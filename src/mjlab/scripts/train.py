@@ -15,6 +15,9 @@ from mjlab.rl import MjlabOnPolicyRunner, RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 from mjlab.scripts._cli import maybe_print_top_level_help
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 from mjlab.utils.gpu import select_gpus
 from mjlab.utils.os import dump_yaml, get_checkpoint_path, get_wandb_checkpoint_path
 from mjlab.utils.torch import configure_torch_backends
@@ -27,6 +30,8 @@ class TrainConfig:
   env: ManagerBasedRlEnvCfg
   agent: RslRlBaseRunnerCfg
   registry_name: str | None = None
+  debug: bool = False
+  """Disable W&B logging/upload while keeping normal local training behavior."""
   video: bool = False
   video_length: int = 200
   video_interval: int = 2000
@@ -65,17 +70,29 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
   cfg.env.seed = seed
 
   print(f"[INFO] Training with: device={device}, seed={seed}, rank={rank}")
+  if cfg.debug:
+    cfg.agent.logger = "tensorboard"
+    cfg.agent.upload_model = False
+    if cfg.agent.run_name:
+      if not cfg.agent.run_name.endswith("debug"):
+        cfg.agent.run_name = f"{cfg.agent.run_name}_debug"
+    else:
+      cfg.agent.run_name = "debug"
+    if rank == 0:
+      print("[INFO] Debug mode enabled: using local logger only, W&B disabled.")
 
   registry_name: str | None = None
 
   # Check if this is a tracking task by checking for motion command.
-  is_tracking_task = "motion" in cfg.env.commands and isinstance(
+  is_tracking_task = "motion" in cfg.env.commands and (isinstance(
     cfg.env.commands["motion"], MotionCommandCfg
-  )
+  ) or isinstance(
+    cfg.env.commands["motion"], MultiMotionCommandCfg
+  ))
 
   if is_tracking_task:
     motion_cmd = cfg.env.commands["motion"]
-    assert isinstance(motion_cmd, MotionCommandCfg)
+    assert isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg))
 
     # Check if motion_file is already set (e.g., via CLI --env.commands.motion.motion-file).
     if motion_cmd.motion_file and Path(motion_cmd.motion_file).exists():
@@ -144,7 +161,6 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     print("[INFO] Recording videos during training.")
 
   env = RslRlVecEnvWrapper(env, clip_actions=cfg.agent.clip_actions)
-
   agent_cfg = asdict(cfg.agent)
   env_cfg = asdict(cfg.env)
 
@@ -162,9 +178,16 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     dump_yaml(log_dir / "params" / "env.yaml", env_cfg)
     dump_yaml(log_dir / "params" / "agent.yaml", agent_cfg)
 
-  runner = runner_cls(env, agent_cfg, str(log_dir), device, **runner_kwargs)
+  runner = runner_cls(
+    env,
+    agent_cfg,
+    str(log_dir),
+    device,
+    **runner_kwargs,
+  )
 
-  add_wandb_tags(cfg.agent.wandb_tags)
+  if not cfg.debug:
+    add_wandb_tags(cfg.agent.wandb_tags)
   runner.add_git_repo_to_log(__file__)
   if resume_path is not None:
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")

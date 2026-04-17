@@ -8,16 +8,20 @@ from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
-from mjlab.tasks.tracking.mdp import MotionCommandCfg
+from mjlab.tasks.tracking.mdp import MotionCommandCfg as SingleMotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 from mjlab.tasks.tracking.tracking_env_cfg import make_tracking_env_cfg
 
 
-def unitree_g1_flat_tracking_env_cfg(
+def _unitree_g1_flat_tracking_env_cfg(
+  motion_command_cfg_cls,
   has_state_estimation: bool = True,
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
   """Create Unitree G1 flat terrain tracking configuration."""
-  cfg = make_tracking_env_cfg()
+  cfg = make_tracking_env_cfg(motion_command_cfg_cls=motion_command_cfg_cls)
 
   cfg.scene.entities = {"robot": get_g1_robot_cfg()}
 
@@ -37,7 +41,7 @@ def unitree_g1_flat_tracking_env_cfg(
   joint_pos_action.scale = G1_ACTION_SCALE
 
   motion_cmd = cfg.commands["motion"]
-  assert isinstance(motion_cmd, MotionCommandCfg)
+  assert isinstance(motion_cmd, (SingleMotionCommandCfg, MultiMotionCommandCfg))
   motion_cmd.anchor_body_name = "torso_link"
   motion_cmd.body_names = (
     "pelvis",
@@ -98,3 +102,27 @@ def unitree_g1_flat_tracking_env_cfg(
     motion_cmd.sampling_mode = "start"
 
   return cfg
+
+
+def unitree_g1_flat_tracking_env_cfg(
+  has_state_estimation: bool = True,
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create the single-motion Unitree G1 flat terrain tracking configuration."""
+  return _unitree_g1_flat_tracking_env_cfg(
+    SingleMotionCommandCfg,
+    has_state_estimation=has_state_estimation,
+    play=play,
+  )
+
+
+def unitree_g1_flat_tracking_bfm_env_cfg(
+  has_state_estimation: bool = True,
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create the multi-motion Unitree G1 flat terrain tracking configuration."""
+  return _unitree_g1_flat_tracking_env_cfg(
+    MultiMotionCommandCfg,
+    has_state_estimation=has_state_estimation,
+    play=play,
+  )

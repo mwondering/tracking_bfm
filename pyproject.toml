@@ -107,7 +107,9 @@ required-environments = [
 ]
 
 [[tool.uv.index]]
-url = "https://pypi.org/simple"
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
 
 [[tool.uv.index]]
 name = "nvidia"
@@ -130,7 +132,6 @@ url = "https://py.mujoco.org"
 explicit = true
 
 [tool.uv.sources]
-warp-lang = { index = "nvidia", marker = "sys_platform != 'darwin'" }
 torch = [
   { index = "pytorch-cu128", extra = "cu128", marker = "sys_platform != 'darwin'" },
   { index = "pytorch-cpu", extra = "cpu", marker = "sys_platform != 'darwin'" },
