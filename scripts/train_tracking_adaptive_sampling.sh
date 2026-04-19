@@ -20,5 +20,6 @@ uv run train "$TASK" \
     --agent.experiment_name "$EXPERIMENT_NAME" \
     --agent.run_name "$RUN_NAME" \
     --agent.wandb_project "tracking_bfm" \
-    --env.commands.motion.sampling-mode uniform \
+    --env.commands.motion.sampling-mode adaptive \
+    --env.commands.motion.adaptive_sampling_strategy "global_2d" \
     --debug False
