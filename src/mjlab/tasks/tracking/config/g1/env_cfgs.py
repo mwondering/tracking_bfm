@@ -101,6 +101,10 @@ def _unitree_g1_flat_tracking_env_cfg(
 
     motion_cmd.sampling_mode = "start"
 
+    ##termination
+    cfg.terminations.pop("anchor_ori", None)
+    cfg.terminations.pop("anchor_pos", None)
+    cfg.terminations.pop("ee_body_pos", None)
   return cfg
 
 

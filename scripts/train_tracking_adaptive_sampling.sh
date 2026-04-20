@@ -8,14 +8,14 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
-MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/Data10k}"
-NUM_ENVS="${NUM_ENVS:-2048}"
+MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
+NUM_ENVS="${NUM_ENVS:-1024}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-adaptive_sampling}"
 
 RUN_NAME="${RUN_NAME:-uniform_baseline}"
 
 uv run train "$TASK" \
-    --env.commands.motion.motion-file "$MOTION_FILE" \
+    --env.commands.motion.motion-path "$MOTION_PATH" \
     --env.scene.num-envs "$NUM_ENVS" \
     --agent.experiment_name "$EXPERIMENT_NAME" \
     --agent.run_name "$RUN_NAME" \

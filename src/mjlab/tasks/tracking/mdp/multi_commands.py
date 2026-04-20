@@ -29,12 +29,162 @@ if TYPE_CHECKING:
 
 _DESIRED_FRAME_COLORS = ((1.0, 0.5, 0.5), (0.5, 1.0, 0.5), (0.5, 0.5, 1.0))
 
+_ISAACLAB_JOINT_NAMES = [
+  "left_hip_pitch_joint",
+  "right_hip_pitch_joint",
+  "waist_yaw_joint",
+  "left_hip_roll_joint",
+  "right_hip_roll_joint",
+  "waist_roll_joint",
+  "left_hip_yaw_joint",
+  "right_hip_yaw_joint",
+  "waist_pitch_joint",
+  "left_knee_joint",
+  "right_knee_joint",
+  "left_shoulder_pitch_joint",
+  "right_shoulder_pitch_joint",
+  "left_ankle_pitch_joint",
+  "right_ankle_pitch_joint",
+  "left_shoulder_roll_joint",
+  "right_shoulder_roll_joint",
+  "left_ankle_roll_joint",
+  "right_ankle_roll_joint",
+  "left_shoulder_yaw_joint",
+  "right_shoulder_yaw_joint",
+  "left_elbow_joint",
+  "right_elbow_joint",
+  "left_wrist_roll_joint",
+  "right_wrist_roll_joint",
+  "left_wrist_pitch_joint",
+  "right_wrist_pitch_joint",
+  "left_wrist_yaw_joint",
+  "right_wrist_yaw_joint",
+]
+
+_MUJOCO_JOINT_NAMES = [
+  "left_hip_pitch_joint",
+  "left_hip_roll_joint",
+  "left_hip_yaw_joint",
+  "left_knee_joint",
+  "left_ankle_pitch_joint",
+  "left_ankle_roll_joint",
+  "right_hip_pitch_joint",
+  "right_hip_roll_joint",
+  "right_hip_yaw_joint",
+  "right_knee_joint",
+  "right_ankle_pitch_joint",
+  "right_ankle_roll_joint",
+  "waist_yaw_joint",
+  "waist_roll_joint",
+  "waist_pitch_joint",
+  "left_shoulder_pitch_joint",
+  "left_shoulder_roll_joint",
+  "left_shoulder_yaw_joint",
+  "left_elbow_joint",
+  "left_wrist_roll_joint",
+  "left_wrist_pitch_joint",
+  "left_wrist_yaw_joint",
+  "right_shoulder_pitch_joint",
+  "right_shoulder_roll_joint",
+  "right_shoulder_yaw_joint",
+  "right_elbow_joint",
+  "right_wrist_roll_joint",
+  "right_wrist_pitch_joint",
+  "right_wrist_yaw_joint",
+]
+
+_ISAACLAB_BODY_NAMES = [
+  "pelvis",
+  "left_hip_pitch_link",
+  "right_hip_pitch_link",
+  "waist_yaw_link",
+  "left_hip_roll_link",
+  "right_hip_roll_link",
+  "waist_roll_link",
+  "left_hip_yaw_link",
+  "right_hip_yaw_link",
+  "torso_link",
+  "left_knee_link",
+  "right_knee_link",
+  "left_shoulder_pitch_link",
+  "right_shoulder_pitch_link",
+  "left_ankle_pitch_link",
+  "right_ankle_pitch_link",
+  "left_shoulder_roll_link",
+  "right_shoulder_roll_link",
+  "left_ankle_roll_link",
+  "right_ankle_roll_link",
+  "left_shoulder_yaw_link",
+  "right_shoulder_yaw_link",
+  "left_elbow_link",
+  "right_elbow_link",
+  "left_wrist_roll_link",
+  "right_wrist_roll_link",
+  "left_wrist_pitch_link",
+  "right_wrist_pitch_link",
+  "left_wrist_yaw_link",
+  "right_wrist_yaw_link",
+]
+
+_MUJOCO_BODY_NAMES = [
+  "pelvis",
+  "left_hip_pitch_link",
+  "left_hip_roll_link",
+  "left_hip_yaw_link",
+  "left_knee_link",
+  "left_ankle_pitch_link",
+  "left_ankle_roll_link",
+  "right_hip_pitch_link",
+  "right_hip_roll_link",
+  "right_hip_yaw_link",
+  "right_knee_link",
+  "right_ankle_pitch_link",
+  "right_ankle_roll_link",
+  "waist_yaw_link",
+  "waist_roll_link",
+  "torso_link",
+  "left_shoulder_pitch_link",
+  "left_shoulder_roll_link",
+  "left_shoulder_yaw_link",
+  "left_elbow_link",
+  "left_wrist_roll_link",
+  "left_wrist_pitch_link",
+  "left_wrist_yaw_link",
+  "right_shoulder_pitch_link",
+  "right_shoulder_roll_link",
+  "right_shoulder_yaw_link",
+  "right_elbow_link",
+  "right_wrist_roll_link",
+  "right_wrist_pitch_link",
+  "right_wrist_yaw_link",
+]
+
+_ISAACLAB_TO_MUJOCO_JOINT_REINDEX = [
+  _ISAACLAB_JOINT_NAMES.index(name) for name in _MUJOCO_JOINT_NAMES
+]
+_ISAACLAB_TO_MUJOCO_BODY_REINDEX = [
+  _ISAACLAB_BODY_NAMES.index(name) for name in _MUJOCO_BODY_NAMES
+]
+
 
 class MotionLoader:
-  def __init__(self, motion_file: str, body_indexes: torch.Tensor, device: str = "cpu"):
+  def __init__(
+    self,
+    motion_file: str,
+    body_indexes: torch.Tensor,
+    motion_type: Literal["isaaclab", "mujoco"] = "isaaclab",
+    device: str = "cpu",
+  ):
     assert os.path.isfile(motion_file), f"Invalid file path: {motion_file}"
     data = np.load(motion_file)
     self.fps = data["fps"]
+    joint_reindex = None
+    body_reindex = None
+    if motion_type == "isaaclab":
+      joint_reindex = _ISAACLAB_TO_MUJOCO_JOINT_REINDEX
+      body_reindex = _ISAACLAB_TO_MUJOCO_BODY_REINDEX
+    elif motion_type != "mujoco":
+      raise ValueError(f"Unsupported motion_type: {motion_type}")
     self.joint_pos = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)
     self.joint_vel = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)
     self._body_pos_w = torch.tensor(
@@ -49,6 +199,14 @@ class MotionLoader:
     self._body_ang_vel_w = torch.tensor(
       data["body_ang_vel_w"], dtype=torch.float32, device=device
     )
+    if joint_reindex is not None:
+      self.joint_pos = self.joint_pos[:, joint_reindex]
+      self.joint_vel = self.joint_vel[:, joint_reindex]
+    if body_reindex is not None:
+      self._body_pos_w = self._body_pos_w[:, body_reindex, :]
+      self._body_quat_w = self._body_quat_w[:, body_reindex, :]
+      self._body_lin_vel_w = self._body_lin_vel_w[:, body_reindex, :]
+      self._body_ang_vel_w = self._body_ang_vel_w[:, body_reindex, :]
     self._body_indexes = body_indexes
     self.time_step_total = self.joint_pos.shape[0]
 
@@ -71,7 +229,11 @@ class MotionLoader:
 
 class MultiMotionLoader:
   def __init__(
-    self, motion_files: list[str], body_indexes: torch.Tensor, device: str = "cpu"
+    self,
+    motion_files: list[str],
+    body_indexes: torch.Tensor,
+    motion_type: Literal["isaaclab", "mujoco"] = "isaaclab",
+    device: str = "cpu",
   ):
     assert len(motion_files) > 0, "motion_files cannot be empty"
     self.num_files = len(motion_files)
@@ -88,147 +250,13 @@ class MultiMotionLoader:
     self.fps_list = []
     self.file_lengths = []
 
-    self.isaaclab_joint_names = [
-      "left_hip_pitch_joint",
-      "right_hip_pitch_joint",
-      "waist_yaw_joint",
-      "left_hip_roll_joint",
-      "right_hip_roll_joint",
-      "waist_roll_joint",
-      "left_hip_yaw_joint",
-      "right_hip_yaw_joint",
-      "waist_pitch_joint",
-      "left_knee_joint",
-      "right_knee_joint",
-      "left_shoulder_pitch_joint",
-      "right_shoulder_pitch_joint",
-      "left_ankle_pitch_joint",
-      "right_ankle_pitch_joint",
-      "left_shoulder_roll_joint",
-      "right_shoulder_roll_joint",
-      "left_ankle_roll_joint",
-      "right_ankle_roll_joint",
-      "left_shoulder_yaw_joint",
-      "right_shoulder_yaw_joint",
-      "left_elbow_joint",
-      "right_elbow_joint",
-      "left_wrist_roll_joint",
-      "right_wrist_roll_joint",
-      "left_wrist_pitch_joint",
-      "right_wrist_pitch_joint",
-      "left_wrist_yaw_joint",
-      "right_wrist_yaw_joint",
-    ]
-
-    self.mujoco_joint_names = [
-      "left_hip_pitch_joint",
-      "left_hip_roll_joint",
-      "left_hip_yaw_joint",
-      "left_knee_joint",
-      "left_ankle_pitch_joint",
-      "left_ankle_roll_joint",
-      "right_hip_pitch_joint",
-      "right_hip_roll_joint",
-      "right_hip_yaw_joint",
-      "right_knee_joint",
-      "right_ankle_pitch_joint",
-      "right_ankle_roll_joint",
-      "waist_yaw_joint",
-      "waist_roll_joint",
-      "waist_pitch_joint",
-      "left_shoulder_pitch_joint",
-      "left_shoulder_roll_joint",
-      "left_shoulder_yaw_joint",
-      "left_elbow_joint",
-      "left_wrist_roll_joint",
-      "left_wrist_pitch_joint",
-      "left_wrist_yaw_joint",
-      "right_shoulder_pitch_joint",
-      "right_shoulder_roll_joint",
-      "right_shoulder_yaw_joint",
-      "right_elbow_joint",
-      "right_wrist_roll_joint",
-      "right_wrist_pitch_joint",
-      "right_wrist_yaw_joint",
-    ]
-
-    self.isaaclab_body_names = [
-      "pelvis",
-      "left_hip_pitch_link",
-      "right_hip_pitch_link",
-      "waist_yaw_link",
-      "left_hip_roll_link",
-      "right_hip_roll_link",
-      "waist_roll_link",
-      "left_hip_yaw_link",
-      "right_hip_yaw_link",
-      "torso_link",
-      "left_knee_link",
-      "right_knee_link",
-      "left_shoulder_pitch_link",
-      "right_shoulder_pitch_link",
-      "left_ankle_pitch_link",
-      "right_ankle_pitch_link",
-      "left_shoulder_roll_link",
-      "right_shoulder_roll_link",
-      "left_ankle_roll_link",
-      "right_ankle_roll_link",
-      "left_shoulder_yaw_link",
-      "right_shoulder_yaw_link",
-      "left_elbow_link",
-      "right_elbow_link",
-      "left_wrist_roll_link",
-      "right_wrist_roll_link",
-      "left_wrist_pitch_link",
-      "right_wrist_pitch_link",
-      "left_wrist_yaw_link",
-      "right_wrist_yaw_link",
-    ]
-    self.mujoco_body_names = [
-      "pelvis",
-      "left_hip_pitch_link",
-      "left_hip_roll_link",
-      "left_hip_yaw_link",
-      "left_knee_link",
-      "left_ankle_pitch_link",
-      "left_ankle_roll_link",
-      "right_hip_pitch_link",
-      "right_hip_roll_link",
-      "right_hip_yaw_link",
-      "right_knee_link",
-      "right_ankle_pitch_link",
-      "right_ankle_roll_link",
-      "waist_yaw_link",
-      "waist_roll_link",
-      "torso_link",
-      "left_shoulder_pitch_link",
-      "left_shoulder_roll_link",
-      "left_shoulder_yaw_link",
-      "left_elbow_link",
-      "left_wrist_roll_link",
-      "left_wrist_pitch_link",
-      "left_wrist_yaw_link",
-      "right_shoulder_pitch_link",
-      "right_shoulder_roll_link",
-      "right_shoulder_yaw_link",
-      "right_elbow_link",
-      "right_wrist_roll_link",
-      "right_wrist_pitch_link",
-      "right_wrist_yaw_link",
-    ]
-
-    self.isaaclab_to_mujoco_joint_reindex = [
-      self.isaaclab_joint_names.index(name) for name in self.mujoco_joint_names
-    ]
-    self.mujoco_to_isaaclab_joint_reindex = [
-      self.mujoco_joint_names.index(name) for name in self.isaaclab_joint_names
-    ]
-    self.isaaclab_to_mujoco_body_reindex = [
-      self.isaaclab_body_names.index(name) for name in self.mujoco_body_names
-    ]
-    self.mujoco_to_isaaclab_body_reindex = [
-      self.mujoco_body_names.index(name) for name in self.isaaclab_body_names
-    ]
+    joint_reindex = None
+    body_reindex = None
+    if motion_type == "isaaclab":
+      joint_reindex = _ISAACLAB_TO_MUJOCO_JOINT_REINDEX
+      body_reindex = _ISAACLAB_TO_MUJOCO_BODY_REINDEX
+    elif motion_type != "mujoco":
+      raise ValueError(f"Unsupported motion_type: {motion_type}")
 
     for motion_file in motion_files:
       assert os.path.isfile(motion_file), f"Invalid file path: {motion_file}"
@@ -236,24 +264,20 @@ class MultiMotionLoader:
 
       self.fps_list.append(data["fps"])
 
-      jp = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_joint_reindex
-      ]
-      jv = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_joint_reindex
-      ]
-      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_body_reindex, :
-      ]
-      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_body_reindex, :
-      ]
-      blv = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_body_reindex, :
-      ]
-      bav = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)[
-        :, self.isaaclab_to_mujoco_body_reindex, :
-      ]
+      jp = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)
+      jv = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)
+      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)
+      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
+      blv = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
+      bav = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
+      if joint_reindex is not None:
+        jp = jp[:, joint_reindex]
+        jv = jv[:, joint_reindex]
+      if body_reindex is not None:
+        bp = bp[:, body_reindex, :]
+        bq = bq[:, body_reindex, :]
+        blv = blv[:, body_reindex, :]
+        bav = bav[:, body_reindex, :]
 
       self.joint_pos_list.append(jp)
       self.joint_vel_list.append(jv)
@@ -429,7 +453,10 @@ class MultiMotionCommand(CommandTerm):
     motion_files = self._resolve_motion_files()
 
     self.motion = MultiMotionLoader(
-      motion_files, self.body_indexes, device=self.device
+      motion_files,
+      self.body_indexes,
+      motion_type=self.cfg.motion_type,
+      device=self.device,
     )
 
     # Calculate buffer length based on max episode length and motion length
@@ -510,7 +537,13 @@ class MultiMotionCommand(CommandTerm):
       self.metrics["error_joint_pos"] = torch.zeros(self.num_envs, device=self.device)
       self.metrics["error_joint_vel"] = torch.zeros(self.num_envs, device=self.device)
       self.metrics["sampling_entropy"] = torch.zeros(self.num_envs, device=self.device)
+      self.metrics["sampling_uniform_prob"] = torch.zeros(
+        self.num_envs, device=self.device
+      )
       self.metrics["sampling_top1_prob"] = torch.zeros(
+        self.num_envs, device=self.device
+      )
+      self.metrics["sampling_top1_ratio"] = torch.zeros(
         self.num_envs, device=self.device
       )
       self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
@@ -528,48 +561,42 @@ class MultiMotionCommand(CommandTerm):
     self._ghost_color = np.array(cfg.viz.ghost_color, dtype=np.float32)
 
   def _resolve_motion_files(self) -> list[str]:
-    """Resolve motion inputs from the new ``motion_file`` interface.
+    """Resolve multi-motion inputs from ``motion_path`` or a single ``motion_file``."""
+    motion_path = os.fspath(self.cfg.motion_path)
+    motion_file = os.fspath(self.cfg.motion_file)
+    if motion_path and motion_file:
+      raise ValueError(
+        "Provide either motion_path for multi-motion input or motion_file for a "
+        "single motion, but not both."
+      )
 
-    Backward compatibility:
-    - ``motion_files`` still works if explicitly provided.
-    - ``motion_path`` is treated as an alias for a directory input.
-    """
-    if self.cfg.motion_files:
-      resolved_motion_files = list(self.cfg.motion_files)
+    if motion_path:
+      if not os.path.exists(motion_path):
+        raise FileNotFoundError(f"Invalid motion path: {motion_path}")
+      if not os.path.isdir(motion_path):
+        raise ValueError(
+          f"motion_path must point to a directory containing .npz files: {motion_path}"
+        )
+      resolved_motion_files = []
+      for root, _, files in os.walk(motion_path):
+        for filename in files:
+          if filename.lower().endswith(".npz"):
+            resolved_motion_files.append(os.path.join(root, filename))
+      resolved_motion_files.sort()
+    elif motion_file:
+      if not os.path.exists(motion_file):
+        raise FileNotFoundError(f"Invalid motion file: {motion_file}")
+      if not os.path.isfile(motion_file):
+        raise ValueError(f"motion_file must point to a .npz file: {motion_file}")
+      resolved_motion_files = [motion_file]
     else:
-      motion_source: str | list[str] | None
-      if self.cfg.motion_path is not None:
-        motion_source = self.cfg.motion_path
-      else:
-        motion_source = self.cfg.motion_file
-
-      if isinstance(motion_source, (str, os.PathLike)):
-        motion_path = os.fspath(motion_source)
-        if not motion_path:
-          resolved_motion_files = []
-        elif os.path.isdir(motion_path):
-          resolved_motion_files = []
-          for root, _, files in os.walk(motion_path):
-            for filename in files:
-              if filename.lower().endswith(".npz"):
-                resolved_motion_files.append(os.path.join(root, filename))
-          resolved_motion_files.sort()
-        elif os.path.isfile(motion_path):
-          resolved_motion_files = [motion_path]
-        else:
-          raise FileNotFoundError(f"Invalid motion path: {motion_path}")
-      elif isinstance(motion_source, (list, tuple)):
-        resolved_motion_files = [os.fspath(path) for path in motion_source]
-      else:
-        resolved_motion_files = []
+      resolved_motion_files = []
 
     if len(resolved_motion_files) == 0:
       raise ValueError(
         "No motion files found. Provide either:\n"
-        "  - motion_file: path to a .npz file\n"
-        "  - motion_file: path to a directory containing .npz files\n"
-        "  - motion_file: list of .npz file paths\n"
-        "Backward-compatible options motion_files / motion_path are also supported."
+        "  - motion_path: path to a directory containing .npz files\n"
+        "  - motion_file: path to a single .npz file"
       )
     return resolved_motion_files
 
@@ -695,6 +722,20 @@ class MultiMotionCommand(CommandTerm):
     )
     epsilon = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
     return (1.0 - epsilon) * focused_probabilities + epsilon * uniform_probabilities
+
+  def _uniform_baseline_probabilities(
+    self, motion_indices: torch.Tensor
+  ) -> torch.Tensor:
+    if self.cfg.adaptive_sampling_strategy == "per_motion":
+      valid_counts = self.motion_bin_counts[motion_indices].clamp(min=1).float()
+      return 1.0 / valid_counts
+    assert self.cfg.adaptive_sampling_strategy == "global_2d"
+    return torch.full(
+      (len(motion_indices),),
+      1.0 / float(self.num_valid_motion_bins),
+      dtype=torch.float,
+      device=self.device,
+    )
 
   @property
   def command(self) -> torch.Tensor:
@@ -1356,9 +1397,14 @@ class MultiMotionCommand(CommandTerm):
         valid_counts > 1, entropy / torch.clamp(denom, min=1e-12), 0.0
       )
       pmax, imax = sampling_probabilities.max(dim=1)
+      uniform_probabilities = 1.0 / valid_counts.float()
       if self.cfg.if_log_metrics:
         self.metrics["sampling_entropy"][env_ids] = entropy_norm
+        self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities
         self.metrics["sampling_top1_prob"][env_ids] = pmax
+        self.metrics["sampling_top1_ratio"][env_ids] = (
+          pmax / uniform_probabilities
+        )
         self.metrics["sampling_top1_bin"][env_ids] = (
           imax.float() / valid_counts.float()
         )
@@ -1377,9 +1423,12 @@ class MultiMotionCommand(CommandTerm):
       )
       H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
       pmax, imax = sampling_probabilities.max(dim=0)
+      uniform_prob = 1.0 / float(self.num_valid_motion_bins)
       if self.cfg.if_log_metrics:
         self.metrics["sampling_entropy"][env_ids] = H_norm
+        self.metrics["sampling_uniform_prob"][env_ids] = uniform_prob
         self.metrics["sampling_top1_prob"][env_ids] = pmax
+        self.metrics["sampling_top1_ratio"][env_ids] = pmax / uniform_prob
         self.metrics["sampling_top1_bin"][env_ids] = (
           self.valid_bin_ids[imax].float() / max(self.bin_count, 1)
         )
@@ -1404,8 +1453,13 @@ class MultiMotionCommand(CommandTerm):
       * self.motion_length[env_ids]
     ).long()
     if self.cfg.if_log_metrics:
+      uniform_probabilities = self._uniform_baseline_probabilities(
+        self.motion_idx[env_ids]
+      )
       self.metrics["sampling_entropy"][:] = 1.0  # Maximum entropy for uniform.
-      self.metrics["sampling_top1_prob"][:] = 1.0 / self.bin_count
+      self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities
+      self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities
+      self.metrics["sampling_top1_ratio"][env_ids] = 1.0
       self.metrics["sampling_top1_bin"][:] = 0.5  # No specific bin preference.
 
   def _resample_command(self, env_ids: torch.Tensor):
@@ -1730,11 +1784,9 @@ class MultiMotionCommandCfg(CommandTermCfg):
   """Configuration for the motion command."""
 
   entity_name: str
-  motion_file: str | list[str] = ""
-  motion_files: list[str] = field(default_factory=list)
-  motion_path: str | None = (
-    None  # Alternative to motion_files: path to directory containing motion.npz files
-  )
+  motion_path: str = ""
+  motion_file: str = ""
+  motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
   anchor_body_name: str
   body_names: tuple[str, ...]
   pose_range: dict[str, tuple[float, float]] = field(default_factory=dict)

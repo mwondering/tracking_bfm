@@ -17,6 +17,9 @@ from mjlab.rl import MjlabOnPolicyRunner, RslRlVecEnvWrapper
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.commands import MotionCommand
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 from mjlab.tasks.tracking.mdp.metrics import (
   compute_ee_orientation_error,
   compute_ee_position_error,
@@ -54,7 +57,7 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, float]:
   agent_cfg = load_rl_cfg(task_id)
 
   motion_cmd = env_cfg.commands.get("motion")
-  if not isinstance(motion_cmd, MotionCommandCfg):
+  if not isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg)):
     raise ValueError(f"Task {task_id} is not a tracking task.")
 
   # Load motion file from W&B run.
@@ -63,7 +66,11 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, float]:
   art = next((a for a in run.used_artifacts() if a.type == "motions"), None)
   if art is None:
     raise RuntimeError("No motion artifact found in the run.")
-  motion_cmd.motion_file = str(Path(art.download()) / "motion.npz")
+  artifact_dir = Path(art.download())
+  if isinstance(motion_cmd, MotionCommandCfg):
+    motion_cmd.motion_file = str(artifact_dir / "motion.npz")
+  else:
+    motion_cmd.motion_path = str(artifact_dir)
 
   # Evaluation config.
   motion_cmd.sampling_mode = "start"

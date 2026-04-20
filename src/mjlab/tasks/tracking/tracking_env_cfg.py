@@ -138,26 +138,37 @@ def make_tracking_env_cfg(
   # Commands
   ##
 
+  motion_kwargs = dict(
+    entity_name="robot",
+    resampling_time_range=(1.0e9, 1.0e9),
+    debug_vis=True,
+    pose_range={
+      "x": (-0.05, 0.05),
+      "y": (-0.05, 0.05),
+      "z": (-0.01, 0.01),
+      "roll": (-0.1, 0.1),
+      "pitch": (-0.1, 0.1),
+      "yaw": (-0.2, 0.2),
+    },
+    velocity_range=VELOCITY_RANGE,
+    joint_position_range=(-0.1, 0.1),
+    anchor_body_name="",
+    body_names=(),
+    future_steps=1,  # 1
+    history_steps=0,  # 0
+
+    adaptive_kernel_size = 3
+    adaptive_lambda = 0.5
+    adaptive_uniform_ratio = 0.3
+    adaptive_alpha= 0.01
+  )
+  if "motion_path" in motion_command_cfg_cls.__dataclass_fields__:
+    motion_kwargs["motion_path"] = ""
+  else:
+    motion_kwargs["motion_file"] = ""
+
   commands: dict[str, CommandTermCfg] = {
-    "motion": motion_command_cfg_cls(
-      entity_name="robot",
-      resampling_time_range=(1.0e9, 1.0e9),
-      debug_vis=True,
-      pose_range={
-        "x": (-0.05, 0.05),
-        "y": (-0.05, 0.05),
-        "z": (-0.01, 0.01),
-        "roll": (-0.1, 0.1),
-        "pitch": (-0.1, 0.1),
-        "yaw": (-0.2, 0.2),
-      },
-      velocity_range=VELOCITY_RANGE,
-      joint_position_range=(-0.1, 0.1),
-      # Override in robot cfg.
-      motion_file="",
-      anchor_body_name="",
-      body_names=(),
-    )
+    "motion": motion_command_cfg_cls(**motion_kwargs)
   }
 
   ##

@@ -3,7 +3,7 @@
 import logging
 import os
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Literal, cast
@@ -19,7 +19,13 @@ from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
 from mjlab.utils.gpu import select_gpus
-from mjlab.utils.os import dump_yaml, get_checkpoint_path, get_wandb_checkpoint_path
+from mjlab.utils.os import (
+  dump_yaml,
+  get_checkpoint_path,
+  get_wandb_checkpoint_path,
+  get_wandb_run_file_path,
+  load_yaml,
+)
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
@@ -47,6 +53,58 @@ class TrainConfig:
     env_cfg = load_env_cfg(task_id)
     agent_cfg = load_rl_cfg(task_id)
     return TrainConfig(env=env_cfg, agent=agent_cfg)
+
+
+@dataclass(frozen=True)
+class _TrainBootstrapConfig:
+  wandb_run_path: str | None = None
+
+
+def _merge_mapping_into_cfg(target, overrides) -> None:
+  """Recursively merge a mapping into a config object."""
+  if overrides is None:
+    return
+  if isinstance(target, dict):
+    for key, value in overrides.items():
+      if key in target and (
+        is_dataclass(target[key]) or isinstance(target[key], dict)
+      ) and isinstance(value, dict):
+        _merge_mapping_into_cfg(target[key], value)
+      else:
+        target[key] = value
+    return
+
+  if not is_dataclass(target):
+    raise TypeError(f"Cannot merge mapping into non-dataclass config: {type(target)}")
+
+  for key, value in overrides.items():
+    current_value = getattr(target, key)
+    if isinstance(current_value, dict) and isinstance(value, dict):
+      _merge_mapping_into_cfg(current_value, value)
+    elif is_dataclass(current_value) and isinstance(value, dict):
+      _merge_mapping_into_cfg(current_value, value)
+    else:
+      setattr(target, key, value)
+
+
+def _apply_wandb_run_configs(default_cfg: TrainConfig, run_path: Path) -> None:
+  """Load env/agent config files from W&B and merge them into the defaults."""
+  cache_root = Path("logs") / "rsl_rl"
+  env_cfg_path, env_cached = get_wandb_run_file_path(
+    cache_root, run_path, "params/env.yaml"
+  )
+  agent_cfg_path, agent_cached = get_wandb_run_file_path(
+    cache_root, run_path, "params/agent.yaml"
+  )
+
+  _merge_mapping_into_cfg(default_cfg.env, load_yaml(env_cfg_path))
+  _merge_mapping_into_cfg(default_cfg.agent, load_yaml(agent_cfg_path))
+
+  cache_msg = "cached" if env_cached and agent_cached else "downloaded"
+  print(
+    f"[INFO] Loaded env/agent config from W&B run {run_path} ({cache_msg}).",
+    flush=True,
+  )
 
 
 def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
@@ -94,9 +152,24 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     motion_cmd = cfg.env.commands["motion"]
     assert isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg))
 
-    # Check if motion_file is already set (e.g., via CLI --env.commands.motion.motion-file).
-    if motion_cmd.motion_file and Path(motion_cmd.motion_file).exists():
-      print(f"[INFO] Using local motion file: {motion_cmd.motion_file}")
+    if isinstance(motion_cmd, MotionCommandCfg):
+      motion_label = "motion file"
+      motion_arg = "--env.commands.motion.motion-file /path/to/motion.npz"
+      has_local_motion = bool(motion_cmd.motion_file) and Path(
+        motion_cmd.motion_file
+      ).exists()
+    else:
+      motion_label = "motion path"
+      motion_arg = "--env.commands.motion.motion-path /path/to/motions_dir"
+      has_local_motion = bool(motion_cmd.motion_path) and Path(
+        motion_cmd.motion_path
+      ).is_dir()
+
+    if has_local_motion:
+      if isinstance(motion_cmd, MotionCommandCfg):
+        print(f"[INFO] Using local {motion_label}: {motion_cmd.motion_file}")
+      else:
+        print(f"[INFO] Using local {motion_label}: {motion_cmd.motion_path}")
     elif cfg.registry_name:
       # Download from WandB registry.
       registry_name = cast(str, cfg.registry_name)
@@ -106,12 +179,16 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
 
       api = wandb.Api()
       artifact = api.artifact(registry_name)
-      motion_cmd.motion_file = str(Path(artifact.download()) / "motion.npz")
+      artifact_dir = Path(artifact.download())
+      if isinstance(motion_cmd, MotionCommandCfg):
+        motion_cmd.motion_file = str(artifact_dir / "motion.npz")
+      else:
+        motion_cmd.motion_path = str(artifact_dir)
     else:
       raise ValueError(
         "For tracking tasks, provide either:\n"
         "  --registry-name your-org/motions/motion-name (download from WandB)\n"
-        "  --env.commands.motion.motion-file /path/to/motion.npz (local file)"
+        f"  {motion_arg} (local {motion_label})"
       )
 
   # Enable NaN guard if requested.
@@ -265,14 +342,25 @@ def main():
     config=mjlab.TYRO_FLAGS,
   )
 
-  args = tyro.cli(
-    TrainConfig,
+  default_args = TrainConfig.from_task(chosen_task)
+  bootstrap_args = tyro.cli(
+    _TrainBootstrapConfig,
     args=remaining_args,
-    default=TrainConfig.from_task(chosen_task),
+    default=_TrainBootstrapConfig(),
     prog=sys.argv[0] + f" {chosen_task}",
     config=mjlab.TYRO_FLAGS,
   )
-  del remaining_args
+  if bootstrap_args.wandb_run_path is not None:
+    _apply_wandb_run_configs(default_args, Path(bootstrap_args.wandb_run_path))
+
+  args = tyro.cli(
+    TrainConfig,
+    args=remaining_args,
+    default=default_args,
+    prog=sys.argv[0] + f" {chosen_task}",
+    config=mjlab.TYRO_FLAGS,
+  )
+  del remaining_args, bootstrap_args, default_args
 
   launch_training(task_id=chosen_task, args=args)
 

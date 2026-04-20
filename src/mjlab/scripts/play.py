@@ -16,6 +16,9 @@ from mjlab.rl import MjlabOnPolicyRunner, RslRlVecEnvWrapper
 from mjlab.scripts._cli import maybe_print_top_level_help
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 from mjlab.utils.os import get_wandb_checkpoint_path
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wrappers import VideoRecorder
@@ -39,6 +42,7 @@ class PlayConfig:
   """Optional checkpoint name within the W&B run to load (e.g. 'model_4000.pt')."""
   checkpoint_file: str | None = None
   motion_file: str | None = None
+  motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
   num_envs: int | None = None
   device: str | None = None
   video: bool = False
@@ -72,20 +76,24 @@ def run_play(task_id: str, cfg: PlayConfig):
 
   # Check if this is a tracking task by checking for motion command.
   is_tracking_task = "motion" in env_cfg.commands and isinstance(
-    env_cfg.commands["motion"], MotionCommandCfg
+    env_cfg.commands["motion"], (MotionCommandCfg, MultiMotionCommandCfg)
   )
 
   if is_tracking_task and cfg._demo_mode:
     # Demo mode: use uniform sampling to see more diversity with num_envs > 1.
     motion_cmd = env_cfg.commands["motion"]
-    assert isinstance(motion_cmd, MotionCommandCfg)
+    assert isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg))
+    motion_cmd.motion_type = cfg.motion_type
     motion_cmd.sampling_mode = "uniform"
 
   if is_tracking_task:
     motion_cmd = env_cfg.commands["motion"]
-    assert isinstance(motion_cmd, MotionCommandCfg)
+    assert isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg))
+    motion_cmd.motion_type = cfg.motion_type
 
     # Check for local motion file first (works for both dummy and trained modes).
+    if cfg.motion_file is not None and not Path(cfg.motion_file).exists():
+      raise FileNotFoundError(f"Motion file not found: {cfg.motion_file}")
     if cfg.motion_file is not None and Path(cfg.motion_file).exists():
       print(f"[INFO]: Using local motion file: {cfg.motion_file}")
       motion_cmd.motion_file = cfg.motion_file
@@ -104,7 +112,14 @@ def run_play(task_id: str, cfg: PlayConfig):
 
       api = wandb.Api()
       artifact = api.artifact(registry_name)
-      motion_cmd.motion_file = str(Path(artifact.download()) / "motion.npz")
+      artifact_dir = Path(artifact.download())
+      artifact_motion_file = artifact_dir / "motion.npz"
+      if not artifact_motion_file.exists():
+        raise ValueError(
+          "The registry artifact does not expose a default motion.npz for play. "
+          "Provide `--motion-file /path/to/motion.npz` explicitly."
+        )
+      motion_cmd.motion_file = str(artifact_motion_file)
     else:
       if cfg.motion_file is not None:
         print(f"[INFO]: Using motion file from CLI: {cfg.motion_file}")
@@ -125,7 +140,14 @@ def run_play(task_id: str, cfg: PlayConfig):
           )
           if art is None:
             raise RuntimeError("No motion artifact found in the run.")
-          motion_cmd.motion_file = str(Path(art.download()) / "motion.npz")
+          artifact_dir = Path(art.download())
+          artifact_motion_file = artifact_dir / "motion.npz"
+          if not artifact_motion_file.exists():
+            raise ValueError(
+              "This run does not expose a single default motion.npz for play. "
+              "Provide `--motion-file /path/to/motion.npz` explicitly."
+            )
+          motion_cmd.motion_file = str(artifact_motion_file)
 
   log_dir: Path | None = None
   resume_path: Path | None = None

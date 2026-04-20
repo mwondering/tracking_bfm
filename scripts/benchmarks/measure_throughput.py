@@ -22,6 +22,9 @@ import mjlab.tasks  # noqa: F401 - registers tasks
 from mjlab.envs import ManagerBasedRlEnv
 from mjlab.tasks.registry import load_env_cfg
 from mjlab.tasks.tracking.mdp.commands import MotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 
 
 @dataclass
@@ -126,7 +129,7 @@ def benchmark_task(task: str, cfg: ThroughputConfig) -> BenchmarkResult:
   env_cfg = load_env_cfg(task)
   env_cfg.scene.num_envs = cfg.num_envs
 
-  # Handle tracking task motion file.
+  # Handle tracking task motion input.
   if len(env_cfg.commands) > 0:
     motion_cmd = env_cfg.commands.get("motion")
     if isinstance(motion_cmd, MotionCommandCfg):
@@ -134,6 +137,10 @@ def benchmark_task(task: str, cfg: ThroughputConfig) -> BenchmarkResult:
       artifact = api.artifact(cfg.tracking_motion)
       motion_dir = artifact.download()
       motion_cmd.motion_file = str(Path(motion_dir) / "motion.npz")
+    elif isinstance(motion_cmd, MultiMotionCommandCfg):
+      api = wandb.Api()
+      artifact = api.artifact(cfg.tracking_motion)
+      motion_cmd.motion_path = artifact.download()
 
   env = ManagerBasedRlEnv(cfg=env_cfg, device=cfg.device)
   env.reset()

@@ -20,6 +20,12 @@ def dump_yaml(filename: Path, data: Dict, sort_keys: bool = False) -> None:
     yaml.dump(data, f, sort_keys=sort_keys)
 
 
+def load_yaml(filename: Path):
+  """Loads data from a YAML file."""
+  with open(filename) as f:
+    return yaml.unsafe_load(f)
+
+
 def get_checkpoint_path(
   log_path: Path,
   run_dir: str = ".*",
@@ -102,3 +108,34 @@ def get_wandb_checkpoint_path(
     wandb_file.download(str(download_dir), replace=True)
 
   return checkpoint_path, was_cached
+
+
+def get_wandb_run_file_path(
+  cache_root: Path, run_path: Path, file_name: str
+) -> tuple[Path, bool]:
+  """Get a file from a wandb run, downloading if needed.
+
+  Returns:
+    Tuple of (local_file_path, was_cached)
+  """
+  import wandb
+
+  run_id = str(run_path).split("/")[-1]
+  download_dir = cache_root / "wandb_run_files" / run_id
+  local_path = download_dir / file_name
+
+  was_cached = local_path.exists()
+  if not was_cached:
+    download_dir.mkdir(parents=True, exist_ok=True)
+    api = wandb.Api()
+    wandb_run = api.run(str(run_path))
+    wandb_file = wandb_run.file(file_name)
+    if wandb_file is None:
+      raise ValueError(f"File '{file_name}' not found in run {run_path}.")
+    wandb_file.download(str(download_dir), replace=True)
+    if not local_path.exists():
+      raise ValueError(
+        f"Downloaded '{file_name}' from run {run_path}, but local file was not created."
+      )
+
+  return local_path, was_cached
