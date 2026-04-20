@@ -21,6 +21,9 @@ uv run train "$TASK" \
     --agent.run_name "$RUN_NAME" \
     --agent.wandb_project "tracking_bfm" \
     --env.commands.motion.sampling-mode adaptive \
-    --env.commands.motion.future_steps 1 \
-    --env.commands.motion.history_steps 0 \
+    --env.commands.motion.adaptive_pre_failure_sample_window_steps 200 \
     --debug False
+
+
+    # --env.commands.motion.future_steps 1 \
+    # --env.commands.motion.history_steps 0 \

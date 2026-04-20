@@ -564,7 +564,6 @@ class MultiMotionCommand(CommandTerm):
       self.metrics["sampling_top1_ratio"] = torch.zeros(
         self.num_envs, device=self.device
       )
-      self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
       self.metrics["sampling_failure_rate_mean"] = torch.zeros(
         self.num_envs, device=self.device
       )
@@ -1431,9 +1430,6 @@ class MultiMotionCommand(CommandTerm):
       self.metrics["sampling_uniform_prob"][env_ids] = uniform_prob
       self.metrics["sampling_top1_prob"][env_ids] = pmax
       self.metrics["sampling_top1_ratio"][env_ids] = pmax / uniform_prob
-      self.metrics["sampling_top1_bin"][env_ids] = (
-        self.valid_bin_ids[imax].float() / max(self.bin_count, 1)
-      )
       self.metrics["sampling_failure_rate_mean"][env_ids] = valid_failure_rate.mean()
       self.metrics["sampling_failure_rate_max"][env_ids] = valid_failure_rate.max()
       self.metrics["sampling_effective_num_bins"][env_ids] = effective_num_bins
@@ -1452,6 +1448,15 @@ class MultiMotionCommand(CommandTerm):
     self.time_steps[env_ids] = torch.minimum(
       bin_starts + offsets, self.motion_length[env_ids] - 1
     )
+    if self.cfg.adaptive_pre_failure_sample_window_steps > 0:
+      pre_failure_offsets = torch.randint(
+        self.cfg.adaptive_pre_failure_sample_window_steps,
+        (len(env_ids),),
+        device=self.device,
+      )
+      self.time_steps[env_ids] = (
+        self.time_steps[env_ids] - pre_failure_offsets
+      ).clamp_min(0)
 
   def _uniform_sampling(self, env_ids: torch.Tensor):
     self.time_steps[env_ids] = (
@@ -1466,7 +1471,6 @@ class MultiMotionCommand(CommandTerm):
       self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
       self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
       self.metrics["sampling_top1_ratio"][env_ids] = 1.0
-      self.metrics["sampling_top1_bin"][:] = 0.5  # No specific bin preference.
       self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
       self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
       self.metrics["sampling_effective_num_bins"][env_ids] = float(self.num_valid_motion_bins)
@@ -1845,6 +1849,7 @@ class MultiMotionCommandCfg(CommandTermCfg):
   adaptive_sequence_length_agnostic: bool = True
   adaptive_max_prob_per_bin: float | Literal["auto"] | None = "auto"
   adaptive_max_prob_per_motion: float | Literal["auto"] | None = "auto"
+  adaptive_pre_failure_sample_window_steps: int = 0
   sampling_mode: Literal["adaptive", "uniform", "start"] = "adaptive"
 
   # for downstream task training
