@@ -154,13 +154,6 @@ def make_tracking_env_cfg(
     joint_position_range=(-0.1, 0.1),
     anchor_body_name="",
     body_names=(),
-    future_steps=1,  # 1
-    history_steps=0,  # 0
-
-    adaptive_kernel_size = 3
-    adaptive_lambda = 0.5
-    adaptive_uniform_ratio = 0.3
-    adaptive_alpha= 0.01
   )
   if "motion_path" in motion_command_cfg_cls.__dataclass_fields__:
     motion_kwargs["motion_path"] = ""
