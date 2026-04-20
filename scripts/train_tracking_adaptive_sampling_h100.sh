@@ -9,7 +9,7 @@ cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/AMASS_LAFAN_Qingtong/}"
-NUM_ENVS="${NUM_ENVS:-1024}"
+NUM_ENVS="${NUM_ENVS:-16384}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-adaptive_sampling param}"
 
 RUN_NAME="${RUN_NAME:-adaptive conservative}"
@@ -21,7 +21,6 @@ uv run train "$TASK" \
     --agent.run_name "$RUN_NAME" \
     --agent.wandb_project "tracking_bfm" \
     --env.commands.motion.sampling-mode adaptive \
-    --env.commands.motion.adaptive_sampling_strategy "global_2d" \
     --debug False \
     --env.commands.motion.adaptive_kernel_size 3 \
     --env.commands.motion.adaptive_lambda 0.5 \

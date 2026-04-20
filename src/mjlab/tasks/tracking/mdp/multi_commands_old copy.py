@@ -513,33 +513,15 @@ class MultiMotionCommand(CommandTerm):
     self.bin_valid_mask = bin_indices.unsqueeze(0) < self.motion_bin_counts.unsqueeze(1)
     self.valid_motion_ids, self.valid_bin_ids = torch.where(self.bin_valid_mask)
     self.num_valid_motion_bins = max(int(self.valid_motion_ids.numel()), 1)
-    bin_starts = bin_indices.unsqueeze(0) * self.bin_width_steps
-    remaining_lengths = (
-      self.motion.file_lengths.unsqueeze(1) - bin_starts
-    ).clamp(min=0)
-    self.bin_lengths = torch.minimum(
-      remaining_lengths,
-      torch.full_like(remaining_lengths, self.bin_width_steps),
+    self.bin_failed_count = torch.zeros(
+      self.motion.num_files, self.bin_count, dtype=torch.float, device=self.device
     )
-    self.bin_lengths.masked_fill_(~self.bin_valid_mask, 0)
-
-    valid_bin_lengths = self.bin_lengths[self.bin_valid_mask].float()
-    mean_bin_length = torch.clamp(valid_bin_lengths.mean(), min=1.0)
-    self.bin_weights = self.bin_lengths.float() / mean_bin_length
-    if self.cfg.adaptive_sequence_length_agnostic:
-      self.bin_weights = self.bin_weights / self.motion_bin_counts.unsqueeze(1).float()
-    self.bin_weights.masked_fill_(~self.bin_valid_mask, 0.0)
-
-    init_count = float(self.cfg.adaptive_init_num_failures)
-    self.bin_episode_count = torch.full(
-      (self.motion.num_files, self.bin_count),
-      init_count,
-      dtype=torch.float,
+    self._current_bin_failed = torch.zeros_like(self.bin_failed_count)
+    self.kernel = torch.tensor(
+      [self.cfg.adaptive_lambda**i for i in range(self.cfg.adaptive_kernel_size)],
       device=self.device,
     )
-    self.bin_failure_count = torch.full_like(self.bin_episode_count, init_count)
-    self.bin_episode_count.masked_fill_(~self.bin_valid_mask, 0.0)
-    self.bin_failure_count.masked_fill_(~self.bin_valid_mask, 0.0)
+    self.kernel = self.kernel / self.kernel.sum()
 
     if self.cfg.if_log_metrics:
       self.metrics["error_anchor_pos"] = torch.zeros(self.num_envs, device=self.device)
@@ -565,18 +547,6 @@ class MultiMotionCommand(CommandTerm):
         self.num_envs, device=self.device
       )
       self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
-      self.metrics["sampling_failure_rate_mean"] = torch.zeros(
-        self.num_envs, device=self.device
-      )
-      self.metrics["sampling_failure_rate_max"] = torch.zeros(
-        self.num_envs, device=self.device
-      )
-      self.metrics["sampling_effective_num_bins"] = torch.zeros(
-        self.num_envs, device=self.device
-      )
-      self.metrics["sampling_num_concentrated_bins"] = torch.zeros(
-        self.num_envs, device=self.device
-      )
 
     # 记录躺下环境的 mask 和 env_ids
     self.init_fall_recovery_mask = torch.zeros(
@@ -689,92 +659,77 @@ class MultiMotionCommand(CommandTerm):
     max_bin_indices = self.motion_bin_counts[motion_indices] - 1
     return torch.minimum(raw_bin_indices, max_bin_indices)
 
-  def _compute_failure_rate(self) -> torch.Tensor:
-    failure_rate = self.bin_failure_count / torch.clamp(self.bin_episode_count, min=1e-12)
-    return failure_rate.masked_fill(~self.bin_valid_mask, 0.0)
+  def _compute_smoothed_bin_failed_count(self) -> torch.Tensor:
+    base_scores = self.bin_failed_count.clone()
+    motion_count = base_scores.shape[0]
+    last_valid_bin_indices = self.motion_bin_counts - 1
+    last_valid_values = base_scores[
+      torch.arange(motion_count, device=self.device), last_valid_bin_indices
+    ]
+    invalid_mask = ~self.bin_valid_mask
+    if torch.any(invalid_mask):
+      base_scores[invalid_mask] = last_valid_values.unsqueeze(1).expand_as(base_scores)[
+        invalid_mask
+      ]
 
-  def _resolve_probability_cap(
-    self, value: float | Literal["auto"] | None, count: int
-  ) -> float | None:
-    if value is None:
-      return None
-    if value == "auto":
-      if count <= 0:
-        return 1.0
-      return float(self.cfg.adaptive_failure_rate_max_over_mean) / float(count)
-    resolved = float(value)
-    if resolved <= 0.0:
-      return None
-    return resolved
-
-  def _apply_max_probability_constraints(
-    self, probabilities: torch.Tensor
-  ) -> torch.Tensor:
-    constrained = probabilities
-    max_prob_per_bin = self._resolve_probability_cap(
-      self.cfg.adaptive_max_prob_per_bin, self.num_valid_motion_bins
+    padded_scores = torch.nn.functional.pad(
+      base_scores.unsqueeze(1),
+      (0, self.cfg.adaptive_kernel_size - 1),
+      mode="replicate",
     )
-    if max_prob_per_bin is not None and self.num_valid_motion_bins > 1.0 / max_prob_per_bin:
-      constrained = torch.clamp(constrained, max=max_prob_per_bin)
-      constrained = constrained / torch.clamp(constrained.sum(), min=1e-12)
+    smoothed_scores = torch.nn.functional.conv1d(
+      padded_scores, self.kernel.view(1, 1, -1)
+    ).squeeze(1)
+    return smoothed_scores.masked_fill(~self.bin_valid_mask, 0.0)
 
-    max_prob_per_motion = self._resolve_probability_cap(
-      self.cfg.adaptive_max_prob_per_motion, self.motion.num_files
-    )
-    if max_prob_per_motion is not None and self.motion.num_files > 1.0 / max_prob_per_motion:
-      motion_probabilities = torch.zeros(
-        self.motion.num_files, dtype=constrained.dtype, device=self.device
-      )
-      motion_probabilities.scatter_add_(0, self.valid_motion_ids, constrained)
-      motion_scale = torch.ones_like(motion_probabilities)
-      oversized = motion_probabilities > max_prob_per_motion
-      motion_scale[oversized] = (
-        max_prob_per_motion
-        / torch.clamp(motion_probabilities[oversized], min=1e-12)
-      )
-      constrained = constrained * motion_scale[self.valid_motion_ids]
-      constrained = constrained / torch.clamp(constrained.sum(), min=1e-12)
+  def _compute_global_adaptive_sampling_probabilities(self) -> torch.Tensor:
+    smoothed_scores = self._compute_smoothed_bin_failed_count()
 
-    return constrained
-
-  def _compute_global_adaptive_sampling_probabilities(self) -> tuple[torch.Tensor, torch.Tensor]:
-    failure_rate = self._compute_failure_rate()
-    valid_failure_rate = failure_rate[self.valid_motion_ids, self.valid_bin_ids]
-    failure_rate_mean = valid_failure_rate.mean()
-    failure_rate_upper_bound = (
-      failure_rate_mean * float(self.cfg.adaptive_failure_rate_max_over_mean)
-    )
-    clipped_failure_rate = torch.clamp(
-      valid_failure_rate, 0.0, failure_rate_upper_bound
-    )
-
-    clipped_sum = clipped_failure_rate.sum()
-    if clipped_sum <= 0.0:
-      failure_based_probabilities = torch.full(
+    valid_scores = smoothed_scores[self.valid_motion_ids, self.valid_bin_ids]
+    score_sum = valid_scores.sum()
+    if score_sum <= 0.0:
+      focused_probabilities = torch.full(
         (self.num_valid_motion_bins,),
         1.0 / float(self.num_valid_motion_bins),
         dtype=torch.float,
         device=self.device,
       )
     else:
-      failure_based_probabilities = clipped_failure_rate / clipped_sum
+      focused_probabilities = valid_scores / score_sum
 
     uniform_probabilities = torch.full_like(
-      failure_based_probabilities, 1.0 / float(self.num_valid_motion_bins)
+      focused_probabilities, 1.0 / float(self.num_valid_motion_bins)
     )
-    uniform_ratio = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
-    probabilities = (
-      (1.0 - uniform_ratio) * failure_based_probabilities
-      + uniform_ratio * uniform_probabilities
+    epsilon = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
+    return (
+      (1.0 - epsilon) * focused_probabilities
+      + epsilon * uniform_probabilities
     )
-    probabilities = probabilities * self.bin_weights[self.valid_motion_ids, self.valid_bin_ids]
-    probabilities = probabilities / torch.clamp(probabilities.sum(), min=1e-12)
-    probabilities = self._apply_max_probability_constraints(probabilities)
-    return probabilities, valid_failure_rate
+
+  def _compute_per_motion_adaptive_probabilities(
+    self, motion_indices: torch.Tensor
+  ) -> torch.Tensor:
+    smoothed_scores = self._compute_smoothed_bin_failed_count()[motion_indices]
+    valid_mask = self.bin_valid_mask[motion_indices]
+    valid_counts = valid_mask.sum(dim=1, keepdim=True).clamp(min=1)
+    uniform_probabilities = valid_mask.float() / valid_counts.float()
+
+    score_sums = smoothed_scores.sum(dim=1, keepdim=True)
+    focused_probabilities = torch.where(
+      score_sums > 0.0,
+      smoothed_scores / torch.clamp(score_sums, min=1e-12),
+      uniform_probabilities,
+    )
+    epsilon = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
+    return (1.0 - epsilon) * focused_probabilities + epsilon * uniform_probabilities
 
   def _uniform_baseline_probabilities(
     self, motion_indices: torch.Tensor
   ) -> torch.Tensor:
+    if self.cfg.adaptive_sampling_strategy == "per_motion":
+      valid_counts = self.motion_bin_counts[motion_indices].clamp(min=1).float()
+      return 1.0 / valid_counts
+    assert self.cfg.adaptive_sampling_strategy == "global_2d"
     return torch.full(
       (len(motion_indices),),
       1.0 / float(self.num_valid_motion_bins),
@@ -1408,36 +1363,75 @@ class MultiMotionCommand(CommandTerm):
     )
 
   def _adaptive_sampling(self, env_ids: torch.Tensor):
-    sampling_probabilities, valid_failure_rate = (
-      self._compute_global_adaptive_sampling_probabilities()
-    )
-    sampled_pair_indices = torch.multinomial(
-      sampling_probabilities, len(env_ids), replacement=True
-    )
-    sampled_motion_indices = self.valid_motion_ids[sampled_pair_indices]
-    sampled_bin_indices = self.valid_bin_ids[sampled_pair_indices]
-
-    H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
-    denom = (
-      math.log(self.num_valid_motion_bins) if self.num_valid_motion_bins > 1 else 1.0
-    )
-    H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
-    pmax, imax = sampling_probabilities.max(dim=0)
-    uniform_prob = 1.0 / float(self.num_valid_motion_bins)
-    effective_num_bins = 1.0 / torch.clamp((sampling_probabilities**2).sum(), min=1e-12)
-    num_concentrated_bins = (sampling_probabilities > 10.0 * uniform_prob).sum().float()
-    if self.cfg.if_log_metrics:
-      self.metrics["sampling_entropy"][env_ids] = H_norm
-      self.metrics["sampling_uniform_prob"][env_ids] = uniform_prob
-      self.metrics["sampling_top1_prob"][env_ids] = pmax
-      self.metrics["sampling_top1_ratio"][env_ids] = pmax / uniform_prob
-      self.metrics["sampling_top1_bin"][env_ids] = (
-        self.valid_bin_ids[imax].float() / max(self.bin_count, 1)
+    episode_failed = self._env.termination_manager.terminated[env_ids]
+    self._current_bin_failed.zero_()
+    if torch.any(episode_failed):
+      failed_env_ids = env_ids[episode_failed]
+      fail_motion_indices = self.motion_idx[failed_env_ids]
+      fail_bin_indices = self._compute_motion_bin_indices(
+        self.time_steps[failed_env_ids], fail_motion_indices
       )
-      self.metrics["sampling_failure_rate_mean"][env_ids] = valid_failure_rate.mean()
-      self.metrics["sampling_failure_rate_max"][env_ids] = valid_failure_rate.max()
-      self.metrics["sampling_effective_num_bins"][env_ids] = effective_num_bins
-      self.metrics["sampling_num_concentrated_bins"][env_ids] = num_concentrated_bins
+      linear_indices = fail_motion_indices * self.bin_count + fail_bin_indices
+      current_failed = torch.bincount(
+        linear_indices,
+        minlength=self.motion.num_files * self.bin_count,
+      ).view(self.motion.num_files, self.bin_count)
+      self._current_bin_failed.copy_(current_failed)
+
+    if self.cfg.adaptive_sampling_strategy == "per_motion":
+      sampled_motion_indices = torch.randint(
+        0, self.motion.num_files, (len(env_ids),), device=self.device
+      )
+      sampling_probabilities = self._compute_per_motion_adaptive_probabilities(
+        sampled_motion_indices
+      )
+      sampled_bin_indices = torch.multinomial(
+        sampling_probabilities, 1, replacement=True
+      ).squeeze(1)
+      valid_counts = self.motion_bin_counts[sampled_motion_indices].clamp(min=1)
+      entropy = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum(
+        dim=1
+      )
+      denom = torch.log(valid_counts.float())
+      entropy_norm = torch.where(
+        valid_counts > 1, entropy / torch.clamp(denom, min=1e-12), 0.0
+      )
+      pmax, imax = sampling_probabilities.max(dim=1)
+      uniform_probabilities = 1.0 / valid_counts.float()
+      if self.cfg.if_log_metrics:
+        self.metrics["sampling_entropy"][env_ids] = entropy_norm
+        self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities
+        self.metrics["sampling_top1_prob"][env_ids] = pmax
+        self.metrics["sampling_top1_ratio"][env_ids] = (
+          pmax / uniform_probabilities
+        )
+        self.metrics["sampling_top1_bin"][env_ids] = (
+          imax.float() / valid_counts.float()
+        )
+    else:
+      assert self.cfg.adaptive_sampling_strategy == "global_2d"
+      sampling_probabilities = self._compute_global_adaptive_sampling_probabilities()
+      sampled_pair_indices = torch.multinomial(
+        sampling_probabilities, len(env_ids), replacement=True
+      )
+      sampled_motion_indices = self.valid_motion_ids[sampled_pair_indices]
+      sampled_bin_indices = self.valid_bin_ids[sampled_pair_indices]
+
+      H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
+      denom = (
+        math.log(self.num_valid_motion_bins) if self.num_valid_motion_bins > 1 else 1.0
+      )
+      H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
+      pmax, imax = sampling_probabilities.max(dim=0)
+      uniform_prob = 1.0 / float(self.num_valid_motion_bins)
+      if self.cfg.if_log_metrics:
+        self.metrics["sampling_entropy"][env_ids] = H_norm
+        self.metrics["sampling_uniform_prob"][env_ids] = uniform_prob
+        self.metrics["sampling_top1_prob"][env_ids] = pmax
+        self.metrics["sampling_top1_ratio"][env_ids] = pmax / uniform_prob
+        self.metrics["sampling_top1_bin"][env_ids] = (
+          self.valid_bin_ids[imax].float() / max(self.bin_count, 1)
+        )
 
     self.motion_idx[env_ids] = sampled_motion_indices
     self.motion_length[env_ids] = self.motion.file_lengths[sampled_motion_indices]
@@ -1463,14 +1457,10 @@ class MultiMotionCommand(CommandTerm):
         self.motion_idx[env_ids]
       )
       self.metrics["sampling_entropy"][:] = 1.0  # Maximum entropy for uniform.
-      self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
-      self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
+      self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities
+      self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities
       self.metrics["sampling_top1_ratio"][env_ids] = 1.0
       self.metrics["sampling_top1_bin"][:] = 0.5  # No specific bin preference.
-      self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
-      self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
-      self.metrics["sampling_effective_num_bins"][env_ids] = float(self.num_valid_motion_bins)
-      self.metrics["sampling_num_concentrated_bins"][env_ids] = 0.0
 
   def _resample_command(self, env_ids: torch.Tensor):
     if len(env_ids) == 0:
@@ -1681,28 +1671,6 @@ class MultiMotionCommand(CommandTerm):
     self.robot.clear_state(env_ids=env_ids)
 
   def _update_command(self):
-    if self.cfg.sampling_mode == "adaptive":
-      current_bin_indices = self._compute_motion_bin_indices(
-        self.time_steps, self.motion_idx
-      )
-      linear_indices = self.motion_idx * self.bin_count + current_bin_indices
-      current_counts = torch.bincount(
-        linear_indices, minlength=self.motion.num_files * self.bin_count
-      ).view(self.motion.num_files, self.bin_count)
-      episode_increments = current_counts.float() / torch.clamp(
-        self.bin_lengths.float(), min=1.0
-      )
-      self.bin_episode_count += episode_increments
-
-      failed_env_ids = torch.where(self._env.termination_manager.terminated)[0]
-      if failed_env_ids.numel() > 0:
-        failed_linear_indices = linear_indices[failed_env_ids]
-        failed_counts = torch.bincount(
-          failed_linear_indices,
-          minlength=self.motion.num_files * self.bin_count,
-        ).view(self.motion.num_files, self.bin_count)
-        self.bin_failure_count += failed_counts.float()
-
     self.time_steps += 1
     env_ids = torch.where(self.time_steps >= self.motion_length)[0]
     if env_ids.numel() > 0:
@@ -1731,6 +1699,14 @@ class MultiMotionCommand(CommandTerm):
     self.body_pos_relative_w = delta_pos_w + quat_apply(
       delta_ori_w, self.body_pos_w - anchor_pos_w_repeat
     )
+
+    if self.cfg.sampling_mode == "adaptive":
+      self.bin_failed_count = (
+        self.cfg.adaptive_alpha * self._current_bin_failed
+        + (1 - self.cfg.adaptive_alpha) * self.bin_failed_count
+      )
+      self.bin_failed_count.masked_fill_(~self.bin_valid_mask, 0.0)
+      self._current_bin_failed.zero_()
 
   def _debug_vis_impl(self, visualizer: DebugVisualizer) -> None:
     """Draw ghost robot or frames based on visualization mode."""
@@ -1837,14 +1813,13 @@ class MultiMotionCommandCfg(CommandTermCfg):
   future_steps: int = 5  # 1
   history_steps: int = 5  # 0
 
+  adaptive_kernel_size: int = 3
+  adaptive_lambda: float = 0.3
   adaptive_uniform_ratio: float = 0.1
+  adaptive_alpha: float = 0.01
   adaptive_bin_width_s: float = 1.0
   adaptive_bin_width_steps: int | None = None
-  adaptive_init_num_failures: float = 1.0
-  adaptive_failure_rate_max_over_mean: float = 200.0
-  adaptive_sequence_length_agnostic: bool = True
-  adaptive_max_prob_per_bin: float | Literal["auto"] | None = "auto"
-  adaptive_max_prob_per_motion: float | Literal["auto"] | None = "auto"
+  adaptive_sampling_strategy: Literal["per_motion", "global_2d"] = "global_2d"
   sampling_mode: Literal["adaptive", "uniform", "start"] = "adaptive"
 
   # for downstream task training
