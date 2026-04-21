@@ -617,6 +617,11 @@ class MultiMotionCommand(CommandTerm):
     else:
       resolved_motion_files = []
 
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    if world_size > 1 and len(resolved_motion_files) > 1:
+      rank = int(os.environ.get("RANK", "0"))
+      resolved_motion_files = resolved_motion_files[rank::world_size]
+
     if len(resolved_motion_files) == 0:
       raise ValueError(
         "No motion files found. Provide either:\n"
