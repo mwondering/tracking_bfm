@@ -110,7 +110,7 @@ def make_tracking_env_cfg(
 
   observations = {
     "actor": ObservationGroupCfg(
-      terms=actor_terms,
+      terms=critic_terms,
       concatenate_terms=True,
       enable_corruption=True,
     ),

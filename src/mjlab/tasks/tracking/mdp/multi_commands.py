@@ -238,29 +238,15 @@ class MultiMotionLoader:
     assert len(motion_files) > 0, "motion_files cannot be empty"
     self.num_files = len(motion_files)
     self.device = device
-    self._body_indexes = body_indexes.to("cpu")
-
-    # Full motion library lives on CPU. Only the active subset is copied to GPU.
-    self._cpu_joint_pos_list = []
-    self._cpu_joint_vel_list = []
-    self._cpu_body_pos_w_list = []
-    self._cpu_body_quat_w_list = []
-    self._cpu_body_lin_vel_w_list = []
-    self._cpu_body_ang_vel_w_list = []
-
-    self.joint_pos_list = []
-    self.joint_vel_list = []
-    self._body_pos_w_list = []
-    self._body_quat_w_list = []
-    self._body_lin_vel_w_list = []
-    self._body_ang_vel_w_list = []
-
+    self._body_indexes = body_indexes
     self.fps_list = []
     self.file_lengths = []
-    self.active_motion_ids = torch.empty(0, dtype=torch.long, device=self.device)
-    self.global_to_active = torch.full(
-      (self.num_files,), -1, dtype=torch.long, device=self.device
-    )
+    joint_pos_list = []
+    joint_vel_list = []
+    body_pos_w_list = []
+    body_quat_w_list = []
+    body_lin_vel_w_list = []
+    body_ang_vel_w_list = []
 
     joint_reindex = None
     body_reindex = None
@@ -276,12 +262,16 @@ class MultiMotionLoader:
 
       self.fps_list.append(data["fps"])
 
-      jp = torch.tensor(data["joint_pos"], dtype=torch.float32)
-      jv = torch.tensor(data["joint_vel"], dtype=torch.float32)
-      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32)
-      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32)
-      blv = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32)
-      bav = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32)
+      jp = torch.tensor(data["joint_pos"], dtype=torch.float32, device=self.device)
+      jv = torch.tensor(data["joint_vel"], dtype=torch.float32, device=self.device)
+      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=self.device)
+      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=self.device)
+      blv = torch.tensor(
+        data["body_lin_vel_w"], dtype=torch.float32, device=self.device
+      )
+      bav = torch.tensor(
+        data["body_ang_vel_w"], dtype=torch.float32, device=self.device
+      )
       if joint_reindex is not None:
         jp = jp[:, joint_reindex]
         jv = jv[:, joint_reindex]
@@ -296,50 +286,34 @@ class MultiMotionLoader:
       blv = blv[:, self._body_indexes, :]
       bav = bav[:, self._body_indexes, :]
 
-      self._cpu_joint_pos_list.append(jp)
-      self._cpu_joint_vel_list.append(jv)
-      self._cpu_body_pos_w_list.append(bp)
-      self._cpu_body_quat_w_list.append(bq)
-      self._cpu_body_lin_vel_w_list.append(blv)
-      self._cpu_body_ang_vel_w_list.append(bav)
+      joint_pos_list.append(jp)
+      joint_vel_list.append(jv)
+      body_pos_w_list.append(bp)
+      body_quat_w_list.append(bq)
+      body_lin_vel_w_list.append(blv)
+      body_ang_vel_w_list.append(bav)
       self.file_lengths.append(jp.shape[0])
 
     self.file_lengths = torch.tensor(
       self.file_lengths, dtype=torch.long, device=self.device
     )
     self.fps = self.fps_list[0]  # 可以根据需求调整
-    self.joint_dim = self._cpu_joint_pos_list[0].shape[1]
+    self.joint_dim = joint_pos_list[0].shape[1]
+    self.body_dim = body_pos_w_list[0].shape[1]
+    self.length_starts = torch.cat(
+      [
+        torch.zeros(1, dtype=torch.long, device=self.device),
+        self.file_lengths[:-1].cumsum(dim=0),
+      ]
+    )
+    self.joint_pos = torch.cat(joint_pos_list, dim=0)
+    self.joint_vel = torch.cat(joint_vel_list, dim=0)
+    self.body_pos_w = torch.cat(body_pos_w_list, dim=0)
+    self.body_quat_w = torch.cat(body_quat_w_list, dim=0)
+    self.body_lin_vel_w = torch.cat(body_lin_vel_w_list, dim=0)
+    self.body_ang_vel_w = torch.cat(body_ang_vel_w_list, dim=0)
 
     self._amp_obs_flat: torch.Tensor | None = None
-
-  def load_active_subset(self, motion_ids: torch.Tensor) -> None:
-    motion_ids = motion_ids.to(dtype=torch.long, device=self.device)
-    self.active_motion_ids = motion_ids
-    self.global_to_active.fill_(-1)
-    if motion_ids.numel() > 0:
-      self.global_to_active[motion_ids] = torch.arange(
-        motion_ids.numel(), device=self.device, dtype=torch.long
-      )
-
-    motion_ids_cpu = motion_ids.cpu().tolist()
-    self.joint_pos_list = [
-      self._cpu_joint_pos_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
-    self.joint_vel_list = [
-      self._cpu_joint_vel_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
-    self._body_pos_w_list = [
-      self._cpu_body_pos_w_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
-    self._body_quat_w_list = [
-      self._cpu_body_quat_w_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
-    self._body_lin_vel_w_list = [
-      self._cpu_body_lin_vel_w_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
-    self._body_ang_vel_w_list = [
-      self._cpu_body_ang_vel_w_list[idx].to(self.device) for idx in motion_ids_cpu
-    ]
 
   # ------------------------------------------------------------------
   # AMP demo data sampling (reuses already-loaded GPU tensors)
@@ -451,11 +425,6 @@ class MultiMotionLoader:
   def get_motion_data_batch(
     self, motion_idx: int, time_steps_start: torch.Tensor, time_steps_end: torch.Tensor
   ) -> dict[str, torch.Tensor]:
-    active_idx = int(self.global_to_active[int(motion_idx)].item())
-    if active_idx < 0:
-      raise RuntimeError(
-        f"Motion {motion_idx} is not present in the active GPU subset."
-      )
     time_steps_tensor = torch.arange(
       time_steps_start.item(),
       time_steps_end.item(),
@@ -467,14 +436,14 @@ class MultiMotionLoader:
       torch.tensor(0, device=self.device),
       self.file_lengths[motion_idx] - 1,
     )
-
+    frame_indices = self.length_starts[motion_idx] + time_steps_tensor
     return {
-      "joint_pos": self.joint_pos_list[active_idx][time_steps_tensor],
-      "joint_vel": self.joint_vel_list[active_idx][time_steps_tensor],
-      "body_pos_w": self._body_pos_w_list[active_idx][time_steps_tensor],
-      "body_quat_w": self._body_quat_w_list[active_idx][time_steps_tensor],
-      "body_lin_vel_w": self._body_lin_vel_w_list[active_idx][time_steps_tensor],
-      "body_ang_vel_w": self._body_ang_vel_w_list[active_idx][time_steps_tensor],
+      "joint_pos": self.joint_pos[frame_indices],
+      "joint_vel": self.joint_vel[frame_indices],
+      "body_pos_w": self.body_pos_w[frame_indices],
+      "body_quat_w": self.body_quat_w[frame_indices],
+      "body_lin_vel_w": self.body_lin_vel_w[frame_indices],
+      "body_ang_vel_w": self.body_ang_vel_w[frame_indices],
     }
 
 
@@ -502,28 +471,11 @@ class MultiMotionCommand(CommandTerm):
       motion_type=self.cfg.motion_type,
       device=self.device,
     )
-    self.motion_buffer_size = min(
-      int(self.cfg.max_num_load_motions), self.num_envs, self.motion.num_files
-    )
 
-    # Calculate buffer length based on max episode length and motion length
-    max_episode_length = (
-      int(self._env.max_episode_length_s / self._env.step_dt)
-      if self._env.max_episode_length_s > 0
-      else self.motion.file_lengths.max().item()
-    )
-    self.buffer_length: int = (
-      int(min(max_episode_length, self.motion.file_lengths.max().item()))
-      + self.cfg.future_steps
-      + self.cfg.history_steps
-    )
     # 初始化状态变量
     self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
     self.motion_idx = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
     self.motion_length = torch.zeros(
-      self.num_envs, dtype=torch.long, device=self.device
-    )
-    self.buffer_start_time = torch.zeros(
       self.num_envs, dtype=torch.long, device=self.device
     )
 
@@ -632,11 +584,6 @@ class MultiMotionCommand(CommandTerm):
     # Ghost model created lazily on first visualization
     self._ghost_model: mujoco.MjModel | None = None
     self._ghost_color = np.array(cfg.viz.ghost_color, dtype=np.float32)
-    self._set_active_motion_subset(
-      torch.arange(self.motion_buffer_size, device=self.device, dtype=torch.long)
-    )
-    # 初始化buffer，存储轨迹数据
-    self._init_buffers()
 
   def _resolve_motion_files(self) -> list[str]:
     """Resolve multi-motion inputs from ``motion_path`` or a single ``motion_file``."""
@@ -678,56 +625,6 @@ class MultiMotionCommand(CommandTerm):
       )
     return resolved_motion_files
 
-  def _init_buffers(self):
-    """初始化buffer存储轨迹数据"""
-    # 获取joint数量
-    joint_dim = self.motion.joint_dim
-    body_dim = len(self.cfg.body_names)
-
-    # 初始化buffer，形状为 (num_envs, buffer_length, ...)
-    self.joint_pos_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, joint_dim, device=self.device
-    )
-    self.joint_vel_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, joint_dim, device=self.device
-    )
-    self.body_pos_w_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, body_dim, 3, device=self.device
-    )
-    self.body_quat_w_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, body_dim, 4, device=self.device
-    )
-    self.body_lin_vel_w_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, body_dim, 3, device=self.device
-    )
-    self.body_ang_vel_w_buffer = torch.zeros(
-      self.num_envs, self.buffer_length, body_dim, 3, device=self.device
-    )
-
-    # 初始化quaternion为[1,0,0,0]
-    self.body_quat_w_buffer[:, :, :, 0] = 1.0
-
-  def _update_buffers(self, env_ids: Optional[torch.Tensor] = None):
-    """更新buffer，从motion数据中填充buffer"""
-    if env_ids is None:
-      env_ids = torch.arange(self.num_envs, device=self.device)
-
-    if len(env_ids) == 0:
-      return
-
-    for env_id in env_ids:
-      motion_data = self.motion.get_motion_data_batch(
-        int(self.motion_idx[env_id].item()),
-        self.buffer_start_time[env_id],
-        self.buffer_start_time[env_id] + self.buffer_length,
-      )
-      self.joint_pos_buffer[env_id] = motion_data["joint_pos"]
-      self.joint_vel_buffer[env_id] = motion_data["joint_vel"]
-      self.body_pos_w_buffer[env_id] = motion_data["body_pos_w"]
-      self.body_quat_w_buffer[env_id] = motion_data["body_quat_w"]
-      self.body_lin_vel_w_buffer[env_id] = motion_data["body_lin_vel_w"]
-      self.body_ang_vel_w_buffer[env_id] = motion_data["body_ang_vel_w"]
-
   def _compute_motion_bin_indices(
     self, time_steps: torch.Tensor, motion_indices: torch.Tensor
   ) -> torch.Tensor:
@@ -755,21 +652,39 @@ class MultiMotionCommand(CommandTerm):
       return None
     return resolved
 
-  def _set_active_motion_subset(self, motion_ids: torch.Tensor) -> None:
-    motion_ids = motion_ids.to(dtype=torch.long, device=self.device)
-    self.active_motion_ids = motion_ids
-    self.active_motion_mask = torch.zeros(
-      self.motion.num_files, dtype=torch.bool, device=self.device
-    )
-    self.active_motion_mask[motion_ids] = True
-    self.motion.load_active_subset(motion_ids)
+  def _clamp_motion_time_steps(
+    self, motion_ids: torch.Tensor, time_steps: torch.Tensor
+  ) -> torch.Tensor:
+    max_time_steps = self.motion.file_lengths[motion_ids] - 1
+    if time_steps.ndim > 1:
+      max_time_steps = max_time_steps.unsqueeze(-1)
+    clamped_time_steps = torch.clamp_min(time_steps, 0)
+    return torch.minimum(clamped_time_steps, max_time_steps)
 
-    active_pair_mask = self.active_motion_mask[self.valid_motion_ids]
-    self.active_valid_motion_ids = self.valid_motion_ids[active_pair_mask]
-    self.active_valid_bin_ids = self.valid_bin_ids[active_pair_mask]
-    self.num_active_valid_motion_bins = max(
-      int(self.active_valid_motion_ids.numel()), 1
-    )
+  def _get_frame_indices(
+    self, motion_ids: torch.Tensor, time_steps: torch.Tensor
+  ) -> torch.Tensor:
+    clamped_time_steps = self._clamp_motion_time_steps(motion_ids, time_steps)
+    frame_starts = self.motion.length_starts[motion_ids]
+    if clamped_time_steps.ndim > 1:
+      frame_starts = frame_starts.unsqueeze(-1)
+    return frame_starts + clamped_time_steps
+
+  def _gather_motion_field(
+    self, field_name: str, motion_ids: torch.Tensor, time_steps: torch.Tensor
+  ) -> torch.Tensor:
+    frame_indices = self._get_frame_indices(motion_ids, time_steps)
+    return getattr(self.motion, field_name)[frame_indices]
+
+  def _get_reference_time_steps(self) -> torch.Tensor:
+    offsets = []
+    if self.cfg.history_steps > 0:
+      offsets.extend(range(-self.cfg.history_steps, 0))
+    offsets.append(0)
+    if self.cfg.future_steps > 1:
+      offsets.extend(range(1, self.cfg.future_steps))
+    offset_tensor = torch.tensor(offsets, device=self.device, dtype=torch.long)
+    return self.time_steps.unsqueeze(1) + offset_tensor.unsqueeze(0)
 
   def _apply_max_probability_constraints(
     self,
@@ -846,49 +761,12 @@ class MultiMotionCommand(CommandTerm):
     )
     return probabilities, valid_failure_rate
 
-  def _compute_subset_adaptive_sampling_probabilities(
-    self,
-  ) -> tuple[torch.Tensor, torch.Tensor]:
-    return self._compute_pair_sampling_probabilities(
-      self.active_valid_motion_ids,
-      self.active_valid_bin_ids,
-      int(self.active_motion_ids.numel()),
-    )
-
-  def _compute_motion_selection_probabilities(self) -> torch.Tensor:
-    pair_probabilities, _ = self._compute_pair_sampling_probabilities(
-      self.valid_motion_ids,
-      self.valid_bin_ids,
-      self.motion.num_files,
-    )
-    motion_probabilities = torch.zeros(
-      self.motion.num_files, dtype=pair_probabilities.dtype, device=self.device
-    )
-    motion_probabilities.scatter_add_(0, self.valid_motion_ids, pair_probabilities)
-    motion_sum = motion_probabilities.sum()
-    if motion_sum <= 0.0:
-      motion_probabilities.fill_(1.0 / float(self.motion.num_files))
-    else:
-      motion_probabilities = motion_probabilities / motion_sum
-    return motion_probabilities
-
-  def refresh_motion_buffer(self) -> None:
-    if self.motion_buffer_size >= self.motion.num_files:
-      return
-    motion_probabilities = self._compute_motion_selection_probabilities()
-    sampled_motion_ids = torch.multinomial(
-      motion_probabilities,
-      self.motion_buffer_size,
-      replacement=False,
-    )
-    self._set_active_motion_subset(sampled_motion_ids)
-
   def _uniform_baseline_probabilities(
     self, motion_indices: torch.Tensor
   ) -> torch.Tensor:
     return torch.full(
       (len(motion_indices),),
-      1.0 / float(self.num_active_valid_motion_bins),
+      1.0 / float(self.num_valid_motion_bins),
       dtype=torch.float,
       device=self.device,
     )
@@ -912,86 +790,41 @@ class MultiMotionCommand(CommandTerm):
 
   @property
   def joint_pos(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return self.joint_pos_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
+    return self._gather_motion_field("joint_pos", self.motion_idx, self.time_steps)
 
   @property
   def joint_vel(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return self.joint_vel_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
+    return self._gather_motion_field("joint_vel", self.motion_idx, self.time_steps)
 
   @property
   def body_pos_w(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return (
-      self.body_pos_w_buffer[
-        torch.arange(self.num_envs, device=self.device), buffer_indices
-      ]
-      + self._env.scene.env_origins[:, None, :]
-    )
+    return self._gather_motion_field(
+      "body_pos_w", self.motion_idx, self.time_steps
+    ) + self._env.scene.env_origins[:, None, :]
 
   @property
   def body_quat_w(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return self.body_quat_w_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
+    return self._gather_motion_field("body_quat_w", self.motion_idx, self.time_steps)
 
   @property
   def body_lin_vel_w(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
+    return self._gather_motion_field(
+      "body_lin_vel_w", self.motion_idx, self.time_steps
     )
-    return self.body_lin_vel_w_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
 
   @property
   def body_ang_vel_w(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
+    return self._gather_motion_field(
+      "body_ang_vel_w", self.motion_idx, self.time_steps
     )
-    return self.body_ang_vel_w_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
 
   @property
   def anchor_pos_w(self) -> torch.Tensor:
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return (
-      self.body_pos_w_buffer[
-        torch.arange(self.num_envs, device=self.device),
-        buffer_indices,
-        self.motion_anchor_body_index,
-      ]
-      + self._env.scene.env_origins
-    )
+    return self.body_pos_w[:, self.motion_anchor_body_index]
 
   @property
   def anchor_quat_w(self) -> torch.Tensor:
-    """Anchor quaternions at current step."""
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return self.body_quat_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      buffer_indices,
-      self.motion_anchor_body_index,
-    ]
+    return self.body_quat_w[:, self.motion_anchor_body_index]
 
   @property
   def anchor_lin_vel_w(self) -> torch.Tensor:
@@ -1000,56 +833,11 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      # Reverse to get [oldest, ..., most_recent] order
-      history_indices = history_indices.flip(dims=[1])
-      history_data = self.body_lin_vel_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        history_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(history_data)
-
-    # Add current step
-    current_data = self.body_lin_vel_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      current_indices,
-      self.motion_anchor_body_index,
-    ].unsqueeze(1)
-    parts.append(current_data)
-
-    # Add future steps (forwards from current, excluding current since it's already added)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_data = self.body_lin_vel_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        future_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(future_data)
-
-    # Concatenate all parts along the time dimension
-    if len(parts) > 1:
-      return torch.cat(parts, dim=1).view(self.num_envs, -1)
-    else:
-      return parts[0].view(self.num_envs, -1)
+    reference_time_steps = self._get_reference_time_steps()
+    reference_lin_vel = self._gather_motion_field(
+      "body_lin_vel_w", self.motion_idx, reference_time_steps
+    )[:, :, self.motion_anchor_body_index]
+    return reference_lin_vel.reshape(self.num_envs, -1)
 
   @property
   def anchor_ang_vel_w(self) -> torch.Tensor:
@@ -1058,55 +846,11 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      history_indices = history_indices.flip(dims=[1])
-      history_data = self.body_ang_vel_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        history_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(history_data)
-
-    # Add current step
-    current_data = self.body_ang_vel_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      current_indices,
-      self.motion_anchor_body_index,
-    ].unsqueeze(1)
-    parts.append(current_data)
-
-    # Add future steps (forwards from current, excluding current since it's already added)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_data = self.body_ang_vel_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        future_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(future_data)
-
-    # Concatenate all parts along the time dimension
-    if len(parts) > 1:
-      return torch.cat(parts, dim=1).view(self.num_envs, -1)
-    else:
-      return parts[0].view(self.num_envs, -1)
+    reference_time_steps = self._get_reference_time_steps()
+    reference_ang_vel = self._gather_motion_field(
+      "body_ang_vel_w", self.motion_idx, reference_time_steps
+    )[:, :, self.motion_anchor_body_index]
+    return reference_ang_vel.reshape(self.num_envs, -1)
 
   @property
   def anchor_projected_gravity(self) -> torch.Tensor:
@@ -1121,55 +865,10 @@ class MultiMotionCommand(CommandTerm):
     or just the enabled steps. Order: [past, current, future].
     Shape: (num_envs, num_steps * 3) where num_steps = history_steps + 1 + (future_steps - 1)
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      history_indices = history_indices.flip(dims=[1])
-      history_quat = self.body_quat_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        history_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(history_quat)
-
-    # Add current step
-    current_quat = self.body_quat_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      current_indices,
-      self.motion_anchor_body_index,
-    ].unsqueeze(1)
-    parts.append(current_quat)
-
-    # Add future steps (forwards from current, excluding current since it's already added)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_quat = self.body_quat_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        future_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(future_quat)
-
-    # Concatenate all quaternion parts along the time dimension
-    if len(parts) > 1:
-      anchor_quat = torch.cat(parts, dim=1)  # Shape: (num_envs, num_steps, 4)
-    else:
-      anchor_quat = parts[0]  # Shape: (num_envs, 1, 4)
+    reference_time_steps = self._get_reference_time_steps()
+    anchor_quat = self._gather_motion_field(
+      "body_quat_w", self.motion_idx, reference_time_steps
+    )[:, :, self.motion_anchor_body_index]
 
     # Extract quaternion components: (w, x, y, z) format
     qw = anchor_quat[..., 0]  # (num_envs, num_steps)
@@ -1186,7 +885,7 @@ class MultiMotionCommand(CommandTerm):
     projected_gravity = torch.stack([gravity_x, gravity_y, gravity_z], dim=-1)
 
     # Reshape to (num_envs, num_steps * 3)
-    return projected_gravity.view(self.num_envs, -1)
+    return projected_gravity.reshape(self.num_envs, -1)
 
   # Motion reference properties with history and future steps
   @property
@@ -1196,60 +895,16 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
+    reference_time_steps = self._get_reference_time_steps()
+    reference_joint_pos = self._gather_motion_field(
+      "joint_pos", self.motion_idx, reference_time_steps
     )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      history_indices = history_indices.flip(dims=[1])
-      history_data = self.joint_pos_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None], history_indices
-      ]
-      parts.append(history_data)
-
-    # Add current step
-    current_data = self.joint_pos_buffer[
-      torch.arange(self.num_envs, device=self.device), current_indices
-    ].unsqueeze(1)
-    parts.append(current_data)
-
-    # Add future steps (forwards from current, excluding current since it's already added)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_data = self.joint_pos_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None], future_indices
-      ]
-      parts.append(future_data)
-
-    # Concatenate all parts along the time dimension
-
-    if len(parts) > 1:
-      return torch.cat(parts, dim=1).view(self.num_envs, -1)
-    else:
-      return parts[0].view(self.num_envs, -1)
+    return reference_joint_pos.reshape(self.num_envs, -1)
 
   @property
   def current_motion_joint_pos(self) -> torch.Tensor:
     """Joint positions reference at current step only."""
-    buffer_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-    return self.joint_pos_buffer[
-      torch.arange(self.num_envs, device=self.device), buffer_indices
-    ]
+    return self.joint_pos
 
   @property
   def motion_joint_vel(self) -> torch.Tensor:
@@ -1258,50 +913,11 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
+    reference_time_steps = self._get_reference_time_steps()
+    reference_joint_vel = self._gather_motion_field(
+      "joint_vel", self.motion_idx, reference_time_steps
     )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      # Reverse to get [oldest, ..., most_recent] order
-      history_indices = history_indices.flip(dims=[1])
-      history_data = self.joint_vel_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None], history_indices
-      ]
-      parts.append(history_data)
-
-    # Add current step
-    current_data = self.joint_vel_buffer[
-      torch.arange(self.num_envs, device=self.device), current_indices
-    ].unsqueeze(1)
-    parts.append(current_data)
-
-    # Add future steps (forwards from current)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_data = self.joint_vel_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None], future_indices
-      ]
-      parts.append(future_data)
-
-    # Concatenate all parts along the time dimension
-    if len(parts) > 1:
-      return torch.cat(parts, dim=1).view(self.num_envs, -1)
-    else:
-      return parts[0].view(self.num_envs, -1)
+    return reference_joint_vel.reshape(self.num_envs, -1)
 
   @property
   def motion_anchor_pos(self) -> torch.Tensor:
@@ -1310,57 +926,12 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      history_indices = history_indices.flip(dims=[1])
-      history_pos = self.body_pos_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        history_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(history_pos)
-
-    # Add current step
-    current_pos = self.body_pos_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      current_indices,
-      self.motion_anchor_body_index,
-    ].unsqueeze(1)
-    parts.append(current_pos)
-
-    # Add future steps (forwards from current)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_pos = self.body_pos_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        future_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(future_pos)
-
-    # Concatenate all parts and add env_origins
-    if len(parts) > 1:
-      combined = torch.cat(parts, dim=1)
-    else:
-      combined = parts[0]
-
-    return (combined + self._env.scene.env_origins[:, None, :]).view(self.num_envs, -1)
+    reference_time_steps = self._get_reference_time_steps()
+    reference_anchor_pos = self._gather_motion_field(
+      "body_pos_w", self.motion_idx, reference_time_steps
+    )[:, :, self.motion_anchor_body_index]
+    reference_anchor_pos = reference_anchor_pos + self._env.scene.env_origins[:, None, :]
+    return reference_anchor_pos.reshape(self.num_envs, -1)
 
   @property
   def motion_anchor_quat(self) -> torch.Tensor:
@@ -1369,55 +940,11 @@ class MultiMotionCommand(CommandTerm):
     Returns concatenated [history_steps, current, future_steps] if both are enabled,
     or just the enabled steps. Order: [past, current, future].
     """
-    current_indices = torch.clamp(
-      self.time_steps - self.buffer_start_time, 0, self.buffer_length - 1
-    )
-
-    parts = []
-
-    # Order should be [past, ..., recent_past] (from oldest to most recent)
-    if self.cfg.history_steps > 0:
-      # Get history indices excluding current step: [current-1, current-2, ..., current-history_steps]
-      history_indices = (
-        current_indices[:, None]
-        - torch.arange(1, self.cfg.history_steps + 1, device=self.device)[None, :]
-      )
-      history_indices = torch.clamp(history_indices, 0, self.buffer_length - 1)
-      history_indices = history_indices.flip(dims=[1])
-      history_quat = self.body_quat_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        history_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(history_quat)
-
-    # Add current step
-    current_quat = self.body_quat_w_buffer[
-      torch.arange(self.num_envs, device=self.device),
-      current_indices,
-      self.motion_anchor_body_index,
-    ].unsqueeze(1)
-    parts.append(current_quat)
-
-    # Add future steps (forwards from current)
-    if self.cfg.future_steps > 1:
-      future_indices = (
-        current_indices[:, None]
-        + torch.arange(1, self.cfg.future_steps, device=self.device)[None, :]
-      )
-      future_indices = torch.clamp(future_indices, 0, self.buffer_length - 1)
-      future_quat = self.body_quat_w_buffer[
-        torch.arange(self.num_envs, device=self.device)[:, None],
-        future_indices,
-        self.motion_anchor_body_index,
-      ]
-      parts.append(future_quat)
-
-    # Concatenate all parts along the time dimension
-    if len(parts) > 1:
-      return torch.cat(parts, dim=1).view(self.num_envs, -1)
-    else:
-      return parts[0].view(self.num_envs, -1)
+    reference_time_steps = self._get_reference_time_steps()
+    reference_anchor_quat = self._gather_motion_field(
+      "body_quat_w", self.motion_idx, reference_time_steps
+    )[:, :, self.motion_anchor_body_index]
+    return reference_anchor_quat.reshape(self.num_envs, -1)
 
   @property
   def robot_joint_pos(self) -> torch.Tensor:
@@ -1473,10 +1000,10 @@ class MultiMotionCommand(CommandTerm):
     # For anchor_lin_vel_w and anchor_ang_vel_w, extract current step
     # Reshape from (num_envs, num_steps * 3) to (num_envs, num_steps, 3) and extract current step
     if num_steps_total > 1:
-      anchor_lin_vel_current = self.anchor_lin_vel_w.view(
+      anchor_lin_vel_current = self.anchor_lin_vel_w.reshape(
         self.num_envs, num_steps_total, 3
       )[:, current_step_idx, :]
-      anchor_ang_vel_current = self.anchor_ang_vel_w.view(
+      anchor_ang_vel_current = self.anchor_ang_vel_w.reshape(
         self.num_envs, num_steps_total, 3
       )[:, current_step_idx, :]
     else:
@@ -1519,24 +1046,26 @@ class MultiMotionCommand(CommandTerm):
     )
 
   def _adaptive_sampling(self, env_ids: torch.Tensor):
-    sampling_probabilities, valid_failure_rate = (
-      self._compute_subset_adaptive_sampling_probabilities()
+    sampling_probabilities, valid_failure_rate = self._compute_pair_sampling_probabilities(
+      self.valid_motion_ids,
+      self.valid_bin_ids,
+      self.motion.num_files,
     )
     sampled_pair_indices = torch.multinomial(
       sampling_probabilities, len(env_ids), replacement=True
     )
-    sampled_motion_indices = self.active_valid_motion_ids[sampled_pair_indices]
-    sampled_bin_indices = self.active_valid_bin_ids[sampled_pair_indices]
+    sampled_motion_indices = self.valid_motion_ids[sampled_pair_indices]
+    sampled_bin_indices = self.valid_bin_ids[sampled_pair_indices]
 
     H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
     denom = (
-      math.log(self.num_active_valid_motion_bins)
-      if self.num_active_valid_motion_bins > 1
+      math.log(self.num_valid_motion_bins)
+      if self.num_valid_motion_bins > 1
       else 1.0
     )
-    H_norm = H / denom if self.num_active_valid_motion_bins > 1 else 0.0
-    pmax, imax = sampling_probabilities.max(dim=0)
-    uniform_prob = 1.0 / float(self.num_active_valid_motion_bins)
+    H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
+    pmax, _ = sampling_probabilities.max(dim=0)
+    uniform_prob = 1.0 / float(self.num_valid_motion_bins)
     effective_num_bins = 1.0 / torch.clamp((sampling_probabilities**2).sum(), min=1e-12)
     num_concentrated_bins = (sampling_probabilities > 10.0 * uniform_prob).sum().float()
     if self.cfg.if_log_metrics:
@@ -1588,23 +1117,21 @@ class MultiMotionCommand(CommandTerm):
       self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
       self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
       self.metrics["sampling_effective_num_bins"][env_ids] = float(
-        self.num_active_valid_motion_bins
+        self.num_valid_motion_bins
       )
       self.metrics["sampling_num_concentrated_bins"][env_ids] = 0.0
 
   def _resample_command(self, env_ids: torch.Tensor):
     if len(env_ids) == 0:
       return
-    active_motion_indices = self.active_motion_ids[
-      torch.randint(
-        0,
-        len(self.active_motion_ids),
-        (len(env_ids),),
-        device=self.device,
-      )
-    ]
+    motion_indices = torch.randint(
+      0,
+      self.motion.num_files,
+      (len(env_ids),),
+      device=self.device,
+    )
     if self.cfg.sampling_mode == "start":
-      self.motion_idx[env_ids] = active_motion_indices
+      self.motion_idx[env_ids] = motion_indices
       self.motion_length[env_ids] = self.motion.file_lengths[self.motion_idx[env_ids]]
       self.time_steps[env_ids] = 0
       print(
@@ -1612,17 +1139,12 @@ class MultiMotionCommand(CommandTerm):
       )
 
     elif self.cfg.sampling_mode == "uniform":
-      self.motion_idx[env_ids] = active_motion_indices
+      self.motion_idx[env_ids] = motion_indices
       self.motion_length[env_ids] = self.motion.file_lengths[self.motion_idx[env_ids]]
       self._uniform_sampling(env_ids)
     else:
       assert self.cfg.sampling_mode == "adaptive"
       self._adaptive_sampling(env_ids)
-
-    self.buffer_start_time[env_ids] = self.time_steps[env_ids].clone()
-
-    # 填充buffer
-    self._update_buffers(env_ids)
 
     root_pos = self.body_pos_w[:, 0].clone()
     root_ori = self.body_quat_w[:, 0].clone()
@@ -1967,10 +1489,8 @@ class MultiMotionCommandCfg(CommandTermCfg):
   adaptive_sequence_length_agnostic: bool = True
   adaptive_max_prob_per_bin: float | Literal["auto"] | None = "auto"
   adaptive_max_prob_per_motion: float | Literal["auto"] | None = "auto"
-  adaptive_pre_failure_sample_window_steps: int = 0
+  adaptive_pre_failure_sample_window_steps: int = 200
   sampling_mode: Literal["adaptive", "uniform", "start"] = "adaptive"
-  max_num_load_motions: int = 1024
-  motion_buffer_refresh_frequency: int = 250
 
   # for downstream task training
   if_log_metrics: bool = True
