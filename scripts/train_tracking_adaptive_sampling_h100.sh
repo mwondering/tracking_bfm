@@ -10,9 +10,9 @@ cd "$REPO_ROOT"
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/AMASS_LAFAN_Qingtong/}"
 NUM_ENVS="${NUM_ENVS:-16384}"
-EXPERIMENT_NAME="${EXPERIMENT_NAME:-adaptive_sampling param}"
+EXPERIMENT_NAME="${EXPERIMENT_NAME:-adaptive_sampling_sonic}"
 
-RUN_NAME="${RUN_NAME:-adaptive conservative}"
+RUN_NAME="${RUN_NAME:-adaptive sonic}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
@@ -21,9 +21,6 @@ uv run train "$TASK" \
     --agent.run_name "$RUN_NAME" \
     --agent.wandb_project "tracking_bfm" \
     --env.commands.motion.sampling-mode adaptive \
-    --debug False \
-    --env.commands.motion.adaptive_kernel_size 3 \
-    --env.commands.motion.adaptive_lambda 0.5 \
-    --env.commands.motion.adaptive_uniform_ratio 0.3 \
-    --env.commands.motion.adaptive_alpha 0.01 \
+    --env.commands.motion.adaptive_pre_failure_sample_window_steps 200 \
+    --debug False
     --gpu_ids "[0]"

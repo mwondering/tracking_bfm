@@ -237,18 +237,30 @@ class MultiMotionLoader:
   ):
     assert len(motion_files) > 0, "motion_files cannot be empty"
     self.num_files = len(motion_files)
-    self._body_indexes = body_indexes
     self.device = device
+    self._body_indexes = body_indexes.to("cpu")
 
-    # 存储每个motion的数据为list，不进行填充
+    # Full motion library lives on CPU. Only the active subset is copied to GPU.
+    self._cpu_joint_pos_list = []
+    self._cpu_joint_vel_list = []
+    self._cpu_body_pos_w_list = []
+    self._cpu_body_quat_w_list = []
+    self._cpu_body_lin_vel_w_list = []
+    self._cpu_body_ang_vel_w_list = []
+
     self.joint_pos_list = []
     self.joint_vel_list = []
     self._body_pos_w_list = []
     self._body_quat_w_list = []
     self._body_lin_vel_w_list = []
     self._body_ang_vel_w_list = []
+
     self.fps_list = []
     self.file_lengths = []
+    self.active_motion_ids = torch.empty(0, dtype=torch.long, device=self.device)
+    self.global_to_active = torch.full(
+      (self.num_files,), -1, dtype=torch.long, device=self.device
+    )
 
     joint_reindex = None
     body_reindex = None
@@ -264,12 +276,12 @@ class MultiMotionLoader:
 
       self.fps_list.append(data["fps"])
 
-      jp = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)
-      jv = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)
-      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)
-      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
-      blv = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
-      bav = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
+      jp = torch.tensor(data["joint_pos"], dtype=torch.float32)
+      jv = torch.tensor(data["joint_vel"], dtype=torch.float32)
+      bp = torch.tensor(data["body_pos_w"], dtype=torch.float32)
+      bq = torch.tensor(data["body_quat_w"], dtype=torch.float32)
+      blv = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32)
+      bav = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32)
       if joint_reindex is not None:
         jp = jp[:, joint_reindex]
         jv = jv[:, joint_reindex]
@@ -279,20 +291,55 @@ class MultiMotionLoader:
         blv = blv[:, body_reindex, :]
         bav = bav[:, body_reindex, :]
 
-      self.joint_pos_list.append(jp)
-      self.joint_vel_list.append(jv)
-      self._body_pos_w_list.append(bp)
-      self._body_quat_w_list.append(bq)
-      self._body_lin_vel_w_list.append(blv)
-      self._body_ang_vel_w_list.append(bav)
+      bp = bp[:, self._body_indexes, :]
+      bq = bq[:, self._body_indexes, :]
+      blv = blv[:, self._body_indexes, :]
+      bav = bav[:, self._body_indexes, :]
+
+      self._cpu_joint_pos_list.append(jp)
+      self._cpu_joint_vel_list.append(jv)
+      self._cpu_body_pos_w_list.append(bp)
+      self._cpu_body_quat_w_list.append(bq)
+      self._cpu_body_lin_vel_w_list.append(blv)
+      self._cpu_body_ang_vel_w_list.append(bav)
       self.file_lengths.append(jp.shape[0])
 
     self.file_lengths = torch.tensor(
       self.file_lengths, dtype=torch.long, device=self.device
     )
     self.fps = self.fps_list[0]  # 可以根据需求调整
+    self.joint_dim = self._cpu_joint_pos_list[0].shape[1]
 
     self._amp_obs_flat: torch.Tensor | None = None
+
+  def load_active_subset(self, motion_ids: torch.Tensor) -> None:
+    motion_ids = motion_ids.to(dtype=torch.long, device=self.device)
+    self.active_motion_ids = motion_ids
+    self.global_to_active.fill_(-1)
+    if motion_ids.numel() > 0:
+      self.global_to_active[motion_ids] = torch.arange(
+        motion_ids.numel(), device=self.device, dtype=torch.long
+      )
+
+    motion_ids_cpu = motion_ids.cpu().tolist()
+    self.joint_pos_list = [
+      self._cpu_joint_pos_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
+    self.joint_vel_list = [
+      self._cpu_joint_vel_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
+    self._body_pos_w_list = [
+      self._cpu_body_pos_w_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
+    self._body_quat_w_list = [
+      self._cpu_body_quat_w_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
+    self._body_lin_vel_w_list = [
+      self._cpu_body_lin_vel_w_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
+    self._body_ang_vel_w_list = [
+      self._cpu_body_ang_vel_w_list[idx].to(self.device) for idx in motion_ids_cpu
+    ]
 
   # ------------------------------------------------------------------
   # AMP demo data sampling (reuses already-loaded GPU tensors)
@@ -404,6 +451,11 @@ class MultiMotionLoader:
   def get_motion_data_batch(
     self, motion_idx: int, time_steps_start: torch.Tensor, time_steps_end: torch.Tensor
   ) -> dict[str, torch.Tensor]:
+    active_idx = int(self.global_to_active[int(motion_idx)].item())
+    if active_idx < 0:
+      raise RuntimeError(
+        f"Motion {motion_idx} is not present in the active GPU subset."
+      )
     time_steps_tensor = torch.arange(
       time_steps_start.item(),
       time_steps_end.item(),
@@ -417,20 +469,12 @@ class MultiMotionLoader:
     )
 
     return {
-      "joint_pos": self.joint_pos_list[motion_idx][time_steps_tensor],
-      "joint_vel": self.joint_vel_list[motion_idx][time_steps_tensor],
-      "body_pos_w": self._body_pos_w_list[motion_idx][time_steps_tensor][
-        :, self._body_indexes
-      ],
-      "body_quat_w": self._body_quat_w_list[motion_idx][time_steps_tensor][
-        :, self._body_indexes
-      ],
-      "body_lin_vel_w": self._body_lin_vel_w_list[motion_idx][time_steps_tensor][
-        :, self._body_indexes
-      ],
-      "body_ang_vel_w": self._body_ang_vel_w_list[motion_idx][time_steps_tensor][
-        :, self._body_indexes
-      ],
+      "joint_pos": self.joint_pos_list[active_idx][time_steps_tensor],
+      "joint_vel": self.joint_vel_list[active_idx][time_steps_tensor],
+      "body_pos_w": self._body_pos_w_list[active_idx][time_steps_tensor],
+      "body_quat_w": self._body_quat_w_list[active_idx][time_steps_tensor],
+      "body_lin_vel_w": self._body_lin_vel_w_list[active_idx][time_steps_tensor],
+      "body_ang_vel_w": self._body_ang_vel_w_list[active_idx][time_steps_tensor],
     }
 
 
@@ -458,6 +502,9 @@ class MultiMotionCommand(CommandTerm):
       motion_type=self.cfg.motion_type,
       device=self.device,
     )
+    self.motion_buffer_size = min(
+      int(self.cfg.max_num_load_motions), self.num_envs, self.motion.num_files
+    )
 
     # Calculate buffer length based on max episode length and motion length
     max_episode_length = (
@@ -479,9 +526,6 @@ class MultiMotionCommand(CommandTerm):
     self.buffer_start_time = torch.zeros(
       self.num_envs, dtype=torch.long, device=self.device
     )
-
-    # 初始化buffer，存储轨迹数据
-    self._init_buffers()
 
     self.body_pos_relative_w = torch.zeros(
       self.num_envs, len(cfg.body_names), 3, device=self.device
@@ -588,6 +632,11 @@ class MultiMotionCommand(CommandTerm):
     # Ghost model created lazily on first visualization
     self._ghost_model: mujoco.MjModel | None = None
     self._ghost_color = np.array(cfg.viz.ghost_color, dtype=np.float32)
+    self._set_active_motion_subset(
+      torch.arange(self.motion_buffer_size, device=self.device, dtype=torch.long)
+    )
+    # 初始化buffer，存储轨迹数据
+    self._init_buffers()
 
   def _resolve_motion_files(self) -> list[str]:
     """Resolve multi-motion inputs from ``motion_path`` or a single ``motion_file``."""
@@ -632,7 +681,7 @@ class MultiMotionCommand(CommandTerm):
   def _init_buffers(self):
     """初始化buffer存储轨迹数据"""
     # 获取joint数量
-    joint_dim = self.motion.joint_pos_list[0].shape[1]
+    joint_dim = self.motion.joint_dim
     body_dim = len(self.cfg.body_names)
 
     # 初始化buffer，形状为 (num_envs, buffer_length, ...)
@@ -706,39 +755,63 @@ class MultiMotionCommand(CommandTerm):
       return None
     return resolved
 
+  def _set_active_motion_subset(self, motion_ids: torch.Tensor) -> None:
+    motion_ids = motion_ids.to(dtype=torch.long, device=self.device)
+    self.active_motion_ids = motion_ids
+    self.active_motion_mask = torch.zeros(
+      self.motion.num_files, dtype=torch.bool, device=self.device
+    )
+    self.active_motion_mask[motion_ids] = True
+    self.motion.load_active_subset(motion_ids)
+
+    active_pair_mask = self.active_motion_mask[self.valid_motion_ids]
+    self.active_valid_motion_ids = self.valid_motion_ids[active_pair_mask]
+    self.active_valid_bin_ids = self.valid_bin_ids[active_pair_mask]
+    self.num_active_valid_motion_bins = max(
+      int(self.active_valid_motion_ids.numel()), 1
+    )
+
   def _apply_max_probability_constraints(
-    self, probabilities: torch.Tensor
+    self,
+    probabilities: torch.Tensor,
+    valid_motion_ids: torch.Tensor,
+    num_motions: int,
   ) -> torch.Tensor:
     constrained = probabilities
     max_prob_per_bin = self._resolve_probability_cap(
-      self.cfg.adaptive_max_prob_per_bin, self.num_valid_motion_bins
+      self.cfg.adaptive_max_prob_per_bin, len(probabilities)
     )
-    if max_prob_per_bin is not None and self.num_valid_motion_bins > 1.0 / max_prob_per_bin:
+    if max_prob_per_bin is not None and len(probabilities) > 1.0 / max_prob_per_bin:
       constrained = torch.clamp(constrained, max=max_prob_per_bin)
       constrained = constrained / torch.clamp(constrained.sum(), min=1e-12)
 
     max_prob_per_motion = self._resolve_probability_cap(
-      self.cfg.adaptive_max_prob_per_motion, self.motion.num_files
+      self.cfg.adaptive_max_prob_per_motion, num_motions
     )
-    if max_prob_per_motion is not None and self.motion.num_files > 1.0 / max_prob_per_motion:
+    if max_prob_per_motion is not None and num_motions > 1.0 / max_prob_per_motion:
       motion_probabilities = torch.zeros(
         self.motion.num_files, dtype=constrained.dtype, device=self.device
       )
-      motion_probabilities.scatter_add_(0, self.valid_motion_ids, constrained)
+      motion_probabilities.scatter_add_(0, valid_motion_ids, constrained)
       motion_scale = torch.ones_like(motion_probabilities)
       oversized = motion_probabilities > max_prob_per_motion
       motion_scale[oversized] = (
         max_prob_per_motion
         / torch.clamp(motion_probabilities[oversized], min=1e-12)
       )
-      constrained = constrained * motion_scale[self.valid_motion_ids]
+      constrained = constrained * motion_scale[valid_motion_ids]
       constrained = constrained / torch.clamp(constrained.sum(), min=1e-12)
 
     return constrained
 
-  def _compute_global_adaptive_sampling_probabilities(self) -> tuple[torch.Tensor, torch.Tensor]:
+  def _compute_pair_sampling_probabilities(
+    self,
+    valid_motion_ids: torch.Tensor,
+    valid_bin_ids: torch.Tensor,
+    num_motions: int,
+  ) -> tuple[torch.Tensor, torch.Tensor]:
     failure_rate = self._compute_failure_rate()
-    valid_failure_rate = failure_rate[self.valid_motion_ids, self.valid_bin_ids]
+    valid_failure_rate = failure_rate[valid_motion_ids, valid_bin_ids]
     failure_rate_mean = valid_failure_rate.mean()
     failure_rate_upper_bound = (
       failure_rate_mean * float(self.cfg.adaptive_failure_rate_max_over_mean)
@@ -750,8 +823,8 @@ class MultiMotionCommand(CommandTerm):
     clipped_sum = clipped_failure_rate.sum()
     if clipped_sum <= 0.0:
       failure_based_probabilities = torch.full(
-        (self.num_valid_motion_bins,),
-        1.0 / float(self.num_valid_motion_bins),
+        (len(valid_motion_ids),),
+        1.0 / float(max(len(valid_motion_ids), 1)),
         dtype=torch.float,
         device=self.device,
       )
@@ -759,24 +832,63 @@ class MultiMotionCommand(CommandTerm):
       failure_based_probabilities = clipped_failure_rate / clipped_sum
 
     uniform_probabilities = torch.full_like(
-      failure_based_probabilities, 1.0 / float(self.num_valid_motion_bins)
+      failure_based_probabilities, 1.0 / float(max(len(valid_motion_ids), 1))
     )
     uniform_ratio = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
     probabilities = (
       (1.0 - uniform_ratio) * failure_based_probabilities
       + uniform_ratio * uniform_probabilities
     )
-    probabilities = probabilities * self.bin_weights[self.valid_motion_ids, self.valid_bin_ids]
+    probabilities = probabilities * self.bin_weights[valid_motion_ids, valid_bin_ids]
     probabilities = probabilities / torch.clamp(probabilities.sum(), min=1e-12)
-    probabilities = self._apply_max_probability_constraints(probabilities)
+    probabilities = self._apply_max_probability_constraints(
+      probabilities, valid_motion_ids, num_motions
+    )
     return probabilities, valid_failure_rate
+
+  def _compute_subset_adaptive_sampling_probabilities(
+    self,
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    return self._compute_pair_sampling_probabilities(
+      self.active_valid_motion_ids,
+      self.active_valid_bin_ids,
+      int(self.active_motion_ids.numel()),
+    )
+
+  def _compute_motion_selection_probabilities(self) -> torch.Tensor:
+    pair_probabilities, _ = self._compute_pair_sampling_probabilities(
+      self.valid_motion_ids,
+      self.valid_bin_ids,
+      self.motion.num_files,
+    )
+    motion_probabilities = torch.zeros(
+      self.motion.num_files, dtype=pair_probabilities.dtype, device=self.device
+    )
+    motion_probabilities.scatter_add_(0, self.valid_motion_ids, pair_probabilities)
+    motion_sum = motion_probabilities.sum()
+    if motion_sum <= 0.0:
+      motion_probabilities.fill_(1.0 / float(self.motion.num_files))
+    else:
+      motion_probabilities = motion_probabilities / motion_sum
+    return motion_probabilities
+
+  def refresh_motion_buffer(self) -> None:
+    if self.motion_buffer_size >= self.motion.num_files:
+      return
+    motion_probabilities = self._compute_motion_selection_probabilities()
+    sampled_motion_ids = torch.multinomial(
+      motion_probabilities,
+      self.motion_buffer_size,
+      replacement=False,
+    )
+    self._set_active_motion_subset(sampled_motion_ids)
 
   def _uniform_baseline_probabilities(
     self, motion_indices: torch.Tensor
   ) -> torch.Tensor:
     return torch.full(
       (len(motion_indices),),
-      1.0 / float(self.num_valid_motion_bins),
+      1.0 / float(self.num_active_valid_motion_bins),
       dtype=torch.float,
       device=self.device,
     )
@@ -1408,21 +1520,23 @@ class MultiMotionCommand(CommandTerm):
 
   def _adaptive_sampling(self, env_ids: torch.Tensor):
     sampling_probabilities, valid_failure_rate = (
-      self._compute_global_adaptive_sampling_probabilities()
+      self._compute_subset_adaptive_sampling_probabilities()
     )
     sampled_pair_indices = torch.multinomial(
       sampling_probabilities, len(env_ids), replacement=True
     )
-    sampled_motion_indices = self.valid_motion_ids[sampled_pair_indices]
-    sampled_bin_indices = self.valid_bin_ids[sampled_pair_indices]
+    sampled_motion_indices = self.active_valid_motion_ids[sampled_pair_indices]
+    sampled_bin_indices = self.active_valid_bin_ids[sampled_pair_indices]
 
     H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
     denom = (
-      math.log(self.num_valid_motion_bins) if self.num_valid_motion_bins > 1 else 1.0
+      math.log(self.num_active_valid_motion_bins)
+      if self.num_active_valid_motion_bins > 1
+      else 1.0
     )
-    H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
+    H_norm = H / denom if self.num_active_valid_motion_bins > 1 else 0.0
     pmax, imax = sampling_probabilities.max(dim=0)
-    uniform_prob = 1.0 / float(self.num_valid_motion_bins)
+    uniform_prob = 1.0 / float(self.num_active_valid_motion_bins)
     effective_num_bins = 1.0 / torch.clamp((sampling_probabilities**2).sum(), min=1e-12)
     num_concentrated_bins = (sampling_probabilities > 10.0 * uniform_prob).sum().float()
     if self.cfg.if_log_metrics:
@@ -1467,23 +1581,30 @@ class MultiMotionCommand(CommandTerm):
       uniform_probabilities = self._uniform_baseline_probabilities(
         self.motion_idx[env_ids]
       )
-      self.metrics["sampling_entropy"][:] = 1.0  # Maximum entropy for uniform.
+      self.metrics["sampling_entropy"][env_ids] = 1.0  # Maximum entropy for uniform.
       self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
       self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
       self.metrics["sampling_top1_ratio"][env_ids] = 1.0
       self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
       self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
-      self.metrics["sampling_effective_num_bins"][env_ids] = float(self.num_valid_motion_bins)
+      self.metrics["sampling_effective_num_bins"][env_ids] = float(
+        self.num_active_valid_motion_bins
+      )
       self.metrics["sampling_num_concentrated_bins"][env_ids] = 0.0
 
   def _resample_command(self, env_ids: torch.Tensor):
     if len(env_ids) == 0:
       return
+    active_motion_indices = self.active_motion_ids[
+      torch.randint(
+        0,
+        len(self.active_motion_ids),
+        (len(env_ids),),
+        device=self.device,
+      )
+    ]
     if self.cfg.sampling_mode == "start":
-      self.motion_idx[env_ids] = (
-        sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device)
-        * self.motion.num_files
-      ).long()
+      self.motion_idx[env_ids] = active_motion_indices
       self.motion_length[env_ids] = self.motion.file_lengths[self.motion_idx[env_ids]]
       self.time_steps[env_ids] = 0
       print(
@@ -1491,10 +1612,7 @@ class MultiMotionCommand(CommandTerm):
       )
 
     elif self.cfg.sampling_mode == "uniform":
-      self.motion_idx[env_ids] = (
-        sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device)
-        * self.motion.num_files
-      ).long()
+      self.motion_idx[env_ids] = active_motion_indices
       self.motion_length[env_ids] = self.motion.file_lengths[self.motion_idx[env_ids]]
       self._uniform_sampling(env_ids)
     else:
@@ -1851,6 +1969,8 @@ class MultiMotionCommandCfg(CommandTermCfg):
   adaptive_max_prob_per_motion: float | Literal["auto"] | None = "auto"
   adaptive_pre_failure_sample_window_steps: int = 0
   sampling_mode: Literal["adaptive", "uniform", "start"] = "adaptive"
+  max_num_load_motions: int = 1024
+  motion_buffer_refresh_frequency: int = 250
 
   # for downstream task training
   if_log_metrics: bool = True

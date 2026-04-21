@@ -1,9 +1,11 @@
 import os
+import time
 from typing import cast
 
 import torch
 import wandb
 from rsl_rl.env.vec_env import VecEnv
+from rsl_rl.runners.on_policy_runner import check_nan
 from torch import nn
 
 from mjlab.rl import RslRlVecEnvWrapper
@@ -13,6 +15,7 @@ from mjlab.rl.exporter_utils import (
 )
 from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.tracking.mdp import MotionCommand
+from mjlab.tasks.tracking.mdp.multi_commands import MultiMotionCommand
 
 
 class _OnnxMotionModel(nn.Module):
@@ -115,3 +118,93 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
           self.registry_name = None
     except Exception as e:
       print(f"[WARN] ONNX export failed (training continues): {e}")
+
+  def learn(
+    self, num_learning_iterations: int, init_at_random_ep_len: bool = False
+  ) -> None:
+    if init_at_random_ep_len:
+      self.env.episode_length_buf = torch.randint_like(
+        self.env.episode_length_buf, high=int(self.env.max_episode_length)
+      )
+
+    obs = self.env.get_observations().to(self.device)
+    self.alg.train_mode()
+
+    if self.is_distributed:
+      print(f"Synchronizing parameters for rank {self.gpu_global_rank}...")
+      self.alg.broadcast_parameters()
+
+    self.logger.init_logging_writer()
+
+    motion_term = self.env.unwrapped.command_manager.get_term("motion")
+    motion_buffer_refresh_frequency = 0
+    if isinstance(motion_term, MultiMotionCommand):
+      motion_buffer_refresh_frequency = int(
+        motion_term.cfg.motion_buffer_refresh_frequency
+      )
+
+    start_it = self.current_learning_iteration
+    total_it = start_it + num_learning_iterations
+    for it in range(start_it, total_it):
+      start = time.time()
+      with torch.inference_mode():
+        for _ in range(self.cfg["num_steps_per_env"]):
+          actions = self.alg.act(obs)
+          obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+          if self.cfg.get("check_for_nan", True):
+            check_nan(obs, rewards, dones)
+          obs, rewards, dones = (
+            obs.to(self.device),
+            rewards.to(self.device),
+            dones.to(self.device),
+          )
+          self.alg.process_env_step(obs, rewards, dones, extras)
+          intrinsic_rewards = (
+            self.alg.intrinsic_rewards if self.cfg["algorithm"]["rnd_cfg"] else None
+          )
+          self.logger.process_env_step(rewards, dones, extras, intrinsic_rewards)
+
+        stop = time.time()
+        collect_time = stop - start
+        start = stop
+        self.alg.compute_returns(obs)
+
+      loss_dict = self.alg.update()
+
+      stop = time.time()
+      learn_time = stop - start
+      self.current_learning_iteration = it
+
+      self.logger.log(
+        it=it,
+        start_it=start_it,
+        total_it=total_it,
+        collect_time=collect_time,
+        learn_time=learn_time,
+        loss_dict=loss_dict,
+        learning_rate=self.alg.learning_rate,
+        action_std=self.alg.get_policy().output_std,
+        rnd_weight=self.alg.rnd.weight if self.cfg["algorithm"]["rnd_cfg"] else None,
+      )
+
+      if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
+        self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))  # type: ignore[arg-type]
+
+      if (
+        motion_buffer_refresh_frequency > 0
+        and (it + 1) % motion_buffer_refresh_frequency == 0
+        and (it + 1) < total_it
+        and isinstance(motion_term, MultiMotionCommand)
+      ):
+        motion_term.refresh_motion_buffer()
+        with torch.inference_mode():
+          obs, _ = self.env.reset()
+        obs = obs.to(self.device)
+
+    if self.logger.writer is not None:
+      self.save(
+        os.path.join(
+          self.logger.log_dir, f"model_{self.current_learning_iteration}.pt"
+        )
+      )  # type: ignore[arg-type]
+      self.logger.stop_logging_writer()
