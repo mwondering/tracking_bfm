@@ -536,6 +536,10 @@ class MultiMotionCommand(CommandTerm):
     self.bin_failure_count = torch.full_like(self.bin_episode_count, init_count)
     self.bin_episode_count.masked_fill_(~self.bin_valid_mask, 0.0)
     self.bin_failure_count.masked_fill_(~self.bin_valid_mask, 0.0)
+    self._adaptive_sampling_phase = "idle"
+    self._skip_current_adaptive_episode_count = torch.zeros(
+      self.num_envs, dtype=torch.bool, device=self.device
+    )
 
     if self.cfg.if_log_metrics:
       self.metrics["error_anchor_pos"] = torch.zeros(self.num_envs, device=self.device)
@@ -642,6 +646,63 @@ class MultiMotionCommand(CommandTerm):
   def _compute_failure_rate(self) -> torch.Tensor:
     failure_rate = self.bin_failure_count / torch.clamp(self.bin_episode_count, min=1e-12)
     return failure_rate.masked_fill(~self.bin_valid_mask, 0.0)
+
+  def _accumulate_adaptive_sampling_stats(
+    self,
+    motion_ids: torch.Tensor,
+    time_steps: torch.Tensor,
+    failure_mask: torch.Tensor | None,
+  ) -> None:
+    if motion_ids.numel() == 0:
+      return
+
+    current_bin_indices = self._compute_motion_bin_indices(time_steps, motion_ids)
+    linear_indices = motion_ids * self.bin_count + current_bin_indices
+    current_counts = torch.bincount(
+      linear_indices, minlength=self.motion.num_files * self.bin_count
+    ).view(self.motion.num_files, self.bin_count)
+    episode_increments = current_counts.float() / torch.clamp(
+      self.bin_lengths.float(), min=1.0
+    )
+    self.bin_episode_count += episode_increments
+
+    if failure_mask is None or not failure_mask.any():
+      return
+
+    failed_linear_indices = linear_indices[failure_mask]
+    failed_counts = torch.bincount(
+      failed_linear_indices, minlength=self.motion.num_files * self.bin_count
+    ).view(self.motion.num_files, self.bin_count)
+    self.bin_failure_count += failed_counts.float()
+
+  def _stage_pre_resample_adaptive_stats(self, env_ids: torch.Tensor) -> None:
+    if self.cfg.sampling_mode != "adaptive" or env_ids.numel() == 0:
+      return
+    if self._adaptive_sampling_phase != "idle":
+      return
+
+    active_env_ids = env_ids[self._env.episode_length_buf[env_ids] > 0]
+    if active_env_ids.numel() == 0:
+      return
+
+    failure_mask = self._env.termination_manager.terminated[active_env_ids]
+    self._accumulate_adaptive_sampling_stats(
+      self.motion_idx[active_env_ids],
+      self.time_steps[active_env_ids],
+      failure_mask,
+    )
+    self._skip_current_adaptive_episode_count[active_env_ids] = True
+
+  def _accumulate_current_adaptive_sampling_stats(self) -> None:
+    active_env_ids = torch.where(~self._skip_current_adaptive_episode_count)[0]
+    self._skip_current_adaptive_episode_count.zero_()
+    if active_env_ids.numel() == 0:
+      return
+    self._accumulate_adaptive_sampling_stats(
+      self.motion_idx[active_env_ids],
+      self.time_steps[active_env_ids],
+      failure_mask=None,
+    )
 
   def _resolve_probability_cap(
     self, value: float | Literal["auto"] | None, count: int
@@ -1129,6 +1190,7 @@ class MultiMotionCommand(CommandTerm):
   def _resample_command(self, env_ids: torch.Tensor):
     if len(env_ids) == 0:
       return
+    self._stage_pre_resample_adaptive_stats(env_ids)
     motion_indices = torch.randint(
       0,
       self.motion.num_files,
@@ -1331,26 +1393,8 @@ class MultiMotionCommand(CommandTerm):
 
   def _update_command(self):
     if self.cfg.sampling_mode == "adaptive":
-      current_bin_indices = self._compute_motion_bin_indices(
-        self.time_steps, self.motion_idx
-      )
-      linear_indices = self.motion_idx * self.bin_count + current_bin_indices
-      current_counts = torch.bincount(
-        linear_indices, minlength=self.motion.num_files * self.bin_count
-      ).view(self.motion.num_files, self.bin_count)
-      episode_increments = current_counts.float() / torch.clamp(
-        self.bin_lengths.float(), min=1.0
-      )
-      self.bin_episode_count += episode_increments
-
-      failed_env_ids = torch.where(self._env.termination_manager.terminated)[0]
-      if failed_env_ids.numel() > 0:
-        failed_linear_indices = linear_indices[failed_env_ids]
-        failed_counts = torch.bincount(
-          failed_linear_indices,
-          minlength=self.motion.num_files * self.bin_count,
-        ).view(self.motion.num_files, self.bin_count)
-        self.bin_failure_count += failed_counts.float()
+      self._adaptive_sampling_phase = "updating"
+      self._accumulate_current_adaptive_sampling_stats()
 
     self.time_steps += 1
     env_ids = torch.where(self.time_steps >= self.motion_length)[0]
@@ -1380,6 +1424,8 @@ class MultiMotionCommand(CommandTerm):
     self.body_pos_relative_w = delta_pos_w + quat_apply(
       delta_ori_w, self.body_pos_w - anchor_pos_w_repeat
     )
+    if self.cfg.sampling_mode == "adaptive":
+      self._adaptive_sampling_phase = "idle"
 
   def _debug_vis_impl(self, visualizer: DebugVisualizer) -> None:
     """Draw ghost robot or frames based on visualization mode."""

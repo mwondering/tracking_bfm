@@ -23,4 +23,5 @@ uv run train "$TASK" \
     --env.commands.motion.sampling-mode adaptive \
     --env.commands.motion.adaptive_pre_failure_sample_window_steps 200 \
     --debug False \
+    --agent.upload-model False \
     --gpu_ids "[4,5]"

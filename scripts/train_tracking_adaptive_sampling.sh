@@ -10,9 +10,9 @@ cd "$REPO_ROOT"
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
 NUM_ENVS="${NUM_ENVS:-1024}"
-EXPERIMENT_NAME="${EXPERIMENT_NAME:-adaptive_sampling}"
+EXPERIMENT_NAME="${EXPERIMENT_NAME:-0422debug}"
 
-RUN_NAME="${RUN_NAME:-uniform_baseline}"
+RUN_NAME="${RUN_NAME:-adaptive}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
