@@ -1,0 +1,1220 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Distillation Task Design &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-04-22-distillation-task-design';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Apr 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-04-22-distillation-task-design.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-04-22-distillation-task-design.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-04-22-distillation-task-design.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/specs/2026-04-22-distillation-task-design.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Distillation Task Design</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-principles">Design Principles</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#package-layout">Package Layout</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#high-level-architecture">High-Level Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#environment-composition">Environment Composition</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-environment-source">Base environment source</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-groups">Observation groups</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-command-reuse-and-sparse-extraction">Motion Command Reuse and Sparse Extraction</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-command-source">Motion command source</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sparse-command-extraction">Sparse command extraction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#student-command-definition">Student command definition</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ee-pose"><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-vel"><code class="docutils literal notranslate"><span class="pre">base_vel</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-ang-vel"><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-height"><code class="docutils literal notranslate"><span class="pre">base_height</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#single-frame-sparse-command-size">Single-frame sparse command size</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#student-observations">Student Observations</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sparse-command-terms">Sparse command terms</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed-proprioceptive-terms">Fixed proprioceptive terms</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#group-construction">Group construction</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#termination-handling">Termination Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-integration">Teacher Integration</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#responsibilities">Responsibilities</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-behavior">Required behavior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#student-model">Student Model</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-implementation">First-phase implementation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#design-intent">Design intent</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-student-mixing-schedule">Teacher-Student Mixing Schedule</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-behavior">First-phase behavior</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-supported-schedule-family">Initial supported schedule family</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#distillation-algorithm">Distillation Algorithm</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inputs">Inputs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-loss">First-phase loss</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#explicit-non-goals-for-phase-one">Explicit non-goals for phase one</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runner">Runner</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Responsibilities</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#per-step-rollout-logic">Per-step rollout logic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#action-naming">Action naming</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluation">Evaluation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#training-time-evaluation">Training-time evaluation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#student-only-evaluation">Student-only evaluation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-frequency">Initial frequency</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-scale">Initial scale</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#logging-and-metrics">Logging and Metrics</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#keep-existing-environment-metrics">Keep existing environment metrics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#add-first-phase-distillation-metrics">Add first-phase distillation metrics</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-policy">Checkpoint Policy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-g1-env-cfgs-py"><code class="docutils literal notranslate"><span class="pre">config/g1/env_cfgs.py</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-g1-rl-cfg-py"><code class="docutils literal notranslate"><span class="pre">config/g1/rl_cfg.py</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unit-test-plan">Unit Test Plan</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-tests">Required tests</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#out-of-scope-for-phase-one">Out of Scope for Phase One</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance-criteria">Acceptance Criteria</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="distillation-task-design">
+<h1>Distillation Task Design<a class="headerlink" href="#distillation-task-design" title="Link to this heading">#</a></h1>
+<p><strong>Date:</strong> 2026-04-22</p>
+<p><strong>Status:</strong> Proposed</p>
+<p><strong>Scope:</strong> First-phase design for a standalone distillation task that reuses the existing tracking teacher environment and checkpoints while introducing a sparse-observation student trained with online action distillation.</p>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
+<p>Add a new task package under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation</span></code> for motion-command distillation without modifying general <code class="docutils literal notranslate"><span class="pre">mjlab</span></code> infrastructure and without forking the existing tracking task implementation.</p>
+<p>The first implementation phase should:</p>
+<ul class="simple">
+<li><p>reuse the current multi-motion tracking command pipeline as the teacher-side motion source</p></li>
+<li><p>reuse an existing <code class="docutils literal notranslate"><span class="pre">tracking_bfm</span></code> checkpoint as a frozen teacher</p></li>
+<li><p>train a student from sparse observations using deterministic teacher mean actions</p></li>
+<li><p>use Bernoulli-switched mixed rollout between teacher and student actions, with teacher probability decaying over training</p></li>
+<li><p>keep termination behavior identical to the original task</p></li>
+<li><p>log both environment metrics and distillation-specific metrics</p></li>
+</ul>
+</section>
+<section id="design-principles">
+<h2>Design Principles<a class="headerlink" href="#design-principles" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>Task isolation:</strong> all distillation-specific code lives under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation</span></code></p></li>
+<li><p><strong>Teacher truth source:</strong> teacher observations, teacher environment semantics, multi-motion sampling, rewards, and terminations come from the existing tracking task</p></li>
+<li><p><strong>Student modularity:</strong> student observation construction and student network selection are explicit modules to support future ablations</p></li>
+<li><p><strong>No privileged student path:</strong> unlike ProtoMotions-style architectures, the first phase keeps a single student action path</p></li>
+<li><p><strong>Future extensibility:</strong> sparse command extraction is implemented with a future-step-aware interface, but first phase only enables single-frame extraction</p></li>
+</ul>
+</section>
+<section id="package-layout">
+<h2>Package Layout<a class="headerlink" href="#package-layout" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>src/mjlab/tasks/distillation/
+  __init__.py
+  distillation_env_cfg.py
+  mdp/
+    __init__.py
+    commands.py
+    observations.py
+    terminations.py
+  rl/
+    __init__.py
+    teacher.py
+    models.py
+    schedules.py
+    algorithm.py
+    runner.py
+  config/
+    __init__.py
+    g1/
+      __init__.py
+      env_cfgs.py
+      rl_cfg.py
+</pre></div>
+</div>
+</section>
+<section id="high-level-architecture">
+<h2>High-Level Architecture<a class="headerlink" href="#high-level-architecture" title="Link to this heading">#</a></h2>
+<p>The distillation task is a composition layer on top of tracking:</p>
+<ol class="arabic simple">
+<li><p>Build a base tracking environment configuration from the existing tracking task factory.</p></li>
+<li><p>Keep the original full motion command and teacher observation semantics intact.</p></li>
+<li><p>Add a new student observation group based on sparse commands plus fixed proprioceptive terms.</p></li>
+<li><p>Load a frozen teacher checkpoint and its observation normalizer.</p></li>
+<li><p>Run mixed rollout using a Bernoulli switch between teacher and student actions.</p></li>
+<li><p>Train the student only from online <code class="docutils literal notranslate"><span class="pre">(student_obs,</span> <span class="pre">teacher_mean_action)</span></code> pairs.</p></li>
+</ol>
+<p>This avoids copying tracking task logic while keeping all distillation code isolated.</p>
+</section>
+<section id="environment-composition">
+<h2>Environment Composition<a class="headerlink" href="#environment-composition" title="Link to this heading">#</a></h2>
+<section id="base-environment-source">
+<h3>Base environment source<a class="headerlink" href="#base-environment-source" title="Link to this heading">#</a></h3>
+<p>The distillation environment factory should call the tracking base environment factory and modify the returned configuration instead of re-declaring the tracking task.</p>
+<p>The following teacher-side components are reused directly from tracking:</p>
+<ul class="simple">
+<li><p>full multi-motion command source</p></li>
+<li><p>scene/entities/sensors</p></li>
+<li><p>actions</p></li>
+<li><p>events</p></li>
+<li><p>rewards</p></li>
+<li><p>terminations</p></li>
+<li><p>teacher actor observations</p></li>
+</ul>
+</section>
+<section id="observation-groups">
+<h3>Observation groups<a class="headerlink" href="#observation-groups" title="Link to this heading">#</a></h3>
+<p>The resulting environment should expose at least:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code>: original tracking actor observation group, reused without semantic changes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">student_actor</span></code>: sparse student observation group defined by the distillation task</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">critic</span></code>: retained only if needed for compatibility with existing wrappers; first-phase distillation does not train a critic</p></li>
+</ul>
+</section>
+</section>
+<section id="motion-command-reuse-and-sparse-extraction">
+<h2>Motion Command Reuse and Sparse Extraction<a class="headerlink" href="#motion-command-reuse-and-sparse-extraction" title="Link to this heading">#</a></h2>
+<section id="motion-command-source">
+<h3>Motion command source<a class="headerlink" href="#motion-command-source" title="Link to this heading">#</a></h3>
+<p>The distillation task should reuse the tracking multi-motion command implementation, specifically the existing multi-motion sampling logic. Distillation code should not duplicate motion file sampling, motion indexing, or adaptive sampling logic.</p>
+</section>
+<section id="sparse-command-extraction">
+<h3>Sparse command extraction<a class="headerlink" href="#sparse-command-extraction" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/mdp/commands.py</span></code> should only add sparse extractors on top of the existing motion term.</p>
+<p>The internal extractor interface should already accept <code class="docutils literal notranslate"><span class="pre">future_steps</span></code>, but first phase only supports:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">future_steps</span> <span class="pre">=</span> <span class="pre">(0,)</span></code></p></li>
+</ul>
+</section>
+<section id="student-command-definition">
+<h3>Student command definition<a class="headerlink" href="#student-command-definition" title="Link to this heading">#</a></h3>
+<p>The student command is split into four parts:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_height</span></code></p></li>
+</ol>
+<section id="ee-pose">
+<h4><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code><a class="headerlink" href="#ee-pose" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>two end effectors</p></li>
+<li><p>expressed relative to the anchor frame</p></li>
+<li><p>anchor is the tracking anchor body; for the first G1 variant this is expected to be the pelvis anchor used by the task configuration</p></li>
+<li><p>parameterization per end effector:</p>
+<ul>
+<li><p>position: 3</p></li>
+<li><p>rotation: 6D rotation representation</p></li>
+</ul>
+</li>
+<li><p>total dimension: <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(3</span> <span class="pre">+</span> <span class="pre">6)</span> <span class="pre">=</span> <span class="pre">18</span></code></p></li>
+</ul>
+</section>
+<section id="base-vel">
+<h4><code class="docutils literal notranslate"><span class="pre">base_vel</span></code><a class="headerlink" href="#base-vel" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>target base linear velocity</p></li>
+<li><p>expressed in world frame</p></li>
+<li><p>dimension: <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+</ul>
+</section>
+<section id="base-ang-vel">
+<h4><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code><a class="headerlink" href="#base-ang-vel" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>target base angular velocity</p></li>
+<li><p>expressed in world frame</p></li>
+<li><p>dimension: <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+</ul>
+</section>
+<section id="base-height">
+<h4><code class="docutils literal notranslate"><span class="pre">base_height</span></code><a class="headerlink" href="#base-height" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>target anchor height</p></li>
+<li><p>world-frame <code class="docutils literal notranslate"><span class="pre">z</span></code> scalar of the anchor</p></li>
+<li><p>dimension: <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+</ul>
+</section>
+<section id="single-frame-sparse-command-size">
+<h4>Single-frame sparse command size<a class="headerlink" href="#single-frame-sparse-command-size" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>total sparse command dimension: <code class="docutils literal notranslate"><span class="pre">18</span> <span class="pre">+</span> <span class="pre">3</span> <span class="pre">+</span> <span class="pre">3</span> <span class="pre">+</span> <span class="pre">1</span> <span class="pre">=</span> <span class="pre">25</span></code></p></li>
+</ul>
+</section>
+</section>
+</section>
+<section id="student-observations">
+<h2>Student Observations<a class="headerlink" href="#student-observations" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/mdp/observations.py</span></code> should define the student observation group as:</p>
+<section id="sparse-command-terms">
+<h3>Sparse command terms<a class="headerlink" href="#sparse-command-terms" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_lin_vel_w</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel_w</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">anchor_height_w</span></code></p></li>
+</ul>
+</section>
+<section id="fixed-proprioceptive-terms">
+<h3>Fixed proprioceptive terms<a class="headerlink" href="#fixed-proprioceptive-terms" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">projected_gravity</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_pos</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">actions</span></code></p></li>
+</ul>
+<p>These five proprioceptive terms are fixed for the first phase and should use the exact intended observation functions and corruption settings chosen for the student task.</p>
+</section>
+<section id="group-construction">
+<h3>Group construction<a class="headerlink" href="#group-construction" title="Link to this heading">#</a></h3>
+<p>Student observation construction should be modular even in the first phase:</p>
+<ul class="simple">
+<li><p>command terms builder</p></li>
+<li><p>proprio term builder</p></li>
+<li><p>student actor group builder</p></li>
+</ul>
+<p>This supports later ablations without rewriting the task.</p>
+</section>
+</section>
+<section id="termination-handling">
+<h2>Termination Handling<a class="headerlink" href="#termination-handling" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/mdp/terminations.py</span></code> should exist for package completeness, but first-phase behavior is simple:</p>
+<ul class="simple">
+<li><p>use the original tracking task termination behavior as-is</p></li>
+<li><p>do not add relaxed/minimal/custom distillation termination modes yet</p></li>
+</ul>
+<p>This means the distillation task should inherit the existing termination structure, including <code class="docutils literal notranslate"><span class="pre">time_out</span></code> and tracking-related failure criteria, without introducing phase-one divergence.</p>
+</section>
+<section id="teacher-integration">
+<h2>Teacher Integration<a class="headerlink" href="#teacher-integration" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/teacher.py</span></code> should provide a frozen teacher adapter.</p>
+<section id="responsibilities">
+<h3>Responsibilities<a class="headerlink" href="#responsibilities" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>load an existing <code class="docutils literal notranslate"><span class="pre">tracking_bfm</span></code> checkpoint</p></li>
+<li><p>restore the teacher policy on the target device</p></li>
+<li><p>restore any teacher observation normalization state required for inference</p></li>
+<li><p>expose a deterministic mean-action inference API</p></li>
+<li><p>keep teacher-side observation handling isolated from the runner</p></li>
+</ul>
+</section>
+<section id="required-behavior">
+<h3>Required behavior<a class="headerlink" href="#required-behavior" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>teacher observations are taken from <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code></p></li>
+<li><p>teacher action targets use deterministic mean action only</p></li>
+<li><p>teacher parameters are frozen</p></li>
+</ul>
+</section>
+</section>
+<section id="student-model">
+<h2>Student Model<a class="headerlink" href="#student-model" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/models.py</span></code> should host a student model registry.</p>
+<section id="first-phase-implementation">
+<h3>First-phase implementation<a class="headerlink" href="#first-phase-implementation" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>one MLP student policy</p></li>
+<li><p>configurable hidden dimensions and activation</p></li>
+<li><p>no critic</p></li>
+<li><p>no latent privileged branch</p></li>
+<li><p>no VAE</p></li>
+</ul>
+</section>
+<section id="design-intent">
+<h3>Design intent<a class="headerlink" href="#design-intent" title="Link to this heading">#</a></h3>
+<p>The model builder should make later network ablations easy without rewriting the runner or algorithm.</p>
+</section>
+</section>
+<section id="teacher-student-mixing-schedule">
+<h2>Teacher-Student Mixing Schedule<a class="headerlink" href="#teacher-student-mixing-schedule" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/schedules.py</span></code> should define the rollout mixing schedule.</p>
+<section id="first-phase-behavior">
+<h3>First-phase behavior<a class="headerlink" href="#first-phase-behavior" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Bernoulli switch between teacher and student action</p></li>
+<li><p>sampled per environment and per step</p></li>
+<li><p>teacher selection probability <code class="docutils literal notranslate"><span class="pre">beta(t)</span></code> decays during training</p></li>
+</ul>
+</section>
+<section id="initial-supported-schedule-family">
+<h3>Initial supported schedule family<a class="headerlink" href="#initial-supported-schedule-family" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>configurable decay schedule</p></li>
+<li><p>first implementation may choose a simple schedule such as linear or cosine decay</p></li>
+</ul>
+<p>The schedule API should return teacher probability as a pure function of training iteration.</p>
+</section>
+</section>
+<section id="distillation-algorithm">
+<h2>Distillation Algorithm<a class="headerlink" href="#distillation-algorithm" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/algorithm.py</span></code> should contain a pure online action distillation update.</p>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">student_obs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">teacher_action</span></code></p></li>
+</ul>
+</section>
+<section id="first-phase-loss">
+<h3>First-phase loss<a class="headerlink" href="#first-phase-loss" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>mean squared error between student action and teacher mean action</p></li>
+</ul>
+</section>
+<section id="explicit-non-goals-for-phase-one">
+<h3>Explicit non-goals for phase one<a class="headerlink" href="#explicit-non-goals-for-phase-one" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>PPO</p></li>
+<li><p>actor-critic loss</p></li>
+<li><p>KL-to-teacher policy distribution</p></li>
+<li><p>offline dataset distillation</p></li>
+<li><p>privileged student branch</p></li>
+<li><p>latent reconstruction losses</p></li>
+</ul>
+</section>
+</section>
+<section id="runner">
+<h2>Runner<a class="headerlink" href="#runner" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code> should implement the main training loop.</p>
+<section id="id1">
+<h3>Responsibilities<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>instantiate distillation env</p></li>
+<li><p>instantiate student model</p></li>
+<li><p>instantiate frozen teacher adapter</p></li>
+<li><p>instantiate teacher mixing schedule</p></li>
+<li><p>collect online rollout data</p></li>
+<li><p>execute mixed rollout action</p></li>
+<li><p>train student on buffered <code class="docutils literal notranslate"><span class="pre">(student_obs,</span> <span class="pre">teacher_action)</span></code> samples</p></li>
+<li><p>save checkpoints every fixed interval</p></li>
+<li><p>run periodic student-only evaluation</p></li>
+</ul>
+</section>
+<section id="per-step-rollout-logic">
+<h3>Per-step rollout logic<a class="headerlink" href="#per-step-rollout-logic" title="Link to this heading">#</a></h3>
+<p>For each environment step:</p>
+<ol class="arabic simple">
+<li><p>read <code class="docutils literal notranslate"><span class="pre">student_actor</span></code> observations</p></li>
+<li><p>read <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> observations</p></li>
+<li><p>compute <code class="docutils literal notranslate"><span class="pre">student_action</span></code></p></li>
+<li><p>compute <code class="docutils literal notranslate"><span class="pre">teacher_action</span></code></p></li>
+<li><p>compute current <code class="docutils literal notranslate"><span class="pre">beta</span></code></p></li>
+<li><p>sample Bernoulli teacher-selection mask</p></li>
+<li><p>choose <code class="docutils literal notranslate"><span class="pre">rollout_action</span></code> from teacher or student action</p></li>
+<li><p>step environment with <code class="docutils literal notranslate"><span class="pre">rollout_action</span></code></p></li>
+<li><p>store <code class="docutils literal notranslate"><span class="pre">student_obs</span></code> and <code class="docutils literal notranslate"><span class="pre">teacher_action</span></code> for supervised updates</p></li>
+</ol>
+</section>
+<section id="action-naming">
+<h3>Action naming<a class="headerlink" href="#action-naming" title="Link to this heading">#</a></h3>
+<p>The implementation should explicitly keep these tensors distinct:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">student_action</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">teacher_action</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rollout_action</span></code></p></li>
+</ul>
+<p>This avoids ambiguity in mixed-rollout training.</p>
+</section>
+</section>
+<section id="evaluation">
+<h2>Evaluation<a class="headerlink" href="#evaluation" title="Link to this heading">#</a></h2>
+<section id="training-time-evaluation">
+<h3>Training-time evaluation<a class="headerlink" href="#training-time-evaluation" title="Link to this heading">#</a></h3>
+<p>Phase one should use:</p>
+<ul class="simple">
+<li><p>normal training rollout logs for mixed-policy behavior</p></li>
+<li><p>periodic <code class="docutils literal notranslate"><span class="pre">student-only</span></code> evaluation for true student performance</p></li>
+</ul>
+</section>
+<section id="student-only-evaluation">
+<h3>Student-only evaluation<a class="headerlink" href="#student-only-evaluation" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>teacher disabled for action execution</p></li>
+<li><p>effectively <code class="docutils literal notranslate"><span class="pre">beta</span> <span class="pre">=</span> <span class="pre">0</span></code></p></li>
+<li><p>no parameter updates</p></li>
+<li><p>separate logging namespace</p></li>
+</ul>
+</section>
+<section id="initial-frequency">
+<h3>Initial frequency<a class="headerlink" href="#initial-frequency" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>every <code class="docutils literal notranslate"><span class="pre">1000</span></code> training iterations</p></li>
+</ul>
+</section>
+<section id="initial-scale">
+<h3>Initial scale<a class="headerlink" href="#initial-scale" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>smaller evaluation workload than training</p></li>
+<li><p>target size around one quarter of training environment count</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">8</span></code> to <code class="docutils literal notranslate"><span class="pre">16</span></code> episodes per evaluation pass</p></li>
+</ul>
+</section>
+</section>
+<section id="logging-and-metrics">
+<h2>Logging and Metrics<a class="headerlink" href="#logging-and-metrics" title="Link to this heading">#</a></h2>
+<p>Distillation metrics are added on top of the original environment metrics; they do not replace existing task metrics.</p>
+<section id="keep-existing-environment-metrics">
+<h3>Keep existing environment metrics<a class="headerlink" href="#keep-existing-environment-metrics" title="Link to this heading">#</a></h3>
+<p>Tracking/environment metrics already produced by the underlying task should remain visible.</p>
+</section>
+<section id="add-first-phase-distillation-metrics">
+<h3>Add first-phase distillation metrics<a class="headerlink" href="#add-first-phase-distillation-metrics" title="Link to this heading">#</a></h3>
+<p>Training-time:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/distill/action_mse</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/distill/beta_teacher</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/distill/teacher_action_ratio</span></code></p></li>
+</ul>
+<p>Student-only evaluation:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EvalStudent/env/return</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EvalStudent/env/episode_len</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EvalStudent/env/anchor_pos_err</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EvalStudent/env/termination_breakdown/*</span></code></p></li>
+</ul>
+<p>These are the minimum first-phase metrics for debugging progress and verifying that decreasing teacher usage does not mask poor student quality.</p>
+</section>
+</section>
+<section id="checkpoint-policy">
+<h2>Checkpoint Policy<a class="headerlink" href="#checkpoint-policy" title="Link to this heading">#</a></h2>
+<p>Phase one uses a simple fixed save policy:</p>
+<ul class="simple">
+<li><p>no best-checkpoint selection</p></li>
+<li><p>save every <code class="docutils literal notranslate"><span class="pre">500</span></code> training iterations</p></li>
+</ul>
+<p>Student-only evaluation is used for monitoring, not for checkpoint selection.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
+<section id="config-g1-env-cfgs-py">
+<h3><code class="docutils literal notranslate"><span class="pre">config/g1/env_cfgs.py</span></code><a class="headerlink" href="#config-g1-env-cfgs-py" title="Link to this heading">#</a></h3>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p>create/register the G1 distillation task</p></li>
+<li><p>compose distillation config from tracking base config</p></li>
+<li><p>set robot-specific student command extraction details if needed</p></li>
+</ul>
+</section>
+<section id="config-g1-rl-cfg-py">
+<h3><code class="docutils literal notranslate"><span class="pre">config/g1/rl_cfg.py</span></code><a class="headerlink" href="#config-g1-rl-cfg-py" title="Link to this heading">#</a></h3>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p>teacher checkpoint path/config</p></li>
+<li><p>student model hyperparameters</p></li>
+<li><p>rollout mixing schedule hyperparameters</p></li>
+<li><p>optimizer/training hyperparameters</p></li>
+<li><p>evaluation interval</p></li>
+<li><p>save interval</p></li>
+</ul>
+</section>
+</section>
+<section id="unit-test-plan">
+<h2>Unit Test Plan<a class="headerlink" href="#unit-test-plan" title="Link to this heading">#</a></h2>
+<p>First-phase tests should focus on correctness of modular components rather than long training runs.</p>
+<section id="required-tests">
+<h3>Required tests<a class="headerlink" href="#required-tests" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">test_distillation_task_loads</span></code></p>
+<ul class="simple">
+<li><p>task config can be constructed and registered</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_sparse_command_extractor_single_frame</span></code></p>
+<ul class="simple">
+<li><p>sparse extractor returns expected dimensions and semantics for single-frame extraction</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_student_observation_group_terms</span></code></p>
+<ul class="simple">
+<li><p>student observation group contains exactly the intended sparse-command and proprio terms</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_teacher_mean_action_path</span></code></p>
+<ul class="simple">
+<li><p>teacher adapter uses deterministic mean action path</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_beta_schedule_decay</span></code></p>
+<ul class="simple">
+<li><p>teacher probability schedule decays correctly and respects configured bounds</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_mixed_rollout_selector</span></code></p>
+<ul class="simple">
+<li><p>Bernoulli action selection behaves correctly at <code class="docutils literal notranslate"><span class="pre">beta=0</span></code>, <code class="docutils literal notranslate"><span class="pre">beta=1</span></code>, and intermediate values</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_distillation_runner_one_iteration_smoke</span></code></p>
+<ul class="simple">
+<li><p>one short train iteration can execute end-to-end without crashing</p></li>
+</ul>
+</li>
+</ol>
+</section>
+</section>
+<section id="out-of-scope-for-phase-one">
+<h2>Out of Scope for Phase One<a class="headerlink" href="#out-of-scope-for-phase-one" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>future-horizon sparse command training</p></li>
+<li><p>PPO + distillation joint training</p></li>
+<li><p>VAE / masked mimic style latent modeling</p></li>
+<li><p>custom termination modes for distillation</p></li>
+<li><p>best-checkpoint selection</p></li>
+<li><p>offline data generation pipeline</p></li>
+<li><p>action blending between teacher and student</p></li>
+</ul>
+</section>
+<section id="acceptance-criteria">
+<h2>Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Link to this heading">#</a></h2>
+<p>Phase one is considered complete when:</p>
+<ul class="simple">
+<li><p>a standalone distillation task exists under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation</span></code></p></li>
+<li><p>the task reuses tracking multi-motion commands and teacher observations without copying teacher semantics</p></li>
+<li><p>a frozen tracking teacher checkpoint can supervise a sparse-observation student</p></li>
+<li><p>mixed rollout with decaying teacher probability runs end-to-end</p></li>
+<li><p>student-only evaluation runs periodically during training</p></li>
+<li><p>checkpoints are saved every <code class="docutils literal notranslate"><span class="pre">500</span></code> iterations</p></li>
+<li><p>the planned unit tests pass</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-principles">Design Principles</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#package-layout">Package Layout</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#high-level-architecture">High-Level Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#environment-composition">Environment Composition</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-environment-source">Base environment source</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-groups">Observation groups</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-command-reuse-and-sparse-extraction">Motion Command Reuse and Sparse Extraction</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-command-source">Motion command source</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sparse-command-extraction">Sparse command extraction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#student-command-definition">Student command definition</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ee-pose"><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-vel"><code class="docutils literal notranslate"><span class="pre">base_vel</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-ang-vel"><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#base-height"><code class="docutils literal notranslate"><span class="pre">base_height</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#single-frame-sparse-command-size">Single-frame sparse command size</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#student-observations">Student Observations</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sparse-command-terms">Sparse command terms</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed-proprioceptive-terms">Fixed proprioceptive terms</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#group-construction">Group construction</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#termination-handling">Termination Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-integration">Teacher Integration</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#responsibilities">Responsibilities</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-behavior">Required behavior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#student-model">Student Model</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-implementation">First-phase implementation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#design-intent">Design intent</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-student-mixing-schedule">Teacher-Student Mixing Schedule</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-behavior">First-phase behavior</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-supported-schedule-family">Initial supported schedule family</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#distillation-algorithm">Distillation Algorithm</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inputs">Inputs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-loss">First-phase loss</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#explicit-non-goals-for-phase-one">Explicit non-goals for phase one</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runner">Runner</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Responsibilities</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#per-step-rollout-logic">Per-step rollout logic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#action-naming">Action naming</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluation">Evaluation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#training-time-evaluation">Training-time evaluation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#student-only-evaluation">Student-only evaluation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-frequency">Initial frequency</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-scale">Initial scale</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#logging-and-metrics">Logging and Metrics</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#keep-existing-environment-metrics">Keep existing environment metrics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#add-first-phase-distillation-metrics">Add first-phase distillation metrics</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-policy">Checkpoint Policy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-g1-env-cfgs-py"><code class="docutils literal notranslate"><span class="pre">config/g1/env_cfgs.py</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-g1-rl-cfg-py"><code class="docutils literal notranslate"><span class="pre">config/g1/rl_cfg.py</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unit-test-plan">Unit Test Plan</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-tests">Required tests</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#out-of-scope-for-phase-one">Out of Scope for Phase One</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance-criteria">Acceptance Criteria</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Apr 23, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

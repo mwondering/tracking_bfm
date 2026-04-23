@@ -1,0 +1,990 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Distillation Student Play Visualization Design &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-04-23-distillation-student-play-design';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Apr 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-04-23-distillation-student-play-design.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-04-23-distillation-student-play-design.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-04-23-distillation-student-play-design.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/specs/2026-04-23-distillation-student-play-design.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Distillation Student Play Visualization Design</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#recommendation">Recommendation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#alternatives-considered">Alternatives Considered</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-add-teacher-student-visualization-branches-directly-in-play-py">Option 1: Add teacher/student visualization branches directly in <code class="docutils literal notranslate"><span class="pre">play.py</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-reuse-play-py-and-implement-student-visualization-inside-the-distillation-task">Option 2: Reuse <code class="docutils literal notranslate"><span class="pre">play.py</span></code> and implement student visualization inside the distillation task</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3-create-a-new-play-distillation-student-py">Option 3: Create a new <code class="docutils literal notranslate"><span class="pre">play_distillation_student.py</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision">Decision</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-architecture">Existing Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#high-level-design">High-Level Design</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entry-point">Entry point</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-local-visualization">Task-local visualization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-source">Motion source</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-content">Visualization Content</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#end-effector-reference-points">1. End-effector reference points</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-linear-velocity-reference">2. Base linear velocity reference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-angular-velocity-reference">3. Base angular velocity reference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-height-reference">4. Base height reference</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-will-not-be-rendered">What Will Not Be Rendered</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-structure-inside-distillation-mdp-commands-py">Module Structure Inside <code class="docutils literal notranslate"><span class="pre">distillation/mdp/commands.py</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-1-sparse-reference-extraction-helpers">Layer 1: sparse reference extraction helpers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-2-visualization-primitive-helpers">Layer 2: visualization primitive helpers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-3-command-level-visualization-entrypoint">Layer 3: command-level visualization entrypoint</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-with-play-mode">Integration With Play Mode</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-constraints">Design Constraints</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#keep-play-py-generic">Keep <code class="docutils literal notranslate"><span class="pre">play.py</span></code> generic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-not-derive-visualization-from-student-observations">Do not derive visualization from student observations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-not-fork-the-tracking-motion-command">Do not fork the tracking motion command</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing-strategy">Testing Strategy</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#extraction-tests">Extraction tests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-dispatch-tests">Visualization dispatch tests</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-non-goals">First-Phase Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance-criteria">Acceptance Criteria</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="distillation-student-play-visualization-design">
+<h1>Distillation Student Play Visualization Design<a class="headerlink" href="#distillation-student-play-visualization-design" title="Link to this heading">#</a></h1>
+<p><strong>Date:</strong> 2026-04-23</p>
+<p><strong>Status:</strong> Proposed</p>
+<p><strong>Scope:</strong> Add student-oriented play visualization for the distillation task while reusing the existing <code class="docutils literal notranslate"><span class="pre">play.py</span></code> entrypoint and viewer infrastructure.</p>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
+<p>Enable playing distilled student checkpoints with a visualization that matches the sparse student command semantics instead of the full motion-tracking reference visualization.</p>
+<p>The new student play mode should:</p>
+<ul class="simple">
+<li><p>reuse the existing <code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/play.py</span></code> command entrypoint</p></li>
+<li><p>keep checkpoint loading, viewer selection, and video recording behavior unchanged</p></li>
+<li><p>avoid rendering the full reference motion ghost or full body frames</p></li>
+<li><p>render only sparse student reference signals:</p>
+<ul>
+<li><p>end-effector reference points</p></li>
+<li><p>base linear velocity arrow</p></li>
+<li><p>base angular velocity arrow</p></li>
+<li><p>base height indicator</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="recommendation">
+<h2>Recommendation<a class="headerlink" href="#recommendation" title="Link to this heading">#</a></h2>
+<p>Reuse the current <code class="docutils literal notranslate"><span class="pre">play.py</span></code> entrypoint and implement task-specific visualization inside the distillation task.</p>
+<p>Do <strong>not</strong> create a new standalone student play script.</p>
+</section>
+<section id="alternatives-considered">
+<h2>Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Link to this heading">#</a></h2>
+<section id="option-1-add-teacher-student-visualization-branches-directly-in-play-py">
+<h3>Option 1: Add teacher/student visualization branches directly in <code class="docutils literal notranslate"><span class="pre">play.py</span></code><a class="headerlink" href="#option-1-add-teacher-student-visualization-branches-directly-in-play-py" title="Link to this heading">#</a></h3>
+<p>This would centralize the logic in one script but would make <code class="docutils literal notranslate"><span class="pre">play.py</span></code> aware of task-specific rendering details. It would couple generic play flow with per-task visualization semantics and would become harder to extend.</p>
+</section>
+<section id="option-2-reuse-play-py-and-implement-student-visualization-inside-the-distillation-task">
+<h3>Option 2: Reuse <code class="docutils literal notranslate"><span class="pre">play.py</span></code> and implement student visualization inside the distillation task<a class="headerlink" href="#option-2-reuse-play-py-and-implement-student-visualization-inside-the-distillation-task" title="Link to this heading">#</a></h3>
+<p>This keeps <code class="docutils literal notranslate"><span class="pre">play.py</span></code> generic and lets each task define its own debug visualization. It matches the current tracking architecture, where reference-motion visualization is already defined inside the command implementation rather than the play script.</p>
+</section>
+<section id="option-3-create-a-new-play-distillation-student-py">
+<h3>Option 3: Create a new <code class="docutils literal notranslate"><span class="pre">play_distillation_student.py</span></code><a class="headerlink" href="#option-3-create-a-new-play-distillation-student-py" title="Link to this heading">#</a></h3>
+<p>This would isolate student play completely, but it would duplicate checkpoint loading, viewer setup, and future play-related fixes. It has the highest long-term maintenance cost.</p>
+</section>
+</section>
+<section id="decision">
+<h2>Decision<a class="headerlink" href="#decision" title="Link to this heading">#</a></h2>
+<p>Choose <strong>Option 2</strong>.</p>
+<p>The distillation task should own its student-specific visualization behavior. <code class="docutils literal notranslate"><span class="pre">play.py</span></code> should remain a general policy playback tool.</p>
+</section>
+<section id="existing-architecture">
+<h2>Existing Architecture<a class="headerlink" href="#existing-architecture" title="Link to this heading">#</a></h2>
+<p>Current tracking play works as follows:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/play.py</span></code> loads the task config, checkpoint, and viewer</p></li>
+<li><p>tracking reference visualization is defined inside the tracking motion command implementation</p></li>
+<li><p>the command implementation uses <code class="docutils literal notranslate"><span class="pre">DebugVisualizer</span></code> hooks such as <code class="docutils literal notranslate"><span class="pre">_debug_vis_impl()</span></code></p></li>
+</ul>
+<p>Relevant current files:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/play.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/commands.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/viewer/debug_visualizer.py</span></code></p></li>
+</ul>
+<p>This means the correct extension point is the distillation task’s command/debug-vis layer, not the generic play script.</p>
+</section>
+<section id="high-level-design">
+<h2>High-Level Design<a class="headerlink" href="#high-level-design" title="Link to this heading">#</a></h2>
+<section id="entry-point">
+<h3>Entry point<a class="headerlink" href="#entry-point" title="Link to this heading">#</a></h3>
+<p>Continue using:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/play.py</span></code></p></li>
+</ul>
+<p>No dedicated student play script will be added in the first phase.</p>
+</section>
+<section id="task-local-visualization">
+<h3>Task-local visualization<a class="headerlink" href="#task-local-visualization" title="Link to this heading">#</a></h3>
+<p>Student play visualization should live under:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/mdp/commands.py</span></code></p></li>
+</ul>
+<p>This module will provide task-local logic for:</p>
+<ul class="simple">
+<li><p>extracting student sparse reference signals from the existing motion command</p></li>
+<li><p>drawing those signals through <code class="docutils literal notranslate"><span class="pre">DebugVisualizer</span></code></p></li>
+</ul>
+</section>
+<section id="motion-source">
+<h3>Motion source<a class="headerlink" href="#motion-source" title="Link to this heading">#</a></h3>
+<p>The distillation task should continue reusing the tracking motion command as the source of truth for motion data. The student visualization must <strong>not</strong> duplicate motion sampling, motion indexing, or time-step progression logic.</p>
+</section>
+</section>
+<section id="visualization-content">
+<h2>Visualization Content<a class="headerlink" href="#visualization-content" title="Link to this heading">#</a></h2>
+<p>The first phase should render only the following sparse reference signals.</p>
+<section id="end-effector-reference-points">
+<h3>1. End-effector reference points<a class="headerlink" href="#end-effector-reference-points" title="Link to this heading">#</a></h3>
+<p>Render two spheres:</p>
+<ul class="simple">
+<li><p>left end effector reference point</p></li>
+<li><p>right end effector reference point</p></li>
+</ul>
+<p>Properties:</p>
+<ul class="simple">
+<li><p>world-frame positions derived from the current reference motion</p></li>
+<li><p>no orientation frame in the first phase</p></li>
+<li><p>distinct left/right colors</p></li>
+<li><p>labels per environment, for example:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">student_ref_left_ee_{env}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">student_ref_right_ee_{env}</span></code></p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="base-linear-velocity-reference">
+<h3>2. Base linear velocity reference<a class="headerlink" href="#base-linear-velocity-reference" title="Link to this heading">#</a></h3>
+<p>Render one arrow:</p>
+<ul class="simple">
+<li><p>start: anchor world position</p></li>
+<li><p>end: <code class="docutils literal notranslate"><span class="pre">anchor_pos</span> <span class="pre">+</span> <span class="pre">base_lin_vel_w</span> <span class="pre">*</span> <span class="pre">lin_vel_scale</span></code></p></li>
+</ul>
+<p>Properties:</p>
+<ul class="simple">
+<li><p>world-frame direction</p></li>
+<li><p>single dedicated color</p></li>
+<li><p>first phase uses a fixed scale constant</p></li>
+</ul>
+</section>
+<section id="base-angular-velocity-reference">
+<h3>3. Base angular velocity reference<a class="headerlink" href="#base-angular-velocity-reference" title="Link to this heading">#</a></h3>
+<p>Render one arrow:</p>
+<ul class="simple">
+<li><p>start: anchor world position</p></li>
+<li><p>end: <code class="docutils literal notranslate"><span class="pre">anchor_pos</span> <span class="pre">+</span> <span class="pre">base_ang_vel_w</span> <span class="pre">*</span> <span class="pre">ang_vel_scale</span></code></p></li>
+</ul>
+<p>Properties:</p>
+<ul class="simple">
+<li><p>world-frame direction</p></li>
+<li><p>single dedicated color distinct from linear velocity</p></li>
+<li><p>treated as a directional magnitude cue, not a richer rotational visualization</p></li>
+</ul>
+</section>
+<section id="base-height-reference">
+<h3>4. Base height reference<a class="headerlink" href="#base-height-reference" title="Link to this heading">#</a></h3>
+<p>Render one vertical height indicator:</p>
+<ul class="simple">
+<li><p>start: <code class="docutils literal notranslate"><span class="pre">(anchor_x,</span> <span class="pre">anchor_y,</span> <span class="pre">0)</span></code></p></li>
+<li><p>end: <code class="docutils literal notranslate"><span class="pre">(anchor_x,</span> <span class="pre">anchor_y,</span> <span class="pre">anchor_z)</span></code></p></li>
+</ul>
+<p>Representation:</p>
+<ul class="simple">
+<li><p>cylinder in the first phase</p></li>
+</ul>
+<p>Reasoning:</p>
+<ul class="simple">
+<li><p>it expresses height as a scalar more clearly than another arrow</p></li>
+</ul>
+</section>
+</section>
+<section id="what-will-not-be-rendered">
+<h2>What Will Not Be Rendered<a class="headerlink" href="#what-will-not-be-rendered" title="Link to this heading">#</a></h2>
+<p>The first phase student play visualization should <strong>not</strong> render:</p>
+<ul class="simple">
+<li><p>full-body desired frames</p></li>
+<li><p>full-body ghost mesh</p></li>
+<li><p>desired anchor frame</p></li>
+<li><p>end-effector orientation frames</p></li>
+<li><p>full motion command visualization from tracking play</p></li>
+</ul>
+<p>This keeps the display aligned with the sparse student command and avoids clutter.</p>
+</section>
+<section id="module-structure-inside-distillation-mdp-commands-py">
+<h2>Module Structure Inside <code class="docutils literal notranslate"><span class="pre">distillation/mdp/commands.py</span></code><a class="headerlink" href="#module-structure-inside-distillation-mdp-commands-py" title="Link to this heading">#</a></h2>
+<p>The implementation should be split into three layers.</p>
+<section id="layer-1-sparse-reference-extraction-helpers">
+<h3>Layer 1: sparse reference extraction helpers<a class="headerlink" href="#layer-1-sparse-reference-extraction-helpers" title="Link to this heading">#</a></h3>
+<p>These functions return numeric reference values only and do not draw.</p>
+<p>Suggested functions:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_student_ee_reference(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_student_base_lin_vel_reference(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_student_base_ang_vel_reference(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_student_base_height_reference(...)</span></code></p></li>
+</ul>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p>read the current tracking motion command term</p></li>
+<li><p>derive the current sparse reference values</p></li>
+<li><p>return world-frame values suitable for visualization</p></li>
+</ul>
+</section>
+<section id="layer-2-visualization-primitive-helpers">
+<h3>Layer 2: visualization primitive helpers<a class="headerlink" href="#layer-2-visualization-primitive-helpers" title="Link to this heading">#</a></h3>
+<p>These functions convert extracted values into viewer primitives.</p>
+<p>Suggested functions:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">draw_student_ee_reference(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">draw_student_base_velocity_reference(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">draw_student_base_height_reference(...)</span></code></p></li>
+</ul>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p>call <code class="docutils literal notranslate"><span class="pre">DebugVisualizer.add_sphere</span></code></p></li>
+<li><p>call <code class="docutils literal notranslate"><span class="pre">DebugVisualizer.add_arrow</span></code></p></li>
+<li><p>call <code class="docutils literal notranslate"><span class="pre">DebugVisualizer.add_cylinder</span></code></p></li>
+</ul>
+</section>
+<section id="layer-3-command-level-visualization-entrypoint">
+<h3>Layer 3: command-level visualization entrypoint<a class="headerlink" href="#layer-3-command-level-visualization-entrypoint" title="Link to this heading">#</a></h3>
+<p>Suggested entrypoint:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">debug_vis_student_sparse_command(...)</span></code></p></li>
+</ul>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p>resolve the active command term</p></li>
+<li><p>iterate over the environment indices selected by the viewer</p></li>
+<li><p>call the extraction and drawing helpers in a fixed order</p></li>
+</ul>
+</section>
+</section>
+<section id="integration-with-play-mode">
+<h2>Integration With Play Mode<a class="headerlink" href="#integration-with-play-mode" title="Link to this heading">#</a></h2>
+<p>The distillation task should activate student sparse visualization in its own play configuration.</p>
+<p>Recommended integration approach:</p>
+<ul class="simple">
+<li><p>keep <code class="docutils literal notranslate"><span class="pre">play.py</span></code> unchanged or nearly unchanged</p></li>
+<li><p>configure the distillation task’s play environment to use student sparse visualization instead of the tracking full reference visualization</p></li>
+</ul>
+<p>This should be done in the distillation task package, not in the global play script.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
+<p>Only a small set of first-phase configuration values should be introduced.</p>
+<p>Suggested configurable values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ee_body_names</span></code></p>
+<ul>
+<li><p>default: <code class="docutils literal notranslate"><span class="pre">(&quot;left_wrist_yaw_link&quot;,</span> <span class="pre">&quot;right_wrist_yaw_link&quot;)</span></code></p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lin_vel_scale</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ang_vel_scale</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ee_sphere_radius</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">height_radius</span></code></p></li>
+</ul>
+<p>The anchor body should continue to come from the existing command configuration rather than being redefined separately.</p>
+<p>First-phase colors may remain hard-coded.</p>
+</section>
+<section id="data-flow">
+<h2>Data Flow<a class="headerlink" href="#data-flow" title="Link to this heading">#</a></h2>
+<p>At each play update:</p>
+<ol class="arabic simple">
+<li><p>the existing motion command provides the current reference motion state</p></li>
+<li><p>the distillation visualization helper extracts sparse student reference values from that state</p></li>
+<li><p>the helper emits a small set of debug primitives through <code class="docutils literal notranslate"><span class="pre">DebugVisualizer</span></code></p></li>
+<li><p>the active viewer renders those primitives</p></li>
+</ol>
+<p>This keeps the visualization dependent on the current motion truth source without depending on student observation tensors or replaying sparse observations directly.</p>
+</section>
+<section id="design-constraints">
+<h2>Design Constraints<a class="headerlink" href="#design-constraints" title="Link to this heading">#</a></h2>
+<section id="keep-play-py-generic">
+<h3>Keep <code class="docutils literal notranslate"><span class="pre">play.py</span></code> generic<a class="headerlink" href="#keep-play-py-generic" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">play.py</span></code> should not know what sparse student references are.</p>
+<p>It should continue to do only generic responsibilities:</p>
+<ul class="simple">
+<li><p>load config</p></li>
+<li><p>resolve checkpoint</p></li>
+<li><p>instantiate runner/policy</p></li>
+<li><p>run viewer</p></li>
+</ul>
+</section>
+<section id="do-not-derive-visualization-from-student-observations">
+<h3>Do not derive visualization from student observations<a class="headerlink" href="#do-not-derive-visualization-from-student-observations" title="Link to this heading">#</a></h3>
+<p>The visualization should read from the command truth source, not from the student observation tensor. This avoids coupling visualization behavior to observation packing/layout.</p>
+</section>
+<section id="do-not-fork-the-tracking-motion-command">
+<h3>Do not fork the tracking motion command<a class="headerlink" href="#do-not-fork-the-tracking-motion-command" title="Link to this heading">#</a></h3>
+<p>The motion command remains the teacher/reference truth source. Student visualization is only a thin adapter layered on top.</p>
+</section>
+</section>
+<section id="testing-strategy">
+<h2>Testing Strategy<a class="headerlink" href="#testing-strategy" title="Link to this heading">#</a></h2>
+<p>The first phase should add lightweight tests instead of viewer integration tests.</p>
+<section id="extraction-tests">
+<h3>Extraction tests<a class="headerlink" href="#extraction-tests" title="Link to this heading">#</a></h3>
+<p>Use mock command data to verify:</p>
+<ul class="simple">
+<li><p>left and right end-effector world positions are extracted correctly</p></li>
+<li><p>base linear velocity reference is correct</p></li>
+<li><p>base angular velocity reference is correct</p></li>
+<li><p>base height reference is correct</p></li>
+</ul>
+</section>
+<section id="visualization-dispatch-tests">
+<h3>Visualization dispatch tests<a class="headerlink" href="#visualization-dispatch-tests" title="Link to this heading">#</a></h3>
+<p>Use a mock <code class="docutils literal notranslate"><span class="pre">DebugVisualizer</span></code> to verify:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">add_sphere</span></code> is called twice</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_arrow</span></code> is called twice</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_cylinder</span></code> is called once</p></li>
+</ul>
+<p>These tests should validate primitive counts and basic label/routing behavior without requiring a full viewer session.</p>
+</section>
+</section>
+<section id="first-phase-non-goals">
+<h2>First-Phase Non-Goals<a class="headerlink" href="#first-phase-non-goals" title="Link to this heading">#</a></h2>
+<p>The following are explicitly out of scope:</p>
+<ul class="simple">
+<li><p>runtime GUI switching between teacher and student visualization modes</p></li>
+<li><p>rendering both full teacher reference and sparse student reference simultaneously</p></li>
+<li><p>a standalone <code class="docutils literal notranslate"><span class="pre">play_distillation_student.py</span></code> script</p></li>
+<li><p>end-effector orientation frame rendering</p></li>
+<li><p>advanced angular velocity visualization beyond a simple arrow cue</p></li>
+</ul>
+</section>
+<section id="acceptance-criteria">
+<h2>Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Link to this heading">#</a></h2>
+<p>The first implementation phase is complete when:</p>
+<ul class="simple">
+<li><p>a distilled student checkpoint can be played through the existing <code class="docutils literal notranslate"><span class="pre">play.py</span></code> entrypoint</p></li>
+<li><p>the distillation task no longer shows the full tracking reference visualization during play</p></li>
+<li><p>the viewer shows:</p>
+<ul>
+<li><p>two end-effector reference spheres</p></li>
+<li><p>one base linear velocity arrow</p></li>
+<li><p>one base angular velocity arrow</p></li>
+<li><p>one base height indicator</p></li>
+</ul>
+</li>
+<li><p>the student play visualization is implemented inside the distillation task rather than the generic play script</p></li>
+<li><p>extraction and visualization dispatch tests pass</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#recommendation">Recommendation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#alternatives-considered">Alternatives Considered</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-add-teacher-student-visualization-branches-directly-in-play-py">Option 1: Add teacher/student visualization branches directly in <code class="docutils literal notranslate"><span class="pre">play.py</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-reuse-play-py-and-implement-student-visualization-inside-the-distillation-task">Option 2: Reuse <code class="docutils literal notranslate"><span class="pre">play.py</span></code> and implement student visualization inside the distillation task</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3-create-a-new-play-distillation-student-py">Option 3: Create a new <code class="docutils literal notranslate"><span class="pre">play_distillation_student.py</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision">Decision</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-architecture">Existing Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#high-level-design">High-Level Design</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entry-point">Entry point</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-local-visualization">Task-local visualization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-source">Motion source</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-content">Visualization Content</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#end-effector-reference-points">1. End-effector reference points</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-linear-velocity-reference">2. Base linear velocity reference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-angular-velocity-reference">3. Base angular velocity reference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#base-height-reference">4. Base height reference</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-will-not-be-rendered">What Will Not Be Rendered</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-structure-inside-distillation-mdp-commands-py">Module Structure Inside <code class="docutils literal notranslate"><span class="pre">distillation/mdp/commands.py</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-1-sparse-reference-extraction-helpers">Layer 1: sparse reference extraction helpers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-2-visualization-primitive-helpers">Layer 2: visualization primitive helpers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#layer-3-command-level-visualization-entrypoint">Layer 3: command-level visualization entrypoint</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-with-play-mode">Integration With Play Mode</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-constraints">Design Constraints</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#keep-play-py-generic">Keep <code class="docutils literal notranslate"><span class="pre">play.py</span></code> generic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-not-derive-visualization-from-student-observations">Do not derive visualization from student observations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#do-not-fork-the-tracking-motion-command">Do not fork the tracking motion command</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing-strategy">Testing Strategy</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#extraction-tests">Extraction tests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-dispatch-tests">Visualization dispatch tests</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#first-phase-non-goals">First-Phase Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance-criteria">Acceptance Criteria</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Apr 23, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
