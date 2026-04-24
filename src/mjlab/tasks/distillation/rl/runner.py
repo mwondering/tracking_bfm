@@ -207,6 +207,7 @@ class DistillationRunner:
           next_obs, rewards, dones, extras = self.env.step(
             rollout_actions.to(self.env.device)
           )
+
           next_obs = next_obs.to(self.device)
           rewards = rewards.to(self.device)
           dones = dones.to(self.device)

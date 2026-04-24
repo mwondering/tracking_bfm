@@ -16,6 +16,8 @@ class StudentCommandConfig:
   command_name: str = "motion"
   ee_body_names: tuple[str, str] = ("left_wrist_yaw_link", "right_wrist_yaw_link")
   anchor_body_name: str = "pelvis"
+  history_steps: int = 0
+  future_steps: int = 1
 
 
 def make_distillation_env_cfg(play: bool = False):
@@ -29,6 +31,8 @@ def make_distillation_env_cfg(play: bool = False):
       command_name=student_command_cfg.command_name,
       ee_body_names=student_command_cfg.ee_body_names,
       anchor_body_name=student_command_cfg.anchor_body_name,
+      history_steps=student_command_cfg.history_steps,
+      future_steps=student_command_cfg.future_steps,
     ),
     concatenate_terms=True,
     enable_corruption=not play,

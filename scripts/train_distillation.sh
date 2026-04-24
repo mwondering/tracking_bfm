@@ -14,7 +14,10 @@ NUM_ENVS="${NUM_ENVS:-1024}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NUM_STEPS_PER_ENV="${NUM_STEPS_PER_ENV:-24}"
 SAVE_INTERVAL="${SAVE_INTERVAL:-500}"
-BETA_DECAY_STEPS="${BETA_DECAY_STEPS:-2000}"
+BETA_DECAY_STEPS="${BETA_DECAY_STEPS:-1}"
+STUDENT_HISTORY_STEPS="${STUDENT_HISTORY_STEPS:-5}"
+STUDENT_FUTURE_STEPS="${STUDENT_FUTURE_STEPS:-6}"
+STUDENT_ROBOT_HISTORY_STEPS="${STUDENT_ROBOT_HISTORY_STEPS:-20}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_distillation}"
 RUN_NAME="${RUN_NAME:-distill_mlp_mixed}"
 
@@ -22,6 +25,19 @@ uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
     --env.scene.num-envs "$NUM_ENVS" \
     --env.commands.motion.sampling-mode uniform \
+    --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.anchor_height_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.anchor_height_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.projected_gravity.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.joint_pos.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.joint_vel.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.actions.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
     --env.commands.motion.adaptive_pre_failure_sample_window_steps 200 \
     --agent.teacher_checkpoint_path "$TEACHER_CKPT" \
     --agent.max_iterations "$MAX_ITERATIONS" \

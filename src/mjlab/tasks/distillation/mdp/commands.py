@@ -50,27 +50,93 @@ def _extract_current_step_velocity(command, values: torch.Tensor) -> torch.Tenso
   return values.reshape(values.shape[0], num_steps_total, 3)[:, history_steps, :]
 
 
+def _get_student_command_offsets(
+  history_steps: int,
+  future_steps: int,
+  device: torch.device | str,
+) -> torch.Tensor:
+  history_steps = int(history_steps)
+  future_steps = int(future_steps)
+  if history_steps < 0:
+    raise ValueError(f"history_steps must be non-negative, got {history_steps}")
+  if future_steps < 1:
+    raise ValueError(f"future_steps must be at least 1, got {future_steps}")
+
+  offsets = list(range(-history_steps, 0))
+  offsets.append(0)
+  offsets.extend(range(1, future_steps))
+  return torch.tensor(offsets, device=device, dtype=torch.long)
+
+
+def _gather_student_body_field(
+  command,
+  field_name: str,
+  history_steps: int,
+  future_steps: int,
+) -> torch.Tensor:
+  if int(history_steps) == 0 and int(future_steps) == 1:
+    values = getattr(command, field_name)
+    return values.unsqueeze(1)
+
+  if not hasattr(command, "_gather_motion_field") or not hasattr(command, "motion_idx"):
+    raise NotImplementedError(
+      "Student multi-step command observations require a motion command that "
+      "supports reference field gathering."
+    )
+  if not hasattr(command, "time_steps"):
+    raise NotImplementedError(
+      "Student multi-step command observations require a motion command that "
+      "tracks per-env reference time steps."
+    )
+
+  offsets = _get_student_command_offsets(
+    history_steps,
+    future_steps,
+    device=command.time_steps.device,
+  )
+  reference_time_steps = command.time_steps.unsqueeze(1) + offsets.unsqueeze(0)
+  values = command._gather_motion_field(field_name, command.motion_idx, reference_time_steps)
+  if field_name == "body_pos_w":
+    values = values + command._env.scene.env_origins[:, None, None, :]
+  return values
+
+
 def student_ee_pose_b(
   env: ManagerBasedRlEnv,
   command_name: str,
   ee_body_names: tuple[str, str],
   anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
 ) -> torch.Tensor:
   command = _get_command(env, command_name)
   body_indexes = _get_body_indexes(command, ee_body_names)
   anchor_body_index = _get_body_index(command, anchor_body_name)
-
-  anchor_pos = command.body_pos_w[:, anchor_body_index : anchor_body_index + 1, :].repeat(
-    1, len(body_indexes), 1
+  body_pos_w = _gather_student_body_field(
+    command,
+    "body_pos_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
   )
-  anchor_quat = command.body_quat_w[:, anchor_body_index : anchor_body_index + 1, :].repeat(
-    1, len(body_indexes), 1
+  body_quat_w = _gather_student_body_field(
+    command,
+    "body_quat_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
   )
-  body_pos = command.body_pos_w[:, body_indexes, :]
-  body_quat = command.body_quat_w[:, body_indexes, :]
+  anchor_pos = body_pos_w[:, :, anchor_body_index : anchor_body_index + 1, :].repeat(
+    1, 1, len(body_indexes), 1
+  )
+  anchor_quat = body_quat_w[:, :, anchor_body_index : anchor_body_index + 1, :].repeat(
+    1, 1, len(body_indexes), 1
+  )
+  body_pos = body_pos_w[:, :, body_indexes, :]
+  body_quat = body_quat_w[:, :, body_indexes, :]
 
   pos_b, quat_b = subtract_frame_transforms(anchor_pos, anchor_quat, body_pos, body_quat)
-  rot6d = matrix_from_quat(quat_b)[..., :2].reshape(env.num_envs, len(body_indexes), 6)
+  rot6d = matrix_from_quat(quat_b)[..., :2].reshape(
+    env.num_envs, -1, len(body_indexes), 6
+  )
   return torch.cat([pos_b, rot6d], dim=-1).reshape(env.num_envs, -1)
 
 
@@ -78,30 +144,54 @@ def student_base_lin_vel_w(
   env: ManagerBasedRlEnv,
   command_name: str,
   anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
 ) -> torch.Tensor:
   command = _get_command(env, command_name)
   anchor_body_index = _get_body_index(command, anchor_body_name)
-  return command.body_lin_vel_w[:, anchor_body_index, :]
+  body_lin_vel_w = _gather_student_body_field(
+    command,
+    "body_lin_vel_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  return body_lin_vel_w[:, :, anchor_body_index, :].reshape(env.num_envs, -1)
 
 
 def student_base_ang_vel_w(
   env: ManagerBasedRlEnv,
   command_name: str,
   anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
 ) -> torch.Tensor:
   command = _get_command(env, command_name)
   anchor_body_index = _get_body_index(command, anchor_body_name)
-  return command.body_ang_vel_w[:, anchor_body_index, :]
+  body_ang_vel_w = _gather_student_body_field(
+    command,
+    "body_ang_vel_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  return body_ang_vel_w[:, :, anchor_body_index, :].reshape(env.num_envs, -1)
 
 
 def student_anchor_height_w(
   env: ManagerBasedRlEnv,
   command_name: str,
   anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
 ) -> torch.Tensor:
   command = _get_command(env, command_name)
   anchor_body_index = _get_body_index(command, anchor_body_name)
-  return command.body_pos_w[:, anchor_body_index, 2:3]
+  body_pos_w = _gather_student_body_field(
+    command,
+    "body_pos_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  return body_pos_w[:, :, anchor_body_index, 2:3].reshape(env.num_envs, -1)
 
 
 def student_sparse_command(
@@ -109,11 +199,9 @@ def student_sparse_command(
   command_name: str,
   ee_body_names: tuple[str, str],
   anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
-  future_steps: tuple[int, ...] = (0,),
+  history_steps: int = 0,
+  future_steps: int = 1,
 ) -> torch.Tensor:
-  if future_steps != (0,):
-    raise NotImplementedError("Only single-frame sparse command extraction is supported.")
-
   return torch.cat(
     [
       student_ee_pose_b(
@@ -121,15 +209,29 @@ def student_sparse_command(
         command_name=command_name,
         ee_body_names=ee_body_names,
         anchor_body_name=anchor_body_name,
+        history_steps=history_steps,
+        future_steps=future_steps,
       ),
       student_base_lin_vel_w(
-        env, command_name=command_name, anchor_body_name=anchor_body_name
+        env,
+        command_name=command_name,
+        anchor_body_name=anchor_body_name,
+        history_steps=history_steps,
+        future_steps=future_steps,
       ),
       student_base_ang_vel_w(
-        env, command_name=command_name, anchor_body_name=anchor_body_name
+        env,
+        command_name=command_name,
+        anchor_body_name=anchor_body_name,
+        history_steps=history_steps,
+        future_steps=future_steps,
       ),
       student_anchor_height_w(
-        env, command_name=command_name, anchor_body_name=anchor_body_name
+        env,
+        command_name=command_name,
+        anchor_body_name=anchor_body_name,
+        history_steps=history_steps,
+        future_steps=future_steps,
       ),
     ],
     dim=-1,
@@ -344,7 +446,8 @@ class StudentSparseCommandVis(CommandTerm):
       command_name=self.cfg.command_name,
       ee_body_names=self.cfg.ee_body_names,
       anchor_body_name=self.cfg.anchor_body_name,
-      future_steps=(0,),
+      history_steps=0,
+      future_steps=1,
     )
 
   def _update_metrics(self) -> None:
