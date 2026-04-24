@@ -204,29 +204,13 @@ def get_student_base_height_reference_w(
   command = _get_command(env, command_name)
   anchor_body_index = _get_body_index(command, anchor_body_name)
   anchor_pos = command.body_pos_w[:, anchor_body_index, :]
-  base_pos = anchor_pos.clone()
+  robot = env.scene["robot"]
+  robot_anchor_index = robot.body_names.index(anchor_body_name)
+  base_pos = robot.data.body_link_pos_w[:, robot_anchor_index, :].clone()
   base_pos[:, 2] = 0.0
-  return base_pos, anchor_pos
-
-
-def draw_student_ee_reference(
-  visualizer: DebugVisualizer,
-  env_idx: int,
-  ee_positions_w: torch.Tensor,
-  radius: float,
-) -> None:
-  visualizer.add_sphere(
-    center=ee_positions_w[0].detach().cpu().numpy(),
-    radius=radius,
-    color=_LEFT_EE_COLOR,
-    label=f"student_ref_left_ee_{env_idx}",
-  )
-  visualizer.add_sphere(
-    center=ee_positions_w[1].detach().cpu().numpy(),
-    radius=radius,
-    color=_RIGHT_EE_COLOR,
-    label=f"student_ref_right_ee_{env_idx}",
-  )
+  anchor_vis_pos = base_pos.clone()
+  anchor_vis_pos[:, 2] = anchor_pos[:, 2]
+  return base_pos, anchor_vis_pos
 
 
 def draw_student_ee_reference_robot_pelvis(
@@ -306,9 +290,6 @@ def debug_vis_student_sparse_command(
   if not env_indices:
     return
 
-  ee_positions_w = get_student_ee_reference_w(
-    env, command_name=command_name, ee_body_names=ee_body_names
-  )
   ee_positions_robot_pelvis_w = get_student_ee_reference_robot_pelvis_w(
     env, command_name=command_name, ee_body_names=ee_body_names
   )
@@ -326,12 +307,6 @@ def debug_vis_student_sparse_command(
   )
 
   for env_idx in env_indices:
-    draw_student_ee_reference(
-      visualizer=visualizer,
-      env_idx=env_idx,
-      ee_positions_w=ee_positions_w[env_idx],
-      radius=ee_sphere_radius,
-    )
     draw_student_ee_reference_robot_pelvis(
       visualizer=visualizer,
       env_idx=env_idx,

@@ -2,12 +2,15 @@
 
 from types import SimpleNamespace
 
+import mjlab
 import numpy as np
 import torch
+import tyro
 
 import mjlab.tasks.distillation.config.g1  # noqa: F401
 from mjlab.tasks.distillation.mdp import commands as distill_cmds
 from mjlab.tasks.registry import load_env_cfg
+from mjlab.scripts.play import PlayConfig, _configure_distillation_play_visualization
 
 
 class _MockCommandManager:
@@ -90,15 +93,19 @@ def test_debug_vis_student_sparse_command_draws_expected_primitives() -> None:
 
   distill_cmds.debug_vis_student_sparse_command(env, visualizer)
 
-  assert len(visualizer.spheres) == 4
+  assert len(visualizer.spheres) == 2
   assert len(visualizer.arrows) == 2
   assert len(visualizer.cylinders) == 1
-  assert visualizer.spheres[0][3] == "student_ref_left_ee_0"
-  assert visualizer.spheres[1][3] == "student_ref_right_ee_0"
-  assert visualizer.spheres[2][3] == "student_ref_left_ee_robot_pelvis_0"
-  assert visualizer.spheres[3][3] == "student_ref_right_ee_robot_pelvis_0"
-  np.testing.assert_allclose(visualizer.spheres[2][0], np.array([1.2, 0.1, 1.0]))
-  np.testing.assert_allclose(visualizer.spheres[3][0], np.array([0.8, 0.15, 0.95]))
+  assert visualizer.spheres[0][3] == "student_ref_left_ee_robot_pelvis_0"
+  assert visualizer.spheres[1][3] == "student_ref_right_ee_robot_pelvis_0"
+  np.testing.assert_allclose(visualizer.spheres[0][0], np.array([1.2, 0.1, 1.0]))
+  np.testing.assert_allclose(visualizer.spheres[1][0], np.array([0.8, 0.15, 0.95]))
+  np.testing.assert_allclose(visualizer.arrows[0][0], np.array([1.0, 0.0, 1.0]))
+  np.testing.assert_allclose(visualizer.arrows[1][0], np.array([1.0, 0.0, 1.0]))
+  np.testing.assert_allclose(visualizer.arrows[0][1], np.array([1.1, -0.06, 1.02]))
+  np.testing.assert_allclose(visualizer.arrows[1][1], np.array([1.048, 0.024, 0.988]))
+  np.testing.assert_allclose(visualizer.cylinders[0][0], np.array([1.0, 0.0, 0.0]))
+  np.testing.assert_allclose(visualizer.cylinders[0][1], np.array([1.0, 0.0, 1.0]))
   assert visualizer.cylinders[0][4] == "student_ref_base_height_0"
 
 
@@ -113,3 +120,25 @@ def test_distillation_play_cfg_enables_motion_and_student_sparse_visualization()
     "right_wrist_yaw_link",
   )
   assert cfg.commands["student_sparse_vis"].anchor_body_name == "pelvis"
+
+
+def test_distillation_play_visualization_override_keeps_student_refs() -> None:
+  cfg = load_env_cfg("Mjlab-Distillation-Flat-Unitree-G1", play=True)
+
+  _configure_distillation_play_visualization(
+    cfg, show_reference_motion=False
+  )
+
+  assert not cfg.commands["motion"].debug_vis
+  assert cfg.commands["student_sparse_vis"].debug_vis
+
+
+def test_play_config_parses_reference_motion_toggle() -> None:
+  args = tyro.cli(
+    PlayConfig,
+    args=["--show-reference-motion", "False"],
+    default=PlayConfig(),
+    config=mjlab.TYRO_FLAGS,
+  )
+
+  assert not args.show_reference_motion

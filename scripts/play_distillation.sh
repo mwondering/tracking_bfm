@@ -18,6 +18,7 @@ DEVICE="${DEVICE:-}"
 WANDB_RUN_PATH="${WANDB_RUN_PATH:-}"
 WANDB_CHECKPOINT_NAME="${WANDB_CHECKPOINT_NAME:-}"
 DRY_RUN="${DRY_RUN:-false}"
+SHOW_REFERENCE_MOTION="${SHOW_REFERENCE_MOTION:-true}"
 
 bool_is_true() {
   case "${1,,}" in
@@ -88,6 +89,10 @@ fi
 
 if bool_is_true "$NO_TERMINATIONS"; then
   cmd+=(--no-terminations)
+fi
+
+if ! bool_is_true "$SHOW_REFERENCE_MOTION"; then
+  cmd+=(--show-reference-motion "False")
 fi
 
 if bool_is_true "$DRY_RUN"; then

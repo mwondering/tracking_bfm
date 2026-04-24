@@ -53,9 +53,20 @@ class PlayConfig:
   viewer: Literal["auto", "native", "viser"] = "auto"
   no_terminations: bool = False
   """Disable all termination conditions (useful for viewing motions with dummy agents)."""
+  show_reference_motion: bool = True
+  """For distillation play, keep sparse student refs visible but optionally hide full reference motion."""
 
   # Internal flag used by demo script.
   _demo_mode: tyro.conf.Suppress[bool] = False
+
+
+def _configure_distillation_play_visualization(env_cfg, show_reference_motion: bool) -> None:
+  motion_cfg = env_cfg.commands.get("motion")
+  student_sparse_vis_cfg = env_cfg.commands.get("student_sparse_vis")
+  if motion_cfg is None or student_sparse_vis_cfg is None:
+    return
+  motion_cfg.debug_vis = show_reference_motion
+  student_sparse_vis_cfg.debug_vis = True
 
 
 def run_play(task_id: str, cfg: PlayConfig):
@@ -73,6 +84,10 @@ def run_play(task_id: str, cfg: PlayConfig):
   if cfg.no_terminations:
     env_cfg.terminations = {}
     print("[INFO]: Terminations disabled")
+
+  _configure_distillation_play_visualization(
+    env_cfg, show_reference_motion=cfg.show_reference_motion
+  )
 
   # Check if this is a tracking task by checking for motion command.
   is_tracking_task = "motion" in env_cfg.commands and isinstance(
