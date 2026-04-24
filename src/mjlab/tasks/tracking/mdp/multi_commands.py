@@ -464,8 +464,6 @@ class MultiMotionCommand(CommandTerm):
     )
 
     motion_files = self._resolve_motion_files()
-    self.motion_files = list(motion_files)
-
     self.motion = MultiMotionLoader(
       motion_files,
       self.body_indexes,
@@ -647,61 +645,6 @@ class MultiMotionCommand(CommandTerm):
   def _compute_failure_rate(self) -> torch.Tensor:
     failure_rate = self.bin_failure_count / torch.clamp(self.bin_episode_count, min=1e-12)
     return failure_rate.masked_fill(~self.bin_valid_mask, 0.0)
-
-  def _motion_display_names(self) -> list[str]:
-    motion_path = os.fspath(self.cfg.motion_path)
-    display_names: list[str] = []
-    for motion_file in self.motion_files:
-      normalized_path = os.path.normpath(motion_file)
-      if motion_path:
-        name = os.path.relpath(normalized_path, motion_path)
-      else:
-        name = os.path.basename(normalized_path)
-      stem, _ = os.path.splitext(name)
-      display_names.append(stem)
-    return display_names
-
-  def _motion_failure_statistics(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    total_visits = self.bin_episode_count.sum(dim=1)
-    total_failures = self.bin_failure_count.sum(dim=1)
-    failure_rate = total_failures / torch.clamp(total_visits, min=1.0e-12)
-    failure_rate = torch.where(total_visits > 0.0, failure_rate, torch.zeros_like(failure_rate))
-    return total_visits, total_failures, failure_rate
-
-  def get_motion_failure_report(self, top_k: int = 10) -> dict[str, object]:
-    total_visits, total_failures, failure_rate = self._motion_failure_statistics()
-    display_names = self._motion_display_names()
-    top_k = max(int(top_k), 0)
-
-    ranked_indices = sorted(
-      range(len(display_names)),
-      key=lambda idx: (
-        -float(failure_rate[idx].item()),
-        -float(total_failures[idx].item()),
-        idx,
-      ),
-    )
-    top_indices = ranked_indices[:top_k]
-    rows = []
-    for rank, motion_index in enumerate(top_indices, start=1):
-      rows.append(
-        {
-          "rank": rank,
-          "motion_index": motion_index,
-          "motion_name": display_names[motion_index],
-          "failure_rate": float(failure_rate[motion_index].item()),
-          "total_failures": float(total_failures[motion_index].item()),
-          "total_visits": float(total_visits[motion_index].item()),
-        }
-      )
-
-    top10_min = min((row["failure_rate"] for row in rows), default=0.0)
-    return {
-      "mean_failure_rate": float(failure_rate.mean().item()) if display_names else 0.0,
-      "max_failure_rate": float(failure_rate.max().item()) if display_names else 0.0,
-      "top10_min_failure_rate": float(top10_min),
-      "rows": rows,
-    }
 
   def _accumulate_adaptive_sampling_stats(
     self,

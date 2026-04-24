@@ -13,7 +13,6 @@ from mjlab.rl.exporter_utils import (
 )
 from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.tracking.mdp import MotionCommand
-from mjlab.tasks.tracking.mdp.multi_commands import MultiMotionCommand
 
 
 class _OnnxMotionModel(nn.Module):
@@ -116,69 +115,3 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
           self.registry_name = None
     except Exception as e:
       print(f"[WARN] ONNX export failed (training continues): {e}")
-
-  def _get_multi_motion_command(self) -> MultiMotionCommand | None:
-    motion_term = self.env.unwrapped.command_manager.get_term("motion")
-    if isinstance(motion_term, MultiMotionCommand):
-      return motion_term
-    return None
-
-  def _log_adaptive_sampling_motion_failure_report(self, it: int) -> None:
-    if self.writer is None or self.logger_type != "wandb" or self.disable_logs:
-      return
-    if getattr(self, "gpu_global_rank", 0) != 0:
-      return
-    if wandb.run is None:
-      return
-
-    motion_term = self._get_multi_motion_command()
-    if motion_term is None:
-      return
-
-    report = motion_term.get_motion_failure_report(top_k=10)
-    self.writer.add_scalar(
-      "Train/adaptive_sampling/motion_failure_rate_mean",
-      report["mean_failure_rate"],
-      it,
-    )
-    self.writer.add_scalar(
-      "Train/adaptive_sampling/motion_failure_rate_max",
-      report["max_failure_rate"],
-      it,
-    )
-    self.writer.add_scalar(
-      "Train/adaptive_sampling/motion_failure_rate_top10_min",
-      report["top10_min_failure_rate"],
-      it,
-    )
-
-    rows = report["rows"]
-    table = wandb.Table(
-      columns=[
-        "rank",
-        "motion_name",
-        "motion_index",
-        "failure_rate",
-        "total_failures",
-        "total_visits",
-      ],
-      data=[
-        [
-          row["rank"],
-          row["motion_name"],
-          row["motion_index"],
-          row["failure_rate"],
-          row["total_failures"],
-          row["total_visits"],
-        ]
-        for row in rows
-      ],
-    )
-    wandb.log(
-      {"Train/adaptive_sampling/top10_motion_failure_rate": table},
-      step=it,
-    )
-
-  def log(self, locs: dict, width: int = 80, pad: int = 35):
-    super().log(locs, width=width, pad=pad)
-    self._log_adaptive_sampling_motion_failure_report(locs["it"])
