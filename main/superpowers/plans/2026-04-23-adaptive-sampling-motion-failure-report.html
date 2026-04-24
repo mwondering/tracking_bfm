@@ -1,0 +1,1043 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Adaptive Sampling Motion Failure Report Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-04-23-adaptive-sampling-motion-failure-report';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Apr 24, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-04-23-adaptive-sampling-motion-failure-report.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-04-23-adaptive-sampling-motion-failure-report.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-04-23-adaptive-sampling-motion-failure-report.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-04-23-adaptive-sampling-motion-failure-report.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Adaptive Sampling Motion Failure Report Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-command-level-regression-tests-for-motion-failure-aggregation">Task 1: Add command-level regression tests for motion failure aggregation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-runner-level-tests-for-w-b-only-adaptive-sampling-motion-logging">Task 2: Add runner-level tests for W&amp;B-only adaptive sampling motion logging</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-run-focused-end-to-end-verification-for-the-new-reporting-path">Task 3: Run focused end-to-end verification for the new reporting path</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="adaptive-sampling-motion-failure-report-implementation-plan">
+<h1>Adaptive Sampling Motion Failure Report Implementation Plan<a class="headerlink" href="#adaptive-sampling-motion-failure-report-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Add rank-local motion failure-rate aggregation and W&amp;B-only top-10 motion reporting for adaptive sampling, without printing the motion list in the terminal log.</p>
+<p><strong>Architecture:</strong> Extend <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> with read-only helpers that map motion indices to stable display names and derive motion-level failure summaries from existing per-bin adaptive sampling tensors. Then extend <code class="docutils literal notranslate"><span class="pre">MotionTrackingOnPolicyRunner</span></code> with a W&amp;B-only logging hook that reads the motion report each training iteration on <code class="docutils literal notranslate"><span class="pre">rank0</span></code> and publishes summary scalars plus a <code class="docutils literal notranslate"><span class="pre">wandb.Table</span></code>.</p>
+<p><strong>Tech Stack:</strong> Python, PyTorch, rsl_rl <code class="docutils literal notranslate"><span class="pre">OnPolicyRunner</span></code>, Weights &amp; Biases, pytest</p>
+<hr class="docutils" />
+<section id="task-1-add-command-level-regression-tests-for-motion-failure-aggregation">
+<h2>Task 1: Add command-level regression tests for motion failure aggregation<a class="headerlink" href="#task-1-add-command-level-regression-tests-for-motion-failure-aggregation" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing tests</strong></p></li>
+</ul>
+<p>Append these tests to <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code> after the existing adaptive sampling bookkeeping tests:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_motion_failure_report_aggregates_bins_and_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="n">_make_command</span><span class="p">()</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">motion_files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;/dataset/acro/front_kick.npz&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;/dataset/locomotion/side_step.npz&quot;</span><span class="p">,</span>
+  <span class="p">]</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">motion_path</span> <span class="o">=</span> <span class="s2">&quot;/dataset&quot;</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_episode_count</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+    <span class="p">[[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span>
+  <span class="p">)</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_failure_count</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+    <span class="p">[[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span>
+  <span class="p">)</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_valid_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+    <span class="p">[[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
+  <span class="p">)</span>
+
+  <span class="n">report</span> <span class="o">=</span> <span class="n">command</span><span class="o">.</span><span class="n">get_motion_failure_report</span><span class="p">(</span><span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;max_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.75</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;rank&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;motion_index&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;motion_name&quot;</span><span class="p">:</span> <span class="s2">&quot;locomotion/side_step&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;failure_rate&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.75</span><span class="p">),</span>
+      <span class="s2">&quot;total_failures&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">3.0</span><span class="p">),</span>
+      <span class="s2">&quot;total_visits&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">4.0</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;rank&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+      <span class="s2">&quot;motion_index&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;motion_name&quot;</span><span class="p">:</span> <span class="s2">&quot;acro/front_kick&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;failure_rate&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.25</span><span class="p">),</span>
+      <span class="s2">&quot;total_failures&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
+      <span class="s2">&quot;total_visits&quot;</span><span class="p">:</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">4.0</span><span class="p">),</span>
+    <span class="p">},</span>
+  <span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_motion_failure_report_handles_zero_visits_deterministically</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="n">_make_command</span><span class="p">()</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">motion_files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;/dataset/acro/front_kick.npz&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;/dataset/locomotion/side_step.npz&quot;</span><span class="p">,</span>
+  <span class="p">]</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">motion_path</span> <span class="o">=</span> <span class="s2">&quot;/dataset&quot;</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_episode_count</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_failure_count</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">bin_valid_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+    <span class="p">[[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
+  <span class="p">)</span>
+
+  <span class="n">report</span> <span class="o">=</span> <span class="n">command</span><span class="o">.</span><span class="n">get_motion_failure_report</span><span class="p">(</span><span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;max_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;motion_index&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;motion_name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;acro/front_kick&quot;</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;failure_rate&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;total_visits&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run the tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>FAIL with <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> because <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> does not yet expose <code class="docutils literal notranslate"><span class="pre">get_motion_failure_report</span></code></p></li>
+<li><p>[ ] <strong>Step 3: Write the minimal implementation for motion names and report building</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code>, make these edits:</p>
+<ol class="arabic simple">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand.__init__</span></code>, retain the resolved file list:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">motion_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_motion_files</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">motion_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">motion_files</span><span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Add a helper that maps the retained file list to display names:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_motion_display_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">motion_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">motion_path</span><span class="p">)</span>
+    <span class="n">display_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">motion_file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_files</span><span class="p">:</span>
+      <span class="n">motion_path_obj</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">motion_file</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">motion_path</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">motion_path_obj</span><span class="p">,</span> <span class="n">motion_path</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">motion_path_obj</span><span class="p">)</span>
+      <span class="n">stem</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+      <span class="n">display_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">display_names</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Add a helper that derives motion-level totals and rates from existing tensors:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_motion_failure_statistics</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+    <span class="n">total_visits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bin_episode_count</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">total_failures</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bin_failure_count</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">failure_rate</span> <span class="o">=</span> <span class="n">total_failures</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">total_visits</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mf">1.0e-12</span><span class="p">)</span>
+    <span class="n">failure_rate</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">total_visits</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">failure_rate</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">failure_rate</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">total_visits</span><span class="p">,</span> <span class="n">total_failures</span><span class="p">,</span> <span class="n">failure_rate</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Add the report builder used by the runner:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">get_motion_failure_report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
+    <span class="n">total_visits</span><span class="p">,</span> <span class="n">total_failures</span><span class="p">,</span> <span class="n">failure_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_motion_failure_statistics</span><span class="p">()</span>
+    <span class="n">display_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_motion_display_names</span><span class="p">()</span>
+    <span class="n">top_k</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">top_k</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">ranked_indices</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+      <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">display_names</span><span class="p">)),</span>
+      <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="p">(</span>
+        <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="n">failure_rate</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+        <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="n">total_failures</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+        <span class="n">idx</span><span class="p">,</span>
+      <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">top_indices</span> <span class="o">=</span> <span class="n">ranked_indices</span><span class="p">[:</span><span class="n">top_k</span><span class="p">]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">rank</span><span class="p">,</span> <span class="n">motion_index</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">top_indices</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+      <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="p">{</span>
+          <span class="s2">&quot;rank&quot;</span><span class="p">:</span> <span class="n">rank</span><span class="p">,</span>
+          <span class="s2">&quot;motion_index&quot;</span><span class="p">:</span> <span class="n">motion_index</span><span class="p">,</span>
+          <span class="s2">&quot;motion_name&quot;</span><span class="p">:</span> <span class="n">display_names</span><span class="p">[</span><span class="n">motion_index</span><span class="p">],</span>
+          <span class="s2">&quot;failure_rate&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">failure_rate</span><span class="p">[</span><span class="n">motion_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+          <span class="s2">&quot;total_failures&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_failures</span><span class="p">[</span><span class="n">motion_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+          <span class="s2">&quot;total_visits&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_visits</span><span class="p">[</span><span class="n">motion_index</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+        <span class="p">}</span>
+      <span class="p">)</span>
+
+    <span class="n">top10_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;failure_rate&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">failure_rate</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()),</span>
+      <span class="s2">&quot;max_failure_rate&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">failure_rate</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">display_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+      <span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">top10_min</span><span class="p">),</span>
+      <span class="s2">&quot;rows&quot;</span><span class="p">:</span> <span class="n">rows</span><span class="p">,</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run the tests to verify they pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>PASS with all tests green in <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code></p></li>
+<li><p>[ ] <strong>Step 5: Commit the command-layer change</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span>src/mjlab/tasks/tracking/mdp/multi_commands.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add motion failure report helpers&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="task-2-add-runner-level-tests-for-w-b-only-adaptive-sampling-motion-logging">
+<h2>Task 2: Add runner-level tests for W&amp;B-only adaptive sampling motion logging<a class="headerlink" href="#task-2-add-runner-level-tests-for-w-b-only-adaptive-sampling-motion-logging" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_motion_failure_logging.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/runner.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_motion_failure_logging.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing runner tests</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_motion_failure_logging.py</span></code> with this content:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleNamespace</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.mdp.multi_commands</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiMotionCommand</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.rl.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionTrackingOnPolicyRunner</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_FakeWriter</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">scalars</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">add_scalar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">scalars</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tag</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">step</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_runner</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">logger_type</span><span class="o">=</span><span class="s2">&quot;wandb&quot;</span><span class="p">,</span> <span class="n">global_rank</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+  <span class="n">runner</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">MotionTrackingOnPolicyRunner</span><span class="p">)</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">_FakeWriter</span><span class="p">()</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">logger_type</span> <span class="o">=</span> <span class="n">logger_type</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">disable_logs</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">=</span> <span class="n">global_rank</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">SimpleNamespace</span><span class="p">(</span>
+    <span class="n">unwrapped</span><span class="o">=</span><span class="n">SimpleNamespace</span><span class="p">(</span>
+      <span class="n">command_manager</span><span class="o">=</span><span class="n">SimpleNamespace</span><span class="p">(</span><span class="n">get_term</span><span class="o">=</span><span class="k">lambda</span> <span class="n">name</span><span class="p">:</span> <span class="n">command</span><span class="p">)</span>
+    <span class="p">)</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">runner</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_runner_logs_motion_failure_report_to_wandb</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">MultiMotionCommand</span><span class="p">)</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">get_motion_failure_report</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span>
+    <span class="s2">&quot;max_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+    <span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="s2">&quot;rows&quot;</span><span class="p">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="s2">&quot;rank&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s2">&quot;motion_name&quot;</span><span class="p">:</span> <span class="s2">&quot;locomotion/side_step&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;motion_index&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+        <span class="s2">&quot;failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+        <span class="s2">&quot;total_failures&quot;</span><span class="p">:</span> <span class="mf">8.0</span><span class="p">,</span>
+        <span class="s2">&quot;total_visits&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>
+      <span class="p">}</span>
+    <span class="p">],</span>
+  <span class="p">}</span>
+
+  <span class="n">logged</span> <span class="o">=</span> <span class="p">{}</span>
+
+  <span class="k">class</span><span class="w"> </span><span class="nc">_FakeTable</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span><span class="s2">&quot;mjlab.tasks.tracking.rl.runner.wandb.Table&quot;</span><span class="p">,</span> <span class="n">_FakeTable</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span><span class="s2">&quot;mjlab.tasks.tracking.rl.runner.wandb.run&quot;</span><span class="p">,</span> <span class="nb">object</span><span class="p">())</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span>
+    <span class="s2">&quot;mjlab.tasks.tracking.rl.runner.wandb.log&quot;</span><span class="p">,</span>
+    <span class="k">lambda</span> <span class="n">payload</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">logged</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;payload&quot;</span><span class="p">:</span> <span class="n">payload</span><span class="p">,</span> <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="n">step</span><span class="p">}),</span>
+  <span class="p">)</span>
+
+  <span class="n">runner</span> <span class="o">=</span> <span class="n">_make_runner</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">logger_type</span><span class="o">=</span><span class="s2">&quot;wandb&quot;</span><span class="p">,</span> <span class="n">global_rank</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">_log_adaptive_sampling_motion_failure_report</span><span class="p">(</span><span class="n">it</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">scalars</span> <span class="o">==</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_mean&quot;</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_max&quot;</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_top10_min&quot;</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
+  <span class="p">]</span>
+  <span class="k">assert</span> <span class="n">logged</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">12</span>
+  <span class="n">table</span> <span class="o">=</span> <span class="n">logged</span><span class="p">[</span><span class="s2">&quot;payload&quot;</span><span class="p">][</span><span class="s2">&quot;Train/adaptive_sampling/top10_motion_failure_rate&quot;</span><span class="p">]</span>
+  <span class="k">assert</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span> <span class="o">==</span> <span class="p">[</span>
+    <span class="s2">&quot;rank&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;motion_name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;motion_index&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;failure_rate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;total_failures&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;total_visits&quot;</span><span class="p">,</span>
+  <span class="p">]</span>
+  <span class="k">assert</span> <span class="n">table</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;locomotion/side_step&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">]]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_runner_skips_motion_failure_report_off_rank0</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">MultiMotionCommand</span><span class="p">)</span>
+  <span class="n">command</span><span class="o">.</span><span class="n">get_motion_failure_report</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span>
+    <span class="s2">&quot;max_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+    <span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="s2">&quot;rows&quot;</span><span class="p">:</span> <span class="p">[],</span>
+  <span class="p">}</span>
+
+  <span class="n">logged</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;called&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span><span class="s2">&quot;mjlab.tasks.tracking.rl.runner.wandb.run&quot;</span><span class="p">,</span> <span class="nb">object</span><span class="p">())</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span>
+    <span class="s2">&quot;mjlab.tasks.tracking.rl.runner.wandb.log&quot;</span><span class="p">,</span>
+    <span class="k">lambda</span> <span class="n">payload</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">logged</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;called&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}),</span>
+  <span class="p">)</span>
+
+  <span class="n">runner</span> <span class="o">=</span> <span class="n">_make_runner</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">logger_type</span><span class="o">=</span><span class="s2">&quot;wandb&quot;</span><span class="p">,</span> <span class="n">global_rank</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">_log_adaptive_sampling_motion_failure_report</span><span class="p">(</span><span class="n">it</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">scalars</span> <span class="o">==</span> <span class="p">[]</span>
+  <span class="k">assert</span> <span class="ow">not</span> <span class="n">logged</span><span class="p">[</span><span class="s2">&quot;called&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run the tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_runner_motion_failure_logging.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>FAIL with <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> because <code class="docutils literal notranslate"><span class="pre">MotionTrackingOnPolicyRunner</span></code> does not yet expose <code class="docutils literal notranslate"><span class="pre">_log_adaptive_sampling_motion_failure_report</span></code></p></li>
+<li><p>[ ] <strong>Step 3: Implement the runner-side W&amp;B-only hook</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/runner.py</span></code>, make these edits:</p>
+<ol class="arabic simple">
+<li><p>Import the multi-motion command type:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.mdp.multi_commands</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiMotionCommand</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Add a helper that safely retrieves the active multi-motion term:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_get_multi_motion_command</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MultiMotionCommand</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">motion_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">command_manager</span><span class="o">.</span><span class="n">get_term</span><span class="p">(</span><span class="s2">&quot;motion&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">motion_term</span><span class="p">,</span> <span class="n">MultiMotionCommand</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">motion_term</span>
+    <span class="k">return</span> <span class="kc">None</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Add the W&amp;B-only logging hook:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_log_adaptive_sampling_motion_failure_report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">it</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger_type</span> <span class="o">!=</span> <span class="s2">&quot;wandb&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_logs</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;gpu_global_rank&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="k">if</span> <span class="n">wandb</span><span class="o">.</span><span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">return</span>
+
+    <span class="n">motion_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_multi_motion_command</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">motion_term</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">return</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">motion_term</span><span class="o">.</span><span class="n">get_motion_failure_report</span><span class="p">(</span><span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span>
+      <span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_mean&quot;</span><span class="p">,</span>
+      <span class="n">report</span><span class="p">[</span><span class="s2">&quot;mean_failure_rate&quot;</span><span class="p">],</span>
+      <span class="n">it</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span>
+      <span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_max&quot;</span><span class="p">,</span>
+      <span class="n">report</span><span class="p">[</span><span class="s2">&quot;max_failure_rate&quot;</span><span class="p">],</span>
+      <span class="n">it</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span>
+      <span class="s2">&quot;Train/adaptive_sampling/motion_failure_rate_top10_min&quot;</span><span class="p">,</span>
+      <span class="n">report</span><span class="p">[</span><span class="s2">&quot;top10_min_failure_rate&quot;</span><span class="p">],</span>
+      <span class="n">it</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">report</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">]</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">wandb</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span>
+      <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+        <span class="s2">&quot;rank&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;motion_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;motion_index&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;failure_rate&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_failures&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_visits&quot;</span><span class="p">,</span>
+      <span class="p">],</span>
+      <span class="n">data</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">[</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;rank&quot;</span><span class="p">],</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;motion_name&quot;</span><span class="p">],</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;motion_index&quot;</span><span class="p">],</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;failure_rate&quot;</span><span class="p">],</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;total_failures&quot;</span><span class="p">],</span>
+          <span class="n">row</span><span class="p">[</span><span class="s2">&quot;total_visits&quot;</span><span class="p">],</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span>
+      <span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">wandb</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+      <span class="p">{</span><span class="s2">&quot;Train/adaptive_sampling/top10_motion_failure_rate&quot;</span><span class="p">:</span> <span class="n">table</span><span class="p">},</span>
+      <span class="n">step</span><span class="o">=</span><span class="n">it</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Override <code class="docutils literal notranslate"><span class="pre">log()</span></code> to call the base implementation first, then emit the W&amp;B-only report:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">locs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">80</span><span class="p">,</span> <span class="n">pad</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">35</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">locs</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="n">pad</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_adaptive_sampling_motion_failure_report</span><span class="p">(</span><span class="n">locs</span><span class="p">[</span><span class="s2">&quot;it&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run the tests to verify they pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_runner_motion_failure_logging.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>PASS with both runner logging tests green</p></li>
+<li><p>[ ] <strong>Step 5: Commit the runner logging change</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_tracking_runner_motion_failure_logging.py<span class="w"> </span>src/mjlab/tasks/tracking/rl/runner.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: log adaptive sampling motion failures to wandb&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="task-3-run-focused-end-to-end-verification-for-the-new-reporting-path">
+<h2>Task 3: Run focused end-to-end verification for the new reporting path<a class="headerlink" href="#task-3-run-focused-end-to-end-verification-for-the-new-reporting-path" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/runner.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_motion_failure_logging.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_multi_motion_command_sampling.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_motion_failure_logging.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Run the focused regression suite</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_runner_motion_failure_logging.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>PASS with all new and existing targeted tests green</p></li>
+<li><p>[ ] <strong>Step 2: Run the existing tracking runner regression file</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_runner.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>PASS, confirming the tracking runner changes did not regress ONNX export or checkpoint behavior</p></li>
+<li><p>[ ] <strong>Step 3: Review the final diff for scope</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>diff<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/mdp/multi_commands.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/rl/runner.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_runner_motion_failure_logging.py
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>Only motion-report helpers, W&amp;B-only runner logging, and focused tests are included</p></li>
+<li><p>[ ] <strong>Step 4: Commit the verified implementation state</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/mdp/multi_commands.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/rl/runner.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_multi_motion_command_sampling.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_runner_motion_failure_logging.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: report top adaptive sampling motion failures&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-command-level-regression-tests-for-motion-failure-aggregation">Task 1: Add command-level regression tests for motion failure aggregation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-runner-level-tests-for-w-b-only-adaptive-sampling-motion-logging">Task 2: Add runner-level tests for W&amp;B-only adaptive sampling motion logging</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-run-focused-end-to-end-verification-for-the-new-reporting-path">Task 3: Run focused end-to-end verification for the new reporting path</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Apr 24, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

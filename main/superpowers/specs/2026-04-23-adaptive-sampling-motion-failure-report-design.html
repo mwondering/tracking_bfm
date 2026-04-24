@@ -1,0 +1,782 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Adaptive Sampling Motion Failure Reporting Design &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Apr 24, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-04-23-adaptive-sampling-motion-failure-report-design.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Adaptive Sampling Motion Failure Reporting Design</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="adaptive-sampling-motion-failure-reporting-design">
+<h1>Adaptive Sampling Motion Failure Reporting Design<a class="headerlink" href="#adaptive-sampling-motion-failure-reporting-design" title="Link to this heading">#</a></h1>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
+<p>Make adaptive sampling behavior easier to interpret by exposing motion-level failure statistics in Weights &amp; Biases.</p>
+<p>For each motion in the local motion subset owned by the current rank, define:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_failures</span> <span class="pre">=</span> <span class="pre">sum(bin_failure_count[motion,</span> <span class="pre">:])</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_visits</span> <span class="pre">=</span> <span class="pre">sum(bin_episode_count[motion,</span> <span class="pre">:])</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_failure_rate</span> <span class="pre">=</span> <span class="pre">motion_total_failures</span> <span class="pre">/</span> <span class="pre">motion_total_visits</span></code></p></li>
+</ul>
+<p>The system should publish the highest-failure motions for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> only, using rank-local statistics only. No cross-rank aggregation is required.</p>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
+<p>In scope:</p>
+<ul class="simple">
+<li><p>Compute motion-level failure rates from existing adaptive sampling bin statistics.</p></li>
+<li><p>Preserve a stable mapping from motion index to human-readable motion name.</p></li>
+<li><p>Expose summary scalars for motion-level failure rates.</p></li>
+<li><p>Expose a top-10 worst-motion buffer to W&amp;B without printing it in the terminal log.</p></li>
+</ul>
+<p>Out of scope:</p>
+<ul class="simple">
+<li><p>Cross-rank or global motion aggregation.</p></li>
+<li><p>Changing adaptive sampling behavior or probabilities.</p></li>
+<li><p>Changing terminal logging format to include motion lists.</p></li>
+<li><p>Adding new viewer/debug visualization for these statistics.</p></li>
+</ul>
+</section>
+<section id="current-state">
+<h2>Current State<a class="headerlink" href="#current-state" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> already maintains adaptive sampling bookkeeping:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bin_episode_count[motion,</span> <span class="pre">bin]</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bin_failure_count[motion,</span> <span class="pre">bin]</span></code></p></li>
+</ul>
+<p>These are updated during adaptive sampling bookkeeping and are already used to derive per-bin failure rates for sampling.</p>
+<p>The motion file ordering is stable because <code class="docutils literal notranslate"><span class="pre">_resolve_motion_files()</span></code> collects and sorts <code class="docutils literal notranslate"><span class="pre">.npz</span></code> files before constructing <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>. That ordering is the authoritative mapping used by <code class="docutils literal notranslate"><span class="pre">motion_idx</span></code>.</p>
+<p>Training logging currently has two paths:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, which is aggregated by the runner and sent to both terminal and W&amp;B.</p></li>
+<li><p>direct writer logging in the runner via <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code> or W&amp;B-native calls.</p></li>
+</ul>
+<p>Because the motion top-10 list should not clutter terminal output, it should not be routed through <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>.</p>
+</section>
+<section id="proposed-design">
+<h2>Proposed Design<a class="headerlink" href="#proposed-design" title="Link to this heading">#</a></h2>
+<section id="motion-identity-and-display-names">
+<h3>1. Motion identity and display names<a class="headerlink" href="#motion-identity-and-display-names" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will retain the resolved motion file list used to initialize <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>.</p>
+<p>It will derive a display name per motion:</p>
+<ul class="simple">
+<li><p>if <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> is set, use the relative path from <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> to the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file, with the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix removed</p></li>
+<li><p>otherwise, use the file basename without the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix</p></li>
+</ul>
+<p>This keeps names stable and more collision-resistant than basename-only naming.</p>
+</section>
+<section id="motion-level-aggregate-statistics">
+<h3>2. Motion-level aggregate statistics<a class="headerlink" href="#motion-level-aggregate-statistics" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose helper methods that derive motion-level aggregates from existing bin-level tensors:</p>
+<ul class="simple">
+<li><p>total visits per motion</p></li>
+<li><p>total failures per motion</p></li>
+<li><p>failure rate per motion</p></li>
+</ul>
+<p>Failure rate computation will clamp the denominator to avoid division by zero, and motions with zero visits will resolve to failure rate <code class="docutils literal notranslate"><span class="pre">0.0</span></code>.</p>
+<p>These helpers will be pure derivations over the existing bookkeeping tensors. No new adaptive sampling state machine is needed.</p>
+</section>
+<section id="top-10-worst-motion-snapshot">
+<h3>3. Top-10 worst-motion snapshot<a class="headerlink" href="#top-10-worst-motion-snapshot" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose a snapshot builder that returns the top 10 motions ranked by:</p>
+<ol class="arabic simple">
+<li><p>descending motion failure rate</p></li>
+<li><p>descending total failures</p></li>
+<li><p>ascending motion index</p></li>
+</ol>
+<p>Each row will contain:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_rank</span></code> within the top-10 list</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
+</ul>
+<p>Only motions from the current process’s local motion subset are considered.</p>
+</section>
+<section id="w-b-only-reporting-path">
+<h3>4. W&amp;B-only reporting path<a class="headerlink" href="#w-b-only-reporting-path" title="Link to this heading">#</a></h3>
+<p>The tracking runner will own reporting.</p>
+<p>At training-log time, if all of the following are true:</p>
+<ul class="simple">
+<li><p>logger type is W&amp;B</p></li>
+<li><p>logging is enabled</p></li>
+<li><p>current process is <code class="docutils literal notranslate"><span class="pre">rank0</span></code></p></li>
+<li><p>the active <code class="docutils literal notranslate"><span class="pre">motion</span></code> command term is <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code></p></li>
+</ul>
+<p>then the runner will:</p>
+<ul class="simple">
+<li><p>write scalar summaries with <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code></p></li>
+<li><p>publish the top-10 snapshot as a <code class="docutils literal notranslate"><span class="pre">wandb.Table</span></code></p></li>
+</ul>
+<p>This reporting will bypass <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, so the top-10 list does not appear in terminal output.</p>
+</section>
+<section id="logged-outputs">
+<h3>5. Logged outputs<a class="headerlink" href="#logged-outputs" title="Link to this heading">#</a></h3>
+<p>Scalars:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_mean</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_max</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_top10_min</span></code></p></li>
+</ul>
+<p>Table:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/top10_motion_failure_rate</span></code></p></li>
+</ul>
+<p>Recommended table columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rank</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">rank</span></code> column here means position inside the sorted top-10 table, not distributed rank.</p>
+</section>
+</section>
+<section id="data-flow">
+<h2>Data Flow<a class="headerlink" href="#data-flow" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Adaptive sampling continues updating <code class="docutils literal notranslate"><span class="pre">bin_episode_count</span></code> and <code class="docutils literal notranslate"><span class="pre">bin_failure_count</span></code> inside <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>.</p></li>
+<li><p>At runner logging time, the runner reads the active motion command term.</p></li>
+<li><p>If the term is multi-motion adaptive sampling, the runner requests:</p>
+<ul class="simple">
+<li><p>motion-level aggregate stats</p></li>
+<li><p>top-10 worst-motion snapshot</p></li>
+</ul>
+</li>
+<li><p>The runner writes summary scalars and one W&amp;B table for the current iteration.</p></li>
+<li><p>Terminal log behavior remains unchanged.</p></li>
+</ol>
+</section>
+<section id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>If the active motion term is not <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>, the runner skips this reporting.</p></li>
+<li><p>If logger type is not W&amp;B, the runner skips the table report entirely.</p></li>
+<li><p>If fewer than 10 motions exist locally, the table contains only the available motions.</p></li>
+<li><p>If all motions have zero visits, all failure rates remain <code class="docutils literal notranslate"><span class="pre">0.0</span></code>, and the table still reports a deterministic top subset.</p></li>
+</ul>
+</section>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
+<p>Add unit tests covering:</p>
+<ul class="simple">
+<li><p>motion-level aggregation from known bin counts</p></li>
+<li><p>top-10 ranking order</p></li>
+<li><p>stable mapping from motion index to motion display name</p></li>
+<li><p>zero-visit behavior produces finite failure rates</p></li>
+<li><p>runner-side payload construction for W&amp;B table rows without requiring a real networked W&amp;B session</p></li>
+</ul>
+<p>Testing should avoid network calls and should assert payload shape and values rather than real upload behavior.</p>
+</section>
+<section id="tradeoffs">
+<h2>Tradeoffs<a class="headerlink" href="#tradeoffs" title="Link to this heading">#</a></h2>
+<p>Chosen design benefits:</p>
+<ul class="simple">
+<li><p>minimal change to adaptive sampling logic</p></li>
+<li><p>no cross-rank synchronization</p></li>
+<li><p>no terminal spam</p></li>
+<li><p>clear separation between statistics ownership (command term) and reporting ownership (runner)</p></li>
+</ul>
+<p>Accepted limitations:</p>
+<ul class="simple">
+<li><p>reported top-10 is only for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> local motions, not the global dataset</p></li>
+<li><p>table history may grow in W&amp;B across iterations, which is acceptable for this debugging-oriented feature</p></li>
+</ul>
+</section>
+<section id="implementation-notes">
+<h2>Implementation Notes<a class="headerlink" href="#implementation-notes" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Prefer adding read-only helper methods on <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> rather than mutating its reset/log pathways.</p></li>
+<li><p>Keep the W&amp;B-specific code in the tracking runner so non-W&amp;B loggers remain unaffected.</p></li>
+<li><p>Do not serialize the top-10 list into scalar tags; use a table for names plus rates.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Apr 24, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
