@@ -1,0 +1,1035 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Distillation Multi-GPU Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-04-27-distillation-multi-gpu';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Apr 27, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-04-27-distillation-multi-gpu.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-04-27-distillation-multi-gpu.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-04-27-distillation-multi-gpu.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-04-27-distillation-multi-gpu.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Distillation Multi-GPU Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-distributed-algorithm-coverage-first">Task 1: Add distributed algorithm coverage first</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-runner-distributed-state-and-log-gating">Task 2: Add runner distributed state and log gating</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-broadcast-metric-reduction-and-rank-0-only-output-behavior">Task 3: Add broadcast, metric reduction, and rank-0-only output behavior</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-run-regression-coverage-and-clean-up">Task 4: Run regression coverage and clean up</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="distillation-multi-gpu-implementation-plan">
+<h1>Distillation Multi-GPU Implementation Plan<a class="headerlink" href="#distillation-multi-gpu-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Enable true multi-GPU distillation training so all ranks optimize one shared student policy with synchronized gradients, while only rank 0 writes logs and checkpoints.</p>
+<p><strong>Architecture:</strong> Keep the current custom distillation runner and pure action-distillation algorithm. Add a small distributed layer to the runner for rank detection and log gating, then add parameter broadcast and gradient all-reduce to the algorithm so each rank trains from local rollout data but applies identical optimizer steps.</p>
+<p><strong>Tech Stack:</strong> Python, PyTorch distributed, TensorDict, pytest, existing <code class="docutils literal notranslate"><span class="pre">torchrunx</span></code> launch path in <code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/train.py</span></code></p>
+<hr class="docutils" />
+<section id="task-1-add-distributed-algorithm-coverage-first">
+<h2>Task 1: Add distributed algorithm coverage first<a class="headerlink" href="#task-1-add-distributed-algorithm-coverage-first" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_algorithm.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/algorithm.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing test</strong></p></li>
+</ul>
+<p>Add the following tests to <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_algorithm.py</span></code> below the existing update test:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleNamespace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_distillation_algorithm_broadcast_parameters_noops_without_multi_gpu</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">({</span><span class="s2">&quot;student_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">)},</span> <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+  <span class="n">model</span> <span class="o">=</span> <span class="n">build_student_model</span><span class="p">(</span>
+    <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">student_obs_group</span><span class="o">=</span><span class="s2">&quot;student_actor&quot;</span><span class="p">,</span>
+    <span class="n">action_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+    <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">algorithm</span> <span class="o">=</span> <span class="n">ActionDistillationAlgorithm</span><span class="p">(</span>
+    <span class="n">policy</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+    <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.broadcast_object_list&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">broadcast</span><span class="p">:</span>
+    <span class="n">algorithm</span><span class="o">.</span><span class="n">broadcast_parameters</span><span class="p">()</span>
+
+  <span class="n">broadcast</span><span class="o">.</span><span class="n">assert_not_called</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_distillation_algorithm_multi_gpu_syncs_parameters_and_gradients</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">({</span><span class="s2">&quot;student_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">5</span><span class="p">)},</span> <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">])</span>
+  <span class="n">teacher_actions</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;student_actor&quot;</span><span class="p">][:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span>
+  <span class="n">model</span> <span class="o">=</span> <span class="n">build_student_model</span><span class="p">(</span>
+    <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">student_obs_group</span><span class="o">=</span><span class="s2">&quot;student_actor&quot;</span><span class="p">,</span>
+    <span class="n">action_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+    <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">algorithm</span> <span class="o">=</span> <span class="n">ActionDistillationAlgorithm</span><span class="p">(</span>
+    <span class="n">policy</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+    <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">multi_gpu_cfg</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;global_rank&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;local_rank&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;world_size&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
+  <span class="p">)</span>
+
+  <span class="n">reduce_calls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_record_all_reduce</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">reduce_calls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">())</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+  <span class="k">with</span> <span class="p">(</span>
+    <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.broadcast_object_list&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">broadcast</span><span class="p">,</span>
+    <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.all_reduce&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">_record_all_reduce</span><span class="p">)</span> <span class="k">as</span> <span class="n">all_reduce</span><span class="p">,</span>
+  <span class="p">):</span>
+    <span class="n">algorithm</span><span class="o">.</span><span class="n">broadcast_parameters</span><span class="p">()</span>
+    <span class="n">algorithm</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+      <span class="n">student_obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span>
+      <span class="n">teacher_actions</span><span class="o">=</span><span class="n">teacher_actions</span><span class="p">,</span>
+      <span class="n">num_learning_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+      <span class="n">num_mini_batches</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">)</span>
+
+  <span class="n">broadcast</span><span class="o">.</span><span class="n">assert_called_once</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">all_reduce</span><span class="o">.</span><span class="n">call_count</span> <span class="o">&gt;</span> <span class="mi">0</span>
+  <span class="k">assert</span> <span class="n">reduce_calls</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_algorithm.py</span> <span class="pre">-v</span></code>
+Expected: FAIL with <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> because <code class="docutils literal notranslate"><span class="pre">ActionDistillationAlgorithm</span></code> does not accept <code class="docutils literal notranslate"><span class="pre">multi_gpu_cfg</span></code>, and/or <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> because <code class="docutils literal notranslate"><span class="pre">broadcast_parameters</span></code> does not exist.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Write minimal implementation</strong></p></li>
+</ul>
+<p>Update <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/algorithm.py</span></code> so the constructor accepts <code class="docutils literal notranslate"><span class="pre">multi_gpu_cfg</span></code>, and add the distributed helpers and gradient reduction path:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">ActionDistillationAlgorithm</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">policy</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">max_grad_norm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">multi_gpu_cfg</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">policy</span> <span class="o">=</span> <span class="n">policy</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">max_grad_norm</span> <span class="o">=</span> <span class="n">max_grad_norm</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">policy</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">learning_rate</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">is_multi_gpu</span> <span class="o">=</span> <span class="n">multi_gpu_cfg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">multi_gpu_cfg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">multi_gpu_cfg</span><span class="p">[</span><span class="s2">&quot;global_rank&quot;</span><span class="p">])</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">multi_gpu_cfg</span><span class="p">[</span><span class="s2">&quot;world_size&quot;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span> <span class="o">=</span> <span class="mi">1</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">broadcast_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_multi_gpu</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="n">model_params</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">policy</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()]</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">broadcast_object_list</span><span class="p">(</span><span class="n">model_params</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">policy</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">model_params</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">reduce_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_multi_gpu</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">continue</span>
+      <span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+      <span class="n">param</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">div_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then call the reduction inside <code class="docutils literal notranslate"><span class="pre">update()</span></code> after <code class="docutils literal notranslate"><span class="pre">mse_loss.backward()</span></code> and before gradient clipping:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">(</span><span class="n">set_to_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">mse_loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reduce_parameters</span><span class="p">()</span>
+        <span class="n">grad_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">policy</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_grad_norm</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run test to verify it passes</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_algorithm.py</span> <span class="pre">-v</span></code>
+Expected: PASS for all distillation algorithm tests.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>src/mjlab/tasks/distillation/rl/algorithm.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add distributed distillation algorithm sync&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="task-2-add-runner-distributed-state-and-log-gating">
+<h2>Task 2: Add runner distributed state and log gating<a class="headerlink" href="#task-2-add-runner-distributed-state-and-log-gating" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing test</strong></p></li>
+</ul>
+<p>Add the following tests to <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">MagicMock</span><span class="p">,</span> <span class="n">patch</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_distillation_runner_configures_multi_gpu_state_from_environment</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_DummyVecEnv</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">DistillationRunnerCfg</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span> <span class="n">upload_model</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.init_process_group&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">init_pg</span><span class="p">,</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.cuda.set_device&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">set_device</span><span class="p">:</span>
+    <span class="n">runner</span> <span class="o">=</span> <span class="n">DistillationRunner</span><span class="p">(</span>
+      <span class="n">env</span><span class="p">,</span>
+      <span class="n">asdict</span><span class="p">(</span><span class="n">cfg</span><span class="p">),</span>
+      <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+      <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:1&quot;</span><span class="p">,</span>
+      <span class="n">teacher_adapter</span><span class="o">=</span><span class="n">TeacherPolicyAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">obs</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">),</span>
+    <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">is_distributed</span> <span class="ow">is</span> <span class="kc">True</span>
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">gpu_world_size</span> <span class="o">==</span> <span class="mi">2</span>
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">==</span> <span class="mi">1</span>
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">gpu_local_rank</span> <span class="o">==</span> <span class="mi">1</span>
+  <span class="k">assert</span> <span class="n">runner</span><span class="o">.</span><span class="n">disable_logs</span> <span class="ow">is</span> <span class="kc">True</span>
+  <span class="n">init_pg</span><span class="o">.</span><span class="n">assert_called_once</span><span class="p">()</span>
+  <span class="n">set_device</span><span class="o">.</span><span class="n">assert_called_once_with</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_distillation_runner_rejects_mismatched_local_rank_device</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_DummyVecEnv</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">DistillationRunnerCfg</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span> <span class="n">upload_model</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;does not match expected device&quot;</span><span class="p">):</span>
+    <span class="n">DistillationRunner</span><span class="p">(</span>
+      <span class="n">env</span><span class="p">,</span>
+      <span class="n">asdict</span><span class="p">(</span><span class="n">cfg</span><span class="p">),</span>
+      <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+      <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:0&quot;</span><span class="p">,</span>
+      <span class="n">teacher_adapter</span><span class="o">=</span><span class="n">TeacherPolicyAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">obs</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">),</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_configures_multi_gpu_state_from_environment</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_rejects_mismatched_local_rank_device</span> <span class="pre">-v</span></code>
+Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">DistillationRunner</span></code> does not define distributed fields or perform device/rank validation.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Write minimal implementation</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code>, add distributed initialization at runner startup before building the student policy:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="o">...</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">env</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">train_cfg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="o">=</span> <span class="n">log_dir</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_configure_multi_gpu</span><span class="p">()</span>
+    <span class="o">...</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">disable_logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_distributed</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">!=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>Add the helper:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_configure_multi_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">is_distributed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span> <span class="o">&gt;</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_distributed</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">multi_gpu_cfg</span> <span class="o">=</span> <span class="kc">None</span>
+      <span class="k">return</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">))</span>
+    <span class="n">expected_device</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;cuda:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_device</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Device &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&#39; does not match expected device for local rank &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+      <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">multi_gpu_cfg</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="s2">&quot;global_rank&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span><span class="p">,</span>
+      <span class="s2">&quot;local_rank&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span><span class="p">,</span>
+      <span class="s2">&quot;world_size&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span>
+      <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;nccl&quot;</span><span class="p">,</span>
+      <span class="n">rank</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_global_rank</span><span class="p">,</span>
+      <span class="n">world_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">set_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gpu_local_rank</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Pass <code class="docutils literal notranslate"><span class="pre">multi_gpu_cfg</span></code> into the algorithm:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">alg</span> <span class="o">=</span> <span class="n">ActionDistillationAlgorithm</span><span class="p">(</span>
+      <span class="n">policy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">student_policy</span><span class="p">,</span>
+      <span class="n">learning_rate</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;learning_rate&quot;</span><span class="p">]),</span>
+      <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+      <span class="n">multi_gpu_cfg</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">multi_gpu_cfg</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run test to verify it passes</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_configures_multi_gpu_state_from_environment</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_rejects_mismatched_local_rank_device</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_distillation_runner_smoke.py<span class="w"> </span>src/mjlab/tasks/distillation/rl/runner.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: configure distillation runner for distributed launch&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="task-3-add-broadcast-metric-reduction-and-rank-0-only-output-behavior">
+<h2>Task 3: Add broadcast, metric reduction, and rank-0-only output behavior<a class="headerlink" href="#task-3-add-broadcast-metric-reduction-and-rank-0-only-output-behavior" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing test</strong></p></li>
+</ul>
+<p>Add the following tests to <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_distillation_runner_distributed_learn_broadcasts_and_skips_nonzero_rank_outputs</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_DummyVecEnv</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">DistillationRunnerCfg</span><span class="p">(</span>
+    <span class="n">logger</span><span class="o">=</span><span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span>
+    <span class="n">upload_model</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">save_interval</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_steps_per_env</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_learning_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_mini_batches</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">teacher_adapter</span> <span class="o">=</span> <span class="n">TeacherPolicyAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">obs</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">)</span>
+
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmpdir</span><span class="p">:</span>
+    <span class="k">with</span> <span class="p">(</span>
+      <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.init_process_group&quot;</span><span class="p">),</span>
+      <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.cuda.set_device&quot;</span><span class="p">),</span>
+      <span class="n">patch</span><span class="o">.</span><span class="n">object</span><span class="p">(</span><span class="n">DistillationRunner</span><span class="p">,</span> <span class="s2">&quot;_prepare_logging_writer&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">prepare_writer</span><span class="p">,</span>
+      <span class="n">patch</span><span class="o">.</span><span class="n">object</span><span class="p">(</span><span class="n">DistillationRunner</span><span class="p">,</span> <span class="s2">&quot;save&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">save</span><span class="p">,</span>
+      <span class="n">patch</span><span class="o">.</span><span class="n">object</span><span class="p">(</span><span class="n">ActionDistillationAlgorithm</span><span class="p">,</span> <span class="s2">&quot;broadcast_parameters&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">broadcast</span><span class="p">,</span>
+    <span class="p">):</span>
+      <span class="n">runner</span> <span class="o">=</span> <span class="n">DistillationRunner</span><span class="p">(</span>
+        <span class="n">env</span><span class="p">,</span>
+        <span class="n">asdict</span><span class="p">(</span><span class="n">cfg</span><span class="p">),</span>
+        <span class="n">log_dir</span><span class="o">=</span><span class="n">tmpdir</span><span class="p">,</span>
+        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:1&quot;</span><span class="p">,</span>
+        <span class="n">teacher_adapter</span><span class="o">=</span><span class="n">teacher_adapter</span><span class="p">,</span>
+      <span class="p">)</span>
+      <span class="n">runner</span><span class="o">.</span><span class="n">learn</span><span class="p">(</span><span class="n">num_learning_iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+  <span class="n">broadcast</span><span class="o">.</span><span class="n">assert_called_once</span><span class="p">()</span>
+  <span class="n">prepare_writer</span><span class="o">.</span><span class="n">assert_not_called</span><span class="p">()</span>
+  <span class="n">save</span><span class="o">.</span><span class="n">assert_not_called</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_distillation_runner_reduces_logged_scalars_across_ranks</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_DummyVecEnv</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">DistillationRunnerCfg</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span> <span class="n">upload_model</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+  <span class="n">teacher_adapter</span> <span class="o">=</span> <span class="n">TeacherPolicyAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">obs</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">)</span>
+
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span>
+  <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setenv</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.init_process_group&quot;</span><span class="p">),</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.cuda.set_device&quot;</span><span class="p">):</span>
+    <span class="n">runner</span> <span class="o">=</span> <span class="n">DistillationRunner</span><span class="p">(</span>
+      <span class="n">env</span><span class="p">,</span>
+      <span class="n">asdict</span><span class="p">(</span><span class="n">cfg</span><span class="p">),</span>
+      <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+      <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:0&quot;</span><span class="p">,</span>
+      <span class="n">teacher_adapter</span><span class="o">=</span><span class="n">teacher_adapter</span><span class="p">,</span>
+    <span class="p">)</span>
+
+  <span class="n">reduced</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_fake_all_reduce</span><span class="p">(</span><span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">reduced</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+    <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;torch.distributed.all_reduce&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">_fake_all_reduce</span><span class="p">):</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">_distributed_mean</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">value</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">reduced</span> <span class="o">==</span> <span class="p">[</span><span class="mf">3.0</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_distributed_learn_broadcasts_and_skips_nonzero_rank_outputs</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_reduces_logged_scalars_across_ranks</span> <span class="pre">-v</span></code>
+Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">learn()</span></code> always prepares logging, saves on every rank, and there is no scalar reduction helper.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Write minimal implementation</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code>, gate logging and saving on rank 0 and add distributed scalar reduction:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_logging_writer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_logs</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">return</span>
+</pre></div>
+</div>
+<p>Add the helper:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_distributed_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_distributed</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">value</span>
+    <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+    <span class="n">tensor</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Update <code class="docutils literal notranslate"><span class="pre">learn()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">learn</span><span class="p">(</span><span class="o">...</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_logging_writer</span><span class="p">()</span>
+    <span class="n">teacher_adapter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_teacher_adapter</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_distributed</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">alg</span><span class="o">.</span><span class="n">broadcast_parameters</span><span class="p">()</span>
+    <span class="o">...</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">last_loss_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distributed_mean</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">alg</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+      <span class="p">}</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">last_train_metrics</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;beta_teacher&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distributed_mean</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">)),</span>
+        <span class="s2">&quot;teacher_action_ratio&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distributed_mean</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">teacher_mask</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())),</span>
+        <span class="s2">&quot;student_action_ratio&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distributed_mean</span><span class="p">(</span><span class="nb">float</span><span class="p">((</span><span class="o">~</span><span class="n">teacher_mask</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())),</span>
+      <span class="p">}</span>
+      <span class="o">...</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_logs</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_train_iteration</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">it</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;model_</span><span class="si">{</span><span class="n">it</span><span class="si">}</span><span class="s2">.pt&quot;</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_logs</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;model_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">current_learning_iteration</span><span class="si">}</span><span class="s2">.pt&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Update throughput sizing in <code class="docutils literal notranslate"><span class="pre">_log_train_iteration()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">collection_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_steps_per_env</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu_world_size</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run test to verify it passes</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_distributed_learn_broadcasts_and_skips_nonzero_rank_outputs</span> <span class="pre">tests/test_distillation_runner_smoke.py::test_distillation_runner_reduces_logged_scalars_across_ranks</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_distillation_runner_smoke.py<span class="w"> </span>src/mjlab/tasks/distillation/rl/runner.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: reduce distillation metrics and gate rank outputs&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="task-4-run-regression-coverage-and-clean-up">
+<h2>Task 4: Run regression coverage and clean up<a class="headerlink" href="#task-4-run-regression-coverage-and-clean-up" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_algorithm.py</span></code> if assertions need tightening</p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code> if smoke expectations need updates</p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code> only if test output reveals minor correctness gaps</p></li>
+<li><p>[ ] <strong>Step 1: Run focused regression tests</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_algorithm.py</span> <span class="pre">tests/test_distillation_runner_smoke.py</span> <span class="pre">-v</span></code>
+Expected: PASS for all distillation algorithm and runner smoke coverage.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run broader distillation regression</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_distillation_task.py</span> <span class="pre">tests/test_play_distillation_script.py</span> <span class="pre">tests/test_distillation_student_play_viz.py</span> <span class="pre">-v</span></code>
+Expected: PASS. If one test fails because it relies on exact logging side effects, adjust only the expectation, not the new distributed behavior.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Inspect the final diff</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">--</span> <span class="pre">src/mjlab/tasks/distillation/rl/algorithm.py</span> <span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span> <span class="pre">tests/test_distillation_algorithm.py</span> <span class="pre">tests/test_distillation_runner_smoke.py</span></code>
+Expected: Diff is limited to distributed sync, metric reduction, and matching test updates.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Commit final polish if needed</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/distillation/rl/algorithm.py<span class="w"> </span>src/mjlab/tasks/distillation/rl/runner.py<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>tests/test_distillation_runner_smoke.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;test: cover multi-gpu distillation runner behavior&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Final verification note</strong></p></li>
+</ul>
+<p>If GPU hardware is available, run one manual smoke launch after tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>mjlab.scripts.train<span class="w"> </span>Mjlab-Distillation-Flat-Unitree-G1<span class="w"> </span>--gpu-ids<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>--agent.max-iterations<span class="w"> </span><span class="m">1</span><span class="w"> </span>--agent.num-steps-per-env<span class="w"> </span><span class="m">2</span>
+</pre></div>
+</div>
+<p>Expected: one shared run directory, only rank 0 checkpoints, no device/rank mismatch error, and no duplicate writer output.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-distributed-algorithm-coverage-first">Task 1: Add distributed algorithm coverage first</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-runner-distributed-state-and-log-gating">Task 2: Add runner distributed state and log gating</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-broadcast-metric-reduction-and-rank-0-only-output-behavior">Task 3: Add broadcast, metric reduction, and rank-0-only output behavior</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-run-regression-coverage-and-clean-up">Task 4: Run regression coverage and clean up</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Apr 27, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
