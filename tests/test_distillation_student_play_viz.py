@@ -10,7 +10,11 @@ import tyro
 import mjlab.tasks.distillation.config.g1  # noqa: F401
 from mjlab.tasks.distillation.mdp import commands as distill_cmds
 from mjlab.tasks.registry import load_env_cfg
-from mjlab.scripts.play import PlayConfig, _configure_distillation_play_visualization
+from mjlab.scripts.play import (
+  PlayCliConfig,
+  PlayConfig,
+  _configure_distillation_play_visualization,
+)
 
 
 class _MockCommandManager:
@@ -142,3 +146,24 @@ def test_play_config_parses_reference_motion_toggle() -> None:
   )
 
   assert not args.show_reference_motion
+
+
+def test_play_cli_config_parses_student_observation_overrides() -> None:
+  args = tyro.cli(
+    PlayCliConfig,
+    args=[
+      "--env.observations.student_actor.terms.ee_pose.params.history_steps",
+      "3",
+      "--env.observations.student_actor.terms.ee_pose.params.future_steps",
+      "4",
+      "--env.observations.student_actor.terms.projected_gravity.history_length",
+      "5",
+    ],
+    default=PlayCliConfig.from_task("Mjlab-Distillation-Flat-Unitree-G1"),
+    config=mjlab.TYRO_FLAGS,
+  )
+
+  terms = args.env.observations["student_actor"].terms
+  assert terms["ee_pose"].params["history_steps"] == 3
+  assert terms["ee_pose"].params["future_steps"] == 4
+  assert terms["projected_gravity"].history_length == 5

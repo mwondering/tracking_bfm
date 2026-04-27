@@ -6,17 +6,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
-
+#/home/lenovo/DATASETS/test_motion
+#/home/lenovo/DATASETS/Data10k
 TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
-MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
-TEACHER_CKPT="${TEACHER_CKPT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt/model_9000.pt}"
+MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/test_motion}"
+TEACHER_CKPT="${TEACHER_CKPT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_0427/model_97000.pt}"
 NUM_ENVS="${NUM_ENVS:-1024}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NUM_STEPS_PER_ENV="${NUM_STEPS_PER_ENV:-24}"
 SAVE_INTERVAL="${SAVE_INTERVAL:-500}"
 BETA_DECAY_STEPS="${BETA_DECAY_STEPS:-1}"
-STUDENT_HISTORY_STEPS="${STUDENT_HISTORY_STEPS:-5}"
-STUDENT_FUTURE_STEPS="${STUDENT_FUTURE_STEPS:-6}"
+STUDENT_HISTORY_STEPS="${STUDENT_HISTORY_STEPS:-0}"
+STUDENT_FUTURE_STEPS="${STUDENT_FUTURE_STEPS:-1}"
 STUDENT_ROBOT_HISTORY_STEPS="${STUDENT_ROBOT_HISTORY_STEPS:-20}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_distillation}"
 RUN_NAME="${RUN_NAME:-distill_mlp_mixed}"
@@ -24,7 +25,7 @@ RUN_NAME="${RUN_NAME:-distill_mlp_mixed}"
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
     --env.scene.num-envs "$NUM_ENVS" \
-    --env.commands.motion.sampling-mode uniform \
+    --env.commands.motion.sampling-mode adaptive \
     --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \

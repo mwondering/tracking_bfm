@@ -1,5 +1,6 @@
 """Script to play RL agent with RSL-RL."""
 
+from copy import deepcopy
 import os
 import sys
 import time as _time
@@ -11,7 +12,7 @@ from typing import Literal
 import torch
 import tyro
 
-from mjlab.envs import ManagerBasedRlEnv
+from mjlab.envs import ManagerBasedRlEnv, ManagerBasedRlEnvCfg
 from mjlab.rl import MjlabOnPolicyRunner, RslRlVecEnvWrapper
 from mjlab.scripts._cli import maybe_print_top_level_help
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
@@ -60,6 +61,17 @@ class PlayConfig:
   _demo_mode: tyro.conf.Suppress[bool] = False
 
 
+@dataclass(frozen=True, kw_only=True)
+class PlayCliConfig(PlayConfig):
+  """CLI-facing play config that also exposes env overrides."""
+
+  env: ManagerBasedRlEnvCfg
+
+  @staticmethod
+  def from_task(task_id: str) -> "PlayCliConfig":
+    return PlayCliConfig(env=load_env_cfg(task_id, play=True))
+
+
 def _configure_distillation_play_visualization(env_cfg, show_reference_motion: bool) -> None:
   motion_cfg = env_cfg.commands.get("motion")
   student_sparse_vis_cfg = env_cfg.commands.get("student_sparse_vis")
@@ -74,7 +86,11 @@ def run_play(task_id: str, cfg: PlayConfig):
 
   device = cfg.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
 
-  env_cfg = load_env_cfg(task_id, play=True)
+  env_cfg = (
+    deepcopy(cfg.env)
+    if isinstance(cfg, PlayCliConfig)
+    else load_env_cfg(task_id, play=True)
+  )
   agent_cfg = load_rl_cfg(task_id)
 
   DUMMY_MODE = cfg.agent in {"zero", "random"}
@@ -347,17 +363,15 @@ def main():
     config=mjlab.TYRO_FLAGS,
   )
 
-  # Parse the rest of the arguments + allow overriding env_cfg and agent_cfg.
-  agent_cfg = load_rl_cfg(chosen_task)
-
+  default_args = PlayCliConfig.from_task(chosen_task)
   args = tyro.cli(
-    PlayConfig,
+    PlayCliConfig,
     args=remaining_args,
-    default=PlayConfig(),
+    default=default_args,
     prog=sys.argv[0] + f" {chosen_task}",
     config=mjlab.TYRO_FLAGS,
   )
-  del remaining_args, agent_cfg
+  del remaining_args, default_args
 
   run_play(chosen_task, args)
 

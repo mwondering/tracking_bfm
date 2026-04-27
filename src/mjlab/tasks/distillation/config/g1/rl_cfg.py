@@ -17,7 +17,7 @@ class DistillationRunnerCfg(RslRlBaseRunnerCfg):
   beta_start: float = 1.0
   beta_end: float = 0.0
   beta_decay_steps: int = 2_00
-  student_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (4096, 2048,2048, 1024, 1024, 1024, 512, 256, 128))
+  student_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (4096,2048,2048,1024, 1024, 1024, 512, 256, 128))
   student_activation: str = "elu"
   learning_rate: float = 1.0e-3
   num_learning_epochs: int = 5
