@@ -11,8 +11,10 @@ from types import SimpleNamespace
 import torch
 import pytest
 from tensordict import TensorDict
+from unittest.mock import patch
 
 from mjlab.tasks.distillation.config.g1.rl_cfg import DistillationRunnerCfg
+from mjlab.tasks.distillation.rl.algorithm import ActionDistillationAlgorithm
 from mjlab.tasks.distillation.rl.runner import DistillationRunner, mix_rollout_actions
 from mjlab.tasks.distillation.rl.teacher import TeacherPolicyAdapter
 
@@ -265,3 +267,134 @@ def test_distillation_runner_consumes_log_extras(capsys) -> None:
   out = capsys.readouterr().out
   assert "Metrics/rollout_reward" in out
   assert "Metrics/action_abs" in out
+
+
+def test_distillation_runner_configures_multi_gpu_state_from_environment(monkeypatch) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "1")
+  monkeypatch.setenv("LOCAL_RANK", "1")
+
+  with (
+    patch("torch.distributed.init_process_group") as init_pg,
+    patch("torch.cuda.set_device") as set_device,
+    patch.object(TensorDict, "to", lambda self, *args, **kwargs: self),
+    patch.object(torch.nn.Module, "to", lambda self, *args, **kwargs: self),
+  ):
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cuda:1",
+      teacher_adapter=TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25),
+    )
+
+  assert runner.is_distributed is True
+  assert runner.gpu_world_size == 2
+  assert runner.gpu_global_rank == 1
+  assert runner.gpu_local_rank == 1
+  assert runner.disable_logs is True
+  init_pg.assert_called_once()
+  set_device.assert_called_once_with(1)
+
+
+def test_distillation_runner_rejects_mismatched_local_rank_device(monkeypatch) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "1")
+  monkeypatch.setenv("LOCAL_RANK", "1")
+
+  with pytest.raises(ValueError, match="does not match expected device"):
+    DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cuda:0",
+      teacher_adapter=TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25),
+    )
+
+
+def test_distillation_runner_distributed_learn_broadcasts_and_skips_nonzero_rank_outputs(
+  monkeypatch,
+) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    upload_model=False,
+    save_interval=1,
+    num_steps_per_env=2,
+    max_iterations=1,
+    num_learning_epochs=1,
+    num_mini_batches=1,
+  )
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "1")
+  monkeypatch.setenv("LOCAL_RANK", "1")
+
+  with TemporaryDirectory() as tmpdir:
+    with (
+      patch("torch.distributed.init_process_group"),
+      patch("torch.cuda.set_device"),
+      patch("torch.distributed.all_reduce"),
+      patch.object(TensorDict, "to", lambda self, *args, **kwargs: self),
+      patch.object(torch.nn.Module, "to", lambda self, *args, **kwargs: self),
+      patch.object(DistillationRunner, "_prepare_logging_writer") as prepare_writer,
+      patch.object(DistillationRunner, "save") as save,
+      patch.object(ActionDistillationAlgorithm, "broadcast_parameters") as broadcast,
+    ):
+      runner = DistillationRunner(
+        env,
+        asdict(cfg),
+        log_dir=tmpdir,
+        device="cuda:1",
+        teacher_adapter=teacher_adapter,
+      )
+      runner.device = torch.device("cpu")
+      runner.learn(num_learning_iterations=1)
+
+  broadcast.assert_called_once()
+  prepare_writer.assert_not_called()
+  save.assert_not_called()
+
+
+def test_distillation_runner_reduces_logged_scalars_across_ranks(monkeypatch) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "0")
+  monkeypatch.setenv("LOCAL_RANK", "0")
+
+  with (
+    patch("torch.distributed.init_process_group"),
+    patch("torch.cuda.set_device"),
+    patch.object(TensorDict, "to", lambda self, *args, **kwargs: self),
+    patch.object(torch.nn.Module, "to", lambda self, *args, **kwargs: self),
+  ):
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cuda:0",
+      teacher_adapter=teacher_adapter,
+    )
+
+  runner.device = torch.device("cpu")
+  reduced = []
+
+  def _fake_all_reduce(tensor: torch.Tensor, op=None):
+    reduced.append(float(tensor.item()))
+    tensor.mul_(2.0)
+
+  with patch("torch.distributed.all_reduce", side_effect=_fake_all_reduce):
+    value = runner._distributed_mean(3.0)
+
+  assert value == pytest.approx(3.0)
+  assert reduced == [3.0]

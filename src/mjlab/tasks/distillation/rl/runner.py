@@ -63,6 +63,7 @@ class DistillationRunner:
     self.cfg = train_cfg
     self.log_dir = log_dir
     self.device = torch.device(device)
+    self._configure_multi_gpu()
     self.num_steps_per_env = int(self.cfg["num_steps_per_env"])
     self.save_interval = int(self.cfg["save_interval"])
     self.student_obs_group = self.cfg["student_obs_group"]
@@ -72,6 +73,7 @@ class DistillationRunner:
     self.writer = None
     self.logger = None
     self.logger_type = self.cfg.get("logger", "tensorboard").lower()
+    self.disable_logs = self.is_distributed and self.gpu_global_rank != 0
 
     self.current_learning_iteration = 0
     self.tot_timesteps = 0
@@ -92,6 +94,7 @@ class DistillationRunner:
       policy=self.student_policy,
       learning_rate=float(self.cfg["learning_rate"]),
       max_grad_norm=1.0,
+      multi_gpu_cfg=self.multi_gpu_cfg,
     )
     self.mix_schedule = LinearTeacherMixSchedule(
       beta_start=float(self.cfg["beta_start"]),
@@ -100,6 +103,36 @@ class DistillationRunner:
     )
     self.teacher_adapter = teacher_adapter
     self.registry_name = registry_name
+
+  def _configure_multi_gpu(self) -> None:
+    self.gpu_world_size = int(os.getenv("WORLD_SIZE", "1"))
+    self.is_distributed = self.gpu_world_size > 1
+
+    if not self.is_distributed:
+      self.gpu_local_rank = 0
+      self.gpu_global_rank = 0
+      self.multi_gpu_cfg = None
+      return
+
+    self.gpu_local_rank = int(os.getenv("LOCAL_RANK", "0"))
+    self.gpu_global_rank = int(os.getenv("RANK", "0"))
+    expected_device = f"cuda:{self.gpu_local_rank}"
+    if str(self.device) != expected_device:
+      raise ValueError(
+        f"Device '{self.device}' does not match expected device for local rank '{self.gpu_local_rank}'."
+      )
+
+    self.multi_gpu_cfg = {
+      "global_rank": self.gpu_global_rank,
+      "local_rank": self.gpu_local_rank,
+      "world_size": self.gpu_world_size,
+    }
+    torch.distributed.init_process_group(
+      backend="nccl",
+      rank=self.gpu_global_rank,
+      world_size=self.gpu_world_size,
+    )
+    torch.cuda.set_device(self.gpu_local_rank)
 
   def add_git_repo_to_log(self, repo_file_path):
     self.git_status_repos.append(repo_file_path)
@@ -167,8 +200,11 @@ class DistillationRunner:
     return infos
 
   def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):
-    self._prepare_logging_writer()
+    if not self.disable_logs:
+      self._prepare_logging_writer()
     teacher_adapter = self._get_teacher_adapter()
+    if self.is_distributed:
+      self.alg.broadcast_parameters()
 
     if init_at_random_ep_len:
       self.env.episode_length_buf = torch.randint_like(
@@ -242,23 +278,30 @@ class DistillationRunner:
         device=self.device,
       )
       teacher_batch = torch.cat(teacher_rollout, dim=0)
-      self.last_loss_dict = self.alg.update(
+      self.last_loss_dict = {
+        key: self._distributed_mean(value)
+        for key, value in self.alg.update(
         student_obs=student_batch,
         teacher_actions=teacher_batch,
         num_learning_epochs=int(self.cfg["num_learning_epochs"]),
         num_mini_batches=int(self.cfg["num_mini_batches"]),
-      )
+        ).items()
+      }
       learn_time = time.time() - learn_start
 
       teacher_mask = torch.cat(teacher_masks, dim=0)
       self.last_train_metrics = {
-        "beta_teacher": float(beta),
-        "teacher_action_ratio": float(teacher_mask.float().mean().item()),
-        "student_action_ratio": float((~teacher_mask).float().mean().item()),
+        "beta_teacher": self._distributed_mean(float(beta)),
+        "teacher_action_ratio": self._distributed_mean(
+          float(teacher_mask.float().mean().item())
+        ),
+        "student_action_ratio": self._distributed_mean(
+          float((~teacher_mask).float().mean().item())
+        ),
       }
       self.current_learning_iteration = it
 
-      if self.log_dir is not None:
+      if self.log_dir is not None and not self.disable_logs:
         self._log_train_iteration(
           it=it,
           total_iterations=tot_iter,
@@ -271,10 +314,12 @@ class DistillationRunner:
         if it % self.save_interval == 0:
           self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
 
-    if self.log_dir is not None:
+    if self.log_dir is not None and not self.disable_logs:
       self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
 
   def _prepare_logging_writer(self) -> None:
+    if self.disable_logs:
+      return
     if self.log_dir is None or self.writer is not None:
       return
 
@@ -327,6 +372,14 @@ class DistillationRunner:
       self.teacher_adapter = self._build_teacher_adapter()
     return self.teacher_adapter
 
+  def _distributed_mean(self, value: float) -> float:
+    if not self.is_distributed:
+      return value
+    tensor = torch.tensor(value, dtype=torch.float32, device=self.device)
+    torch.distributed.all_reduce(tensor, op=torch.distributed.ReduceOp.SUM)
+    tensor /= self.gpu_world_size
+    return float(tensor.item())
+
   def _log_train_iteration(
     self,
     *,
@@ -341,7 +394,7 @@ class DistillationRunner:
     if self.writer is None:
       return
 
-    collection_size = self.num_steps_per_env * self.env.num_envs
+    collection_size = self.num_steps_per_env * self.env.num_envs * self.gpu_world_size
     self.tot_timesteps += collection_size
     self.tot_time += collection_time + learn_time
     fps = int(collection_size / max(collection_time + learn_time, 1.0e-6))
@@ -352,8 +405,16 @@ class DistillationRunner:
       self.writer.add_scalar(f"Train/distill/{key}", value, it)
 
     if len(rewbuffer) > 0:
-      self.writer.add_scalar("Train/env/mean_reward", statistics.mean(rewbuffer), it)
-      self.writer.add_scalar("Train/env/mean_episode_length", statistics.mean(lenbuffer), it)
+      self.writer.add_scalar(
+        "Train/env/mean_reward",
+        self._distributed_mean(statistics.mean(rewbuffer)),
+        it,
+      )
+      self.writer.add_scalar(
+        "Train/env/mean_episode_length",
+        self._distributed_mean(statistics.mean(lenbuffer)),
+        it,
+      )
 
     if ep_infos:
       aggregated: dict[str, list[float]] = defaultdict(list)
@@ -361,7 +422,11 @@ class DistillationRunner:
         for key, value in ep_info.items():
           aggregated[key].append(self._to_float(value))
       for key, values in aggregated.items():
-        self.writer.add_scalar(f"Train/env/{key}", sum(values) / len(values), it)
+        self.writer.add_scalar(
+          f"Train/env/{key}",
+          self._distributed_mean(sum(values) / len(values)),
+          it,
+        )
     else:
       aggregated = {}
 
