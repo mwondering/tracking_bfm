@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import asdict
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -398,3 +399,58 @@ def test_distillation_runner_reduces_logged_scalars_across_ranks(monkeypatch) ->
 
   assert value == pytest.approx(3.0)
   assert reduced == [3.0]
+
+
+def test_build_teacher_adapter_masks_distributed_env_for_nested_teacher_runner(
+  monkeypatch,
+) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    upload_model=False,
+    teacher_checkpoint_path="dummy_teacher.pt",
+    teacher_task_id="Dummy-Teacher-Task",
+  )
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "0")
+  monkeypatch.setenv("LOCAL_RANK", "0")
+
+  seen_env: list[tuple[str | None, str | None, str | None]] = []
+
+  class _TeacherRunnerProbe:
+    def __init__(self, env, train_cfg, log_dir=None, device="cpu"):
+      seen_env.append(
+        (
+          os.environ.get("WORLD_SIZE"),
+          os.environ.get("RANK"),
+          os.environ.get("LOCAL_RANK"),
+        )
+      )
+
+    def load(self, path, map_location=None):
+      return None
+
+    def get_inference_policy(self, device=None):
+      return lambda obs: obs["actor"][..., :3] * 0.5
+
+  with (
+    patch("torch.distributed.init_process_group"),
+    patch("torch.cuda.set_device"),
+    patch.object(TensorDict, "to", lambda self, *args, **kwargs: self),
+    patch.object(torch.nn.Module, "to", lambda self, *args, **kwargs: self),
+    patch("mjlab.tasks.distillation.rl.runner.load_runner_cls", return_value=_TeacherRunnerProbe),
+    patch(
+      "mjlab.tasks.distillation.rl.runner.load_rl_cfg",
+      return_value=DistillationRunnerCfg(logger="tensorboard", upload_model=False),
+    ),
+  ):
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cuda:0",
+    )
+    runner._build_teacher_adapter()
+
+  assert seen_env == [(None, None, None)]

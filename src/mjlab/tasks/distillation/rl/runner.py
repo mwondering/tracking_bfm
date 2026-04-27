@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import os
 import statistics
 import time
@@ -351,12 +352,13 @@ class DistillationRunner:
     teacher_cfg = asdict(load_rl_cfg(teacher_task_id))
 
     common_step_counter = getattr(self.env.unwrapped, "common_step_counter", None)
-    teacher_runner = teacher_runner_cls(
-      self.env,
-      teacher_cfg,
-      log_dir=None,
-      device=str(self.device),
-    )
+    with self._suppress_distributed_env_for_nested_runner():
+      teacher_runner = teacher_runner_cls(
+        self.env,
+        teacher_cfg,
+        log_dir=None,
+        device=str(self.device),
+      )
     teacher_runner.load(checkpoint_path, map_location=str(self.device))
     if common_step_counter is not None:
       self.env.unwrapped.common_step_counter = common_step_counter
@@ -371,6 +373,21 @@ class DistillationRunner:
     if self.teacher_adapter is None:
       self.teacher_adapter = self._build_teacher_adapter()
     return self.teacher_adapter
+
+  @contextmanager
+  def _suppress_distributed_env_for_nested_runner(self):
+    env_keys = ("WORLD_SIZE", "RANK", "LOCAL_RANK")
+    original_env = {key: os.environ.get(key) for key in env_keys}
+    try:
+      for key in env_keys:
+        os.environ.pop(key, None)
+      yield
+    finally:
+      for key, value in original_env.items():
+        if value is None:
+          os.environ.pop(key, None)
+        else:
+          os.environ[key] = value
 
   def _distributed_mean(self, value: float) -> float:
     if not self.is_distributed:
