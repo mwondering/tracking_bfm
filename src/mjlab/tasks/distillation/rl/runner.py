@@ -300,6 +300,11 @@ class DistillationRunner:
           float((~teacher_mask).float().mean().item())
         ),
       }
+      env_metrics, aggregated_ep_info = self._collect_distributed_log_data(
+        ep_infos=ep_infos,
+        rewbuffer=rewbuffer,
+        lenbuffer=lenbuffer,
+      )
       self.current_learning_iteration = it
 
       if self.log_dir is not None and not self.disable_logs:
@@ -308,9 +313,8 @@ class DistillationRunner:
           total_iterations=tot_iter,
           collection_time=collection_time,
           learn_time=learn_time,
-          ep_infos=ep_infos,
-          rewbuffer=rewbuffer,
-          lenbuffer=lenbuffer,
+          env_metrics=env_metrics,
+          aggregated_ep_info=aggregated_ep_info,
         )
         if it % self.save_interval == 0:
           self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
@@ -397,6 +401,33 @@ class DistillationRunner:
     tensor /= self.gpu_world_size
     return float(tensor.item())
 
+  def _collect_distributed_log_data(
+    self,
+    *,
+    ep_infos: list[dict[str, Any]],
+    rewbuffer: deque,
+    lenbuffer: deque,
+  ) -> tuple[dict[str, float], dict[str, float]]:
+    env_metrics: dict[str, float] = {}
+    if len(rewbuffer) > 0:
+      env_metrics["mean_reward"] = self._distributed_mean(statistics.mean(rewbuffer))
+      env_metrics["mean_episode_length"] = self._distributed_mean(
+        statistics.mean(lenbuffer)
+      )
+
+    aggregated_ep_info: dict[str, float] = {}
+    if ep_infos:
+      aggregated: dict[str, list[float]] = defaultdict(list)
+      for ep_info in ep_infos:
+        for key, value in ep_info.items():
+          aggregated[key].append(self._to_float(value))
+      aggregated_ep_info = {
+        key: self._distributed_mean(sum(values) / len(values))
+        for key, values in aggregated.items()
+      }
+
+    return env_metrics, aggregated_ep_info
+
   def _log_train_iteration(
     self,
     *,
@@ -404,9 +435,8 @@ class DistillationRunner:
     total_iterations: int,
     collection_time: float,
     learn_time: float,
-    ep_infos: list[dict[str, Any]],
-    rewbuffer: deque,
-    lenbuffer: deque,
+    env_metrics: dict[str, float],
+    aggregated_ep_info: dict[str, float],
   ) -> None:
     if self.writer is None:
       return
@@ -421,31 +451,16 @@ class DistillationRunner:
     for key, value in self.last_train_metrics.items():
       self.writer.add_scalar(f"Train/distill/{key}", value, it)
 
-    if len(rewbuffer) > 0:
-      self.writer.add_scalar(
-        "Train/env/mean_reward",
-        self._distributed_mean(statistics.mean(rewbuffer)),
-        it,
-      )
+    if "mean_reward" in env_metrics:
+      self.writer.add_scalar("Train/env/mean_reward", env_metrics["mean_reward"], it)
       self.writer.add_scalar(
         "Train/env/mean_episode_length",
-        self._distributed_mean(statistics.mean(lenbuffer)),
+        env_metrics["mean_episode_length"],
         it,
       )
 
-    if ep_infos:
-      aggregated: dict[str, list[float]] = defaultdict(list)
-      for ep_info in ep_infos:
-        for key, value in ep_info.items():
-          aggregated[key].append(self._to_float(value))
-      for key, values in aggregated.items():
-        self.writer.add_scalar(
-          f"Train/env/{key}",
-          self._distributed_mean(sum(values) / len(values)),
-          it,
-        )
-    else:
-      aggregated = {}
+    for key, value in aggregated_ep_info.items():
+      self.writer.add_scalar(f"Train/env/{key}", value, it)
 
     self.writer.add_scalar("Perf/total_fps", fps, it)
     self.writer.add_scalar("Perf/collection_time", collection_time, it)
@@ -457,9 +472,8 @@ class DistillationRunner:
         collection_time=collection_time,
         learn_time=learn_time,
         fps=fps,
-        aggregated_ep_info=aggregated,
-        rewbuffer=rewbuffer,
-        lenbuffer=lenbuffer,
+        aggregated_ep_info=aggregated_ep_info,
+        env_metrics=env_metrics,
       )
     )
 
@@ -471,9 +485,8 @@ class DistillationRunner:
     collection_time: float,
     learn_time: float,
     fps: int,
-    aggregated_ep_info: dict[str, list[float]],
-    rewbuffer: deque,
-    lenbuffer: deque,
+    aggregated_ep_info: dict[str, float],
+    env_metrics: dict[str, float],
   ) -> str:
     width = 80
     pad = 35
@@ -491,14 +504,14 @@ class DistillationRunner:
     for key, value in self.last_train_metrics.items():
       lines.append(f"{f'{key}:':>{pad}} {value:.4f}")
 
-    if len(rewbuffer) > 0:
-      lines.append(f"{'Mean reward:':>{pad}} {statistics.mean(rewbuffer):.4f}")
+    if "mean_reward" in env_metrics:
+      lines.append(f"{'Mean reward:':>{pad}} {env_metrics['mean_reward']:.4f}")
       lines.append(
-        f"{'Mean episode length:':>{pad}} {statistics.mean(lenbuffer):.4f}"
+        f"{'Mean episode length:':>{pad}} {env_metrics['mean_episode_length']:.4f}"
       )
 
-    for key, values in aggregated_ep_info.items():
-      lines.append(f"{f'{key}:':>{pad}} {sum(values) / len(values):.4f}")
+    for key, value in aggregated_ep_info.items():
+      lines.append(f"{f'{key}:':>{pad}} {value:.4f}")
 
     lines.extend(
       [

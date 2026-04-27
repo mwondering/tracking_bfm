@@ -454,3 +454,51 @@ def test_build_teacher_adapter_masks_distributed_env_for_nested_teacher_runner(
     runner._build_teacher_adapter()
 
   assert seen_env == [(None, None, None)]
+
+
+def test_distillation_runner_collects_distributed_env_metrics_without_writer(
+  monkeypatch,
+) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "1")
+  monkeypatch.setenv("LOCAL_RANK", "1")
+
+  with (
+    patch("torch.distributed.init_process_group"),
+    patch("torch.cuda.set_device"),
+    patch.object(TensorDict, "to", lambda self, *args, **kwargs: self),
+    patch.object(torch.nn.Module, "to", lambda self, *args, **kwargs: self),
+  ):
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cuda:1",
+      teacher_adapter=teacher_adapter,
+    )
+
+  runner.device = torch.device("cpu")
+  rewbuffer = deque([2.0, 4.0], maxlen=100)
+  lenbuffer = deque([8.0, 10.0], maxlen=100)
+  ep_infos = [{"reward_metric": torch.tensor(6.0)}]
+  reduced = []
+
+  def _fake_all_reduce(tensor: torch.Tensor, op=None):
+    reduced.append(float(tensor.item()))
+    tensor.mul_(2.0)
+
+  with patch("torch.distributed.all_reduce", side_effect=_fake_all_reduce):
+    env_metrics, aggregated = runner._collect_distributed_log_data(
+      ep_infos=ep_infos,
+      rewbuffer=rewbuffer,
+      lenbuffer=lenbuffer,
+    )
+
+  assert env_metrics["mean_reward"] == pytest.approx(3.0)
+  assert env_metrics["mean_episode_length"] == pytest.approx(9.0)
+  assert aggregated["reward_metric"] == pytest.approx(6.0)
+  assert reduced == [3.0, 9.0, 6.0]
