@@ -9,7 +9,7 @@ cd "$REPO_ROOT"
 #/home/lenovo/DATASETS/test_motion
 #/home/lenovo/DATASETS/Data10k
 TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
-MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data}"
+MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/AMASS_LAFAN_Qingtong}"
 TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_filteredsonic/2026-04-25_11-04-39_multi_gpu_adaptive_resume/model_102000.pt}"
 NUM_ENVS="${NUM_ENVS:-16384}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
@@ -50,4 +50,4 @@ uv run train "$TASK" \
     --agent.wandb_project "tracking_bfm_distillation" \
     --debug False \
     --agent.upload-model False \
-    --agent.gpu_ids "[4,5]"
+    --gpu_ids "[4,5]"
