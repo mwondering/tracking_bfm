@@ -20,7 +20,7 @@ STUDENT_HISTORY_STEPS="${STUDENT_HISTORY_STEPS:-0}"
 STUDENT_FUTURE_STEPS="${STUDENT_FUTURE_STEPS:-1}"
 STUDENT_ROBOT_HISTORY_STEPS="${STUDENT_ROBOT_HISTORY_STEPS:-20}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_distillation}"
-RUN_NAME="${RUN_NAME:-distill_mlp_mixed}"
+RUN_NAME="${RUN_NAME:-distill_mlp_mixed_nonoise}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \

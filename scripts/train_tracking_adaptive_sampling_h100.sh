@@ -12,7 +12,7 @@ MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
 NUM_ENVS="${NUM_ENVS:-16384}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-teacher_amass_lafan_noiton_sonic}"
 
-RUN_NAME="${RUN_NAME:-multi_gpu_adaptive_nocommandwindow}"
+RUN_NAME="${RUN_NAME:-multi_gpu_adaptive_nocommandwindow_16384_resume}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
@@ -27,4 +27,7 @@ uv run train "$TASK" \
     --agent.save_interval 2000 \
     --debug False \
     --agent.upload-model False \
-    --gpu_ids "[0,1,2,3,4,5]"
+    --gpu_ids "[0,1,2,3]" \
+    --agent.resume True \
+    --agent.load_run "2026-04-28_15-53-48_multi_gpu_adaptive_nocommandwindow_16384" \
+    --agent.load_checkpoint "model_48000.pt" \

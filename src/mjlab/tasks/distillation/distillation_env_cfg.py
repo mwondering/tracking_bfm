@@ -6,9 +6,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from mjlab.managers.observation_manager import ObservationGroupCfg
-from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
 from mjlab.tasks.distillation.mdp.commands import StudentSparseCommandVisCfg
 from mjlab.tasks.distillation.mdp.observations import build_student_actor_terms
+from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ def make_distillation_env_cfg(play: bool = False):
   student_command_cfg = StudentCommandConfig()
 
   teacher_actor = deepcopy(cfg.observations["actor"])
+  teacher_actor.enable_corruption = False
   student_actor = ObservationGroupCfg(
     terms=build_student_actor_terms(
       command_name=student_command_cfg.command_name,
@@ -35,7 +36,7 @@ def make_distillation_env_cfg(play: bool = False):
       future_steps=student_command_cfg.future_steps,
     ),
     concatenate_terms=True,
-    enable_corruption=not play,
+    enable_corruption=False,
   )
 
   cfg.observations["teacher_actor"] = teacher_actor
