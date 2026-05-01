@@ -9,8 +9,8 @@ cd "$REPO_ROOT"
 #/home/lenovo/DATASETS/test_motion
 #/home/lenovo/DATASETS/Data10k
 TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
-MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/test_motion}"
-TEACHER_CKPT="${TEACHER_CKPT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_0427/model_97000.pt}"
+MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
+TEACHER_CKPT="${TEACHER_CKPT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt_0429/model_16000.pt}"
 NUM_ENVS="${NUM_ENVS:-1024}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NUM_STEPS_PER_ENV="${NUM_STEPS_PER_ENV:-24}"
@@ -26,6 +26,8 @@ uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
     --env.scene.num-envs "$NUM_ENVS" \
     --env.commands.motion.sampling-mode adaptive \
+    --env.commands.motion.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.commands.motion.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
