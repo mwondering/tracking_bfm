@@ -17,12 +17,17 @@ CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/l
 MOTION_TYPE="${MOTION_TYPE:-isaaclab}"
 NUM_ENVS="${NUM_ENVS:-512}"
 VIEWER="${VIEWER:-none}"
+GPU_IDS="${GPU_IDS:-}"
 FAILURE_THRESHOLD="${FAILURE_THRESHOLD:-0.9}"
 OUTPUT_FILE="${OUTPUT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/filter_report.json}"
 REPORT_FILE="${REPORT_FILE:-$OUTPUT_FILE}"
-MISSING_OK="${MISSING_OK:-true}"
+MISSING_OK="${MISSING_OK:-True}"
 
 if [[ "$MODE" == "evaluate" ]]; then
+  EFFECTIVE_VIEWER="$VIEWER"
+  if [[ -n "$GPU_IDS" ]]; then
+    EFFECTIVE_VIEWER="none"
+  fi
   CMD=(
     uv run data-filtering evaluate "$TASK"
     --history-steps 0
@@ -30,11 +35,14 @@ if [[ "$MODE" == "evaluate" ]]; then
     --motion-path "$MOTION_PATH"
     --motion-type "$MOTION_TYPE"
     --num-envs "$NUM_ENVS"
-    --viewer "$VIEWER"
+    --viewer "$EFFECTIVE_VIEWER"
     --failure-threshold "$FAILURE_THRESHOLD"
     --output-file "$OUTPUT_FILE"
     --checkpoint-file "$CHECKPOINT_FILE"
   )
+  if [[ -n "$GPU_IDS" ]]; then
+    CMD+=(--gpu-ids "$GPU_IDS")
+  fi
   "${CMD[@]}"
 elif [[ "$MODE" == "delete" ]]; then
   CMD=(

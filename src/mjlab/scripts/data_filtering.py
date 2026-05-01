@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import time
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -26,6 +27,7 @@ from mjlab.tasks.tracking.mdp.commands import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
+from mjlab.utils.gpu import select_gpus
 from mjlab.utils.os import get_wandb_checkpoint_path
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.viewer import NativeMujocoViewer, ViserPlayViewer
@@ -45,6 +47,8 @@ class EvaluateConfig:
   failure_threshold: float = 0.9
   output_file: str = "filtered_motions.json"
   viewer: Literal["none", "auto", "native", "viser"] = "none"
+  torchrunx_log_dir: str | None = None
+  gpu_ids: list[int] | Literal["all"] | None = None
 
 
 @dataclass(frozen=True)
@@ -249,6 +253,8 @@ def _build_filter_report(
   checkpoint: str,
   threshold: float,
   records: list[dict[str, Any]],
+  rank: int,
+  world_size: int,
 ) -> dict[str, Any]:
   sorted_records = sorted(records, key=lambda item: item["motion_index"])
   failed_records = [
@@ -266,6 +272,8 @@ def _build_filter_report(
     "motion_root": motion_root,
     "checkpoint": checkpoint,
     "failure_threshold": threshold,
+    "rank": rank,
+    "world_size": world_size,
     "total_motion_count": total_motion_count,
     "failed_motion_count": failed_motion_count,
     "failed_motion_ratio": failed_motion_ratio,
@@ -295,6 +303,88 @@ def _load_policy(task_id: str, env: RslRlVecEnvWrapper, device: str, checkpoint_
   return runner.get_inference_policy(device=device)
 
 
+def _shard_motion_files(
+  motion_files: list[Path], world_size: int, rank: int
+) -> list[Path]:
+  if world_size <= 1:
+    return motion_files
+  return motion_files[rank::world_size]
+
+
+def _runtime_rank_context(cfg: EvaluateConfig) -> tuple[str, int, int]:
+  cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+  world_size = int(os.environ.get("WORLD_SIZE", "1"))
+  rank = int(os.environ.get("RANK", "0"))
+
+  if cuda_visible == "":
+    device = cfg.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
+    return device, rank, world_size
+
+  local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+  os.environ["MUJOCO_EGL_DEVICE_ID"] = str(local_rank)
+  device = f"cuda:{local_rank}"
+  return device, rank, world_size
+
+
+def _rank_output_path(output_file: str, rank: int, world_size: int) -> Path:
+  output_path = Path(output_file)
+  if world_size <= 1:
+    return output_path
+  return output_path.with_name(
+    f"{output_path.stem}.rank{rank:02d}-of-{world_size:02d}{output_path.suffix or '.json'}"
+  )
+
+
+def _prepare_launch_cfg(cfg: EvaluateConfig) -> EvaluateConfig:
+  if cfg.gpu_ids is not None and cfg.viewer != "none":
+    print("[INFO] gpu_ids provided; forcing viewer=none to avoid multi-process viewer conflicts.")
+    return replace(cfg, viewer="none")
+  return cfg
+
+
+def _merge_filter_reports(
+  report_paths: list[Path], output_path: Path
+) -> dict[str, Any]:
+  reports = []
+  for report_path in sorted(report_paths):
+    with report_path.open("r", encoding="utf-8") as file:
+      reports.append(json.load(file))
+  if not reports:
+    raise ValueError("No partial reports found to merge.")
+
+  merged_failed_motions: list[dict[str, Any]] = []
+  total_motion_count = 0
+  failed_motion_count = 0
+
+  for report in reports:
+    total_motion_count += int(report["total_motion_count"])
+    failed_motion_count += int(report["failed_motion_count"])
+    merged_failed_motions.extend(report.get("failed_motions", []))
+
+  merged_failed_motions.sort(
+    key=lambda item: (item.get("rank", -1), item.get("motion_index", -1))
+  )
+  merged_report = {
+    "created_at": datetime.now(tz=timezone.utc).isoformat(),
+    "task_id": reports[0]["task_id"],
+    "motion_root": reports[0]["motion_root"],
+    "checkpoint": reports[0]["checkpoint"],
+    "failure_threshold": reports[0]["failure_threshold"],
+    "world_size": max(int(report.get("world_size", 1)) for report in reports),
+    "report_parts": len(reports),
+    "total_motion_count": total_motion_count,
+    "failed_motion_count": failed_motion_count,
+    "failed_motion_ratio": (
+      failed_motion_count / total_motion_count if total_motion_count > 0 else 0.0
+    ),
+    "failed_motions": merged_failed_motions,
+  }
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  with output_path.open("w", encoding="utf-8") as file:
+    json.dump(merged_report, file, indent=2)
+  return merged_report
+
+
 class FilteringEvalEnv:
   """VecEnv wrapper that records completed motions and refills idle env slots."""
 
@@ -303,10 +393,12 @@ class FilteringEvalEnv:
     env: RslRlVecEnvWrapper,
     motion_files: list[Path],
     command: Any,
+    rank: int,
   ) -> None:
     self._env = env
     self._motion_files = motion_files
     self._command = command
+    self._rank = rank
     self.records: list[dict[str, Any]] = []
     self.finished = False
     self._next_motion_index = 0
@@ -388,6 +480,7 @@ class FilteringEvalEnv:
         {
           "motion_index": motion_index,
           "path": str(self._motion_files[motion_index].resolve()),
+          "rank": self._rank,
           "completed_steps": completed_steps,
           "total_steps": motion_length,
           "completion_ratio": completion_ratio,
@@ -479,6 +572,7 @@ def _run_viewer_evaluate(
   checkpoint_label: str,
   motion_root: str,
 ) -> dict[str, Any]:
+  device, rank, world_size = _runtime_rank_context(cfg)
   env_cfg = _prepare_filtering_env_cfg(load_env_cfg(task_id, play=False))
   motion_cmd = env_cfg.commands["motion"]
   assert isinstance(motion_cmd, MultiMotionCommandCfg)
@@ -491,13 +585,11 @@ def _run_viewer_evaluate(
   )
   env_cfg.scene.num_envs = min(cfg.num_envs, len(motion_files))
 
-  env = ManagerBasedRlEnv(
-    cfg=env_cfg, device=cfg.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
-  )
+  env = ManagerBasedRlEnv(cfg=env_cfg, device=device)
   vec_env = RslRlVecEnvWrapper(env, clip_actions=load_rl_cfg(task_id).clip_actions)
-  policy = _load_policy(task_id, vec_env, env.device, checkpoint_path)
+  policy = _load_policy(task_id, vec_env, device, checkpoint_path)
   command = cast(Any, env.command_manager.get_term("motion"))
-  filtering_env = FilteringEvalEnv(vec_env, motion_files, command)
+  filtering_env = FilteringEvalEnv(vec_env, motion_files, command, rank=rank)
 
   viewer_backend = _resolve_viewer_backend(cfg.viewer)
   assert viewer_backend is not None
@@ -514,8 +606,10 @@ def _run_viewer_evaluate(
     checkpoint=checkpoint_label,
     threshold=cfg.failure_threshold,
     records=filtering_env.records,
+    rank=rank,
+    world_size=world_size,
   )
-  output_path = Path(cfg.output_file)
+  output_path = _rank_output_path(cfg.output_file, rank, world_size)
   output_path.parent.mkdir(parents=True, exist_ok=True)
   with output_path.open("w", encoding="utf-8") as file:
     json.dump(report, file, indent=2)
@@ -531,9 +625,9 @@ def _run_viewer_evaluate(
 
 def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
   configure_torch_backends()
-  device = cfg.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
+  device, rank, world_size = _runtime_rank_context(cfg)
   motion_root = _resolve_motion_root(cfg)
-  motion_files = _collect_motion_files(motion_root)
+  motion_files = _shard_motion_files(_collect_motion_files(motion_root), world_size, rank)
   checkpoint_path, checkpoint_label = _resolve_checkpoint_path(task_id, cfg)
   if cfg.viewer != "none":
     return _run_viewer_evaluate(
@@ -637,6 +731,7 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
         {
           "motion_index": motion_index,
           "path": str(motion_files[motion_index].resolve()),
+          "rank": rank,
           "completed_steps": completed_steps,
           "total_steps": total_steps,
           "completion_ratio": completion_ratio,
@@ -660,8 +755,10 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
     checkpoint=checkpoint_label,
     threshold=cfg.failure_threshold,
     records=records,
+    rank=rank,
+    world_size=world_size,
   )
-  output_path = Path(cfg.output_file)
+  output_path = _rank_output_path(cfg.output_file, rank, world_size)
   output_path.parent.mkdir(parents=True, exist_ok=True)
   with output_path.open("w", encoding="utf-8") as file:
     json.dump(report, file, indent=2)
@@ -673,6 +770,54 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
   )
   print(f"[INFO] Report saved to {output_path.resolve()}")
   return report
+
+
+def launch_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
+  cfg = _prepare_launch_cfg(cfg)
+
+  if cfg.gpu_ids is None:
+    return run_evaluate(task_id, cfg)
+
+  selected_gpus, num_gpus = select_gpus(cfg.gpu_ids)
+  if selected_gpus is None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+  else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, selected_gpus))
+  os.environ["MUJOCO_GL"] = "egl"
+
+  if num_gpus <= 1:
+    return run_evaluate(task_id, cfg)
+
+  import torchrunx
+
+  logging.basicConfig(level=logging.INFO)
+  if "TORCHRUNX_LOG_DIR" not in os.environ:
+    if cfg.torchrunx_log_dir is not None:
+      os.environ["TORCHRUNX_LOG_DIR"] = cfg.torchrunx_log_dir
+    else:
+      output_path = Path(cfg.output_file)
+      os.environ["TORCHRUNX_LOG_DIR"] = str(
+        output_path.parent / f"{output_path.stem}_torchrunx"
+      )
+
+  print(f"[INFO] Launching data filtering with {num_gpus} GPUs", flush=True)
+  torchrunx.Launcher(
+    hostnames=["localhost"],
+    workers_per_host=num_gpus,
+    backend=None,
+    copy_env_vars=torchrunx.DEFAULT_ENV_VARS_FOR_COPY + ("MUJOCO*",),
+  ).run(run_evaluate, task_id, cfg)
+
+  rank_report_paths = [
+    _rank_output_path(cfg.output_file, rank=rank, world_size=num_gpus)
+    for rank in range(num_gpus)
+  ]
+  merged_report = _merge_filter_reports(rank_report_paths, Path(cfg.output_file))
+  print(
+    f"[INFO] Merged {len(rank_report_paths)} partial reports into "
+    f"{Path(cfg.output_file).resolve()}"
+  )
+  return merged_report
 
 
 def run_delete(cfg: DeleteConfig) -> None:
@@ -739,7 +884,7 @@ def main() -> None:
       prog=sys.argv[0] + f" evaluate {chosen_task}",
       config=mjlab.TYRO_FLAGS,
     )
-    run_evaluate(chosen_task, args)
+    launch_evaluate(chosen_task, args)
     return
 
   if command == "delete":

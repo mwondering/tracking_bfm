@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import torch
 
 from mjlab.scripts.data_filtering import (
+  EvaluateConfig,
   _build_filter_report,
   _configure_motion_command,
   _extract_failed_motion_paths,
+  _merge_filter_reports,
   _prepare_filtering_env_cfg,
+  _prepare_launch_cfg,
+  _shard_motion_files,
   motion_sequence_complete,
 )
 from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
@@ -83,11 +88,15 @@ def test_build_filter_report_counts_bad_motions() -> None:
     checkpoint="/ckpt/model.pt",
     threshold=0.9,
     records=records,
+    rank=0,
+    world_size=1,
   )
 
   assert report["total_motion_count"] == 2
   assert report["failed_motion_count"] == 1
   assert report["failed_motion_ratio"] == 0.5
+  assert report["rank"] == 0
+  assert report["world_size"] == 1
   assert report["failed_motions"] == [records[0]]
 
 
@@ -123,3 +132,79 @@ def test_configure_motion_command_applies_reference_window_overrides() -> None:
   assert motion_cfg.motion_type == "isaaclab"
   assert motion_cfg.history_steps == 0
   assert motion_cfg.future_steps == 1
+
+
+def test_shard_motion_files_matches_rank_slicing() -> None:
+  """Outer scheduling should shard motions the same way as the command loader."""
+  motion_files = [Path(f"/dataset/{idx}.npz") for idx in range(6)]
+
+  shard = _shard_motion_files(motion_files, world_size=3, rank=1)
+
+  assert shard == [motion_files[1], motion_files[4]]
+
+
+def test_prepare_launch_cfg_disables_viewer_when_gpu_ids_are_provided() -> None:
+  """Any explicit gpu_ids launch should force non-viewer mode."""
+  cfg = EvaluateConfig(viewer="viser", gpu_ids=[0, 1])
+
+  prepared_cfg = _prepare_launch_cfg(cfg)
+
+  assert prepared_cfg.viewer == "none"
+
+
+def test_merge_filter_reports_combines_partial_reports(tmp_path: Path) -> None:
+  """Multi-GPU runs should merge rank-local reports into one final report."""
+  part_a = tmp_path / "part_a.json"
+  part_b = tmp_path / "part_b.json"
+  final_path = tmp_path / "merged.json"
+
+  part_a.write_text(
+    json.dumps(
+      {
+        "task_id": "Task",
+        "motion_root": "/dataset",
+        "checkpoint": "/ckpt.pt",
+        "failure_threshold": 0.9,
+        "rank": 0,
+        "world_size": 2,
+        "total_motion_count": 2,
+        "failed_motion_count": 1,
+        "failed_motion_ratio": 0.5,
+        "failed_motions": [
+          {
+            "motion_index": 1,
+            "path": "/dataset/b.npz",
+            "completion_ratio": 0.7,
+            "rank": 0,
+          }
+        ],
+      }
+    ),
+    encoding="utf-8",
+  )
+  part_b.write_text(
+    json.dumps(
+      {
+        "task_id": "Task",
+        "motion_root": "/dataset",
+        "checkpoint": "/ckpt.pt",
+        "failure_threshold": 0.9,
+        "rank": 1,
+        "world_size": 2,
+        "total_motion_count": 1,
+        "failed_motion_count": 0,
+        "failed_motion_ratio": 0.0,
+        "failed_motions": [],
+      }
+    ),
+    encoding="utf-8",
+  )
+
+  merged = _merge_filter_reports([part_a, part_b], final_path)
+
+  assert merged["total_motion_count"] == 3
+  assert merged["failed_motion_count"] == 1
+  assert merged["failed_motion_ratio"] == 1 / 3
+  assert merged["report_parts"] == 2
+  assert merged["failed_motions"][0]["rank"] == 0
+  assert final_path.exists()
