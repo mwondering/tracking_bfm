@@ -34,8 +34,17 @@ def build_student_actor_terms(
         "future_steps": future_steps,
       },
     ),
-    "base_lin_vel_w": ObservationTermCfg(
-      func=distill_commands.student_base_lin_vel_w,
+    # "base_lin_vel_w": ObservationTermCfg(
+    #   func=distill_commands.student_base_lin_vel_w,
+    #   params={
+    #     "command_name": command_name,
+    #     "anchor_body_name": anchor_body_name,
+    #     "history_steps": history_steps,
+    #     "future_steps": future_steps,
+    #   },
+    # ),
+    "base_lin_vel_b": ObservationTermCfg(
+      func=distill_commands.student_base_lin_vel_b,
       params={
         "command_name": command_name,
         "anchor_body_name": anchor_body_name,
@@ -43,8 +52,17 @@ def build_student_actor_terms(
         "future_steps": future_steps,
       },
     ),
-    "base_ang_vel_w": ObservationTermCfg(
-      func=distill_commands.student_base_ang_vel_w,
+    # "base_ang_vel_w": ObservationTermCfg(
+    #   func=distill_commands.student_base_ang_vel_w,
+    #   params={
+    #     "command_name": command_name,
+    #     "anchor_body_name": anchor_body_name,
+    #     "history_steps": history_steps,
+    #     "future_steps": future_steps,
+    #   },
+    # ),
+    "base_ang_vel_b": ObservationTermCfg(
+      func=distill_commands.student_base_ang_vel_b,
       params={
         "command_name": command_name,
         "anchor_body_name": anchor_body_name,

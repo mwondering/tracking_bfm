@@ -1,10 +1,14 @@
 """Tests specific to distillation tasks."""
 
+from types import SimpleNamespace
+
+import torch
 import tyro
 
 import mjlab
 import mjlab.tasks.distillation.config.g1  # noqa: F401
 from mjlab.scripts.train import TrainConfig
+from mjlab.tasks.distillation.mdp import commands as distill_commands
 from mjlab.tasks.distillation.mdp.observations import build_student_actor_terms
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 
@@ -44,6 +48,28 @@ def test_student_actor_robot_state_history_tracks_student_history_steps() -> Non
   assert terms["joint_pos"].history_length == 6
   assert terms["joint_vel"].history_length == 6
   assert terms["actions"].history_length == 6
+  assert "base_lin_vel_b" in terms
+  assert "base_ang_vel_b" in terms
+
+
+def test_student_base_velocity_body_terms_rotate_reference_velocity() -> None:
+  yaw_90_quat = torch.tensor([[0.70710677, 0.0, 0.0, 0.70710677]])
+  command = SimpleNamespace(
+    cfg=SimpleNamespace(body_names=("pelvis",)),
+    body_quat_w=yaw_90_quat[:, None, :],
+    body_lin_vel_w=torch.tensor([[[1.0, 0.0, 0.0]]]),
+    body_ang_vel_w=torch.tensor([[[0.0, 1.0, 0.0]]]),
+  )
+  env = SimpleNamespace(
+    num_envs=1,
+    command_manager=SimpleNamespace(get_term=lambda _name: command),
+  )
+
+  lin_vel_b = distill_commands.student_base_lin_vel_b(env, command_name="motion")
+  ang_vel_b = distill_commands.student_base_ang_vel_b(env, command_name="motion")
+
+  torch.testing.assert_close(lin_vel_b, torch.tensor([[0.0, -1.0, 0.0]]), atol=1e-5, rtol=1e-5)
+  torch.testing.assert_close(ang_vel_b, torch.tensor([[1.0, 0.0, 0.0]]), atol=1e-5, rtol=1e-5)
 
 
 def test_distillation_obs_corruption_can_be_configured_independently() -> None:

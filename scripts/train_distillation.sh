@@ -30,10 +30,10 @@ uv run train "$TASK" \
     --env.commands.motion.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.anchor_height_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.anchor_height_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.projected_gravity.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \

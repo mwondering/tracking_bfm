@@ -9,6 +9,7 @@ from mjlab.managers import CommandTerm, CommandTermCfg
 from mjlab.utils.lab_api.math import (
   matrix_from_quat,
   quat_apply,
+  quat_apply_inverse,
   subtract_frame_transforms,
 )
 from mjlab.viewer.debug_visualizer import DebugVisualizer
@@ -174,6 +175,60 @@ def student_base_ang_vel_w(
     future_steps=future_steps,
   )
   return body_ang_vel_w[:, :, anchor_body_index, :].reshape(env.num_envs, -1)
+
+
+def student_base_lin_vel_b(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
+) -> torch.Tensor:
+  command = _get_command(env, command_name)
+  anchor_body_index = _get_body_index(command, anchor_body_name)
+  body_lin_vel_w = _gather_student_body_field(
+    command,
+    "body_lin_vel_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  body_quat_w = _gather_student_body_field(
+    command,
+    "body_quat_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  anchor_lin_vel_w = body_lin_vel_w[:, :, anchor_body_index, :]
+  anchor_quat_w = body_quat_w[:, :, anchor_body_index, :]
+  anchor_lin_vel_b = quat_apply_inverse(anchor_quat_w, anchor_lin_vel_w)
+  return anchor_lin_vel_b.reshape(env.num_envs, -1)
+
+
+def student_base_ang_vel_b(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  anchor_body_name: str = _DEFAULT_STUDENT_ANCHOR_BODY_NAME,
+  history_steps: int = 0,
+  future_steps: int = 1,
+) -> torch.Tensor:
+  command = _get_command(env, command_name)
+  anchor_body_index = _get_body_index(command, anchor_body_name)
+  body_ang_vel_w = _gather_student_body_field(
+    command,
+    "body_ang_vel_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  body_quat_w = _gather_student_body_field(
+    command,
+    "body_quat_w",
+    history_steps=history_steps,
+    future_steps=future_steps,
+  )
+  anchor_ang_vel_w = body_ang_vel_w[:, :, anchor_body_index, :]
+  anchor_quat_w = body_quat_w[:, :, anchor_body_index, :]
+  anchor_ang_vel_b = quat_apply_inverse(anchor_quat_w, anchor_ang_vel_w)
+  return anchor_ang_vel_b.reshape(env.num_envs, -1)
 
 
 def student_anchor_height_w(
