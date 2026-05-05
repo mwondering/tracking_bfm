@@ -2,6 +2,7 @@ from mjlab.tasks.registry import register_mjlab_task
 from mjlab.tasks.tracking.rl import MotionTrackingOnPolicyRunner
 
 from .env_cfgs import (
+  unitree_g1_flat_tracking_bfm_1stage_env_cfg,
   unitree_g1_flat_tracking_bfm_env_cfg,
   unitree_g1_flat_tracking_env_cfg,
 )
@@ -27,6 +28,14 @@ register_mjlab_task(
   task_id="Mjlab-Trackingbfm-Flat-Unitree-G1",
   env_cfg=unitree_g1_flat_tracking_bfm_env_cfg(),
   play_env_cfg=unitree_g1_flat_tracking_bfm_env_cfg(play=True),
+  rl_cfg=unitree_g1_trackingbfm_ppo_runner_cfg(),
+  runner_cls=MotionTrackingOnPolicyRunner,
+)
+
+register_mjlab_task(
+  task_id="Mjlab-Trackingbfm-Flat-Unitree-G1-1Stage",
+  env_cfg=unitree_g1_flat_tracking_bfm_1stage_env_cfg(),
+  play_env_cfg=unitree_g1_flat_tracking_bfm_1stage_env_cfg(play=True),
   rl_cfg=unitree_g1_trackingbfm_ppo_runner_cfg(),
   runner_cls=MotionTrackingOnPolicyRunner,
 )

@@ -6,13 +6,104 @@ from mjlab.asset_zoo.robots import (
 )
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs.mdp.actions import JointPositionActionCfg
-from mjlab.managers.observation_manager import ObservationGroupCfg
+from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
+from mjlab.tasks.distillation.mdp import commands as distill_commands
+from mjlab.tasks.tracking import mdp
 from mjlab.tasks.tracking.mdp import MotionCommandCfg as SingleMotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
 from mjlab.tasks.tracking.tracking_env_cfg import make_tracking_env_cfg
+from mjlab.utils.noise import UniformNoiseCfg as Unoise
+
+_STUDENT_EE_BODY_NAMES = ("left_wrist_yaw_link", "right_wrist_yaw_link")
+_STUDENT_ANCHOR_BODY_NAME = "pelvis"
+
+
+def _robot_state_history_length(history_steps: int) -> int:
+  history_steps = int(history_steps)
+  if history_steps <= 0:
+    return 0
+  return history_steps + 1
+
+
+def _unitree_g1_sparse_actor_cfg(
+  *,
+  history_steps: int,
+  future_steps: int,
+  enable_corruption: bool,
+) -> ObservationGroupCfg:
+  robot_history_length = _robot_state_history_length(history_steps)
+  return ObservationGroupCfg(
+    terms={
+      "ee_pose": ObservationTermCfg(
+        func=distill_commands.student_ee_pose_b,
+        params={
+          "command_name": "motion",
+          "ee_body_names": _STUDENT_EE_BODY_NAMES,
+          "anchor_body_name": _STUDENT_ANCHOR_BODY_NAME,
+          "history_steps": history_steps,
+          "future_steps": future_steps,
+        },
+      ),
+      "base_lin_vel_b": ObservationTermCfg(
+        func=distill_commands.student_base_lin_vel_b,
+        params={
+          "command_name": "motion",
+          "anchor_body_name": _STUDENT_ANCHOR_BODY_NAME,
+          "history_steps": history_steps,
+          "future_steps": future_steps,
+        },
+      ),
+      "base_ang_vel_b": ObservationTermCfg(
+        func=distill_commands.student_base_ang_vel_b,
+        params={
+          "command_name": "motion",
+          "anchor_body_name": _STUDENT_ANCHOR_BODY_NAME,
+          "history_steps": history_steps,
+          "future_steps": future_steps,
+        },
+      ),
+      "anchor_height_w": ObservationTermCfg(
+        func=distill_commands.student_anchor_height_w,
+        params={
+          "command_name": "motion",
+          "anchor_body_name": _STUDENT_ANCHOR_BODY_NAME,
+          "history_steps": history_steps,
+          "future_steps": future_steps,
+        },
+      ),
+      "projected_gravity": ObservationTermCfg(
+        func=mdp.projected_gravity,
+        noise=Unoise(n_min=-0.05, n_max=0.05),
+        history_length=robot_history_length,
+      ),
+      "base_ang_vel": ObservationTermCfg(
+        func=mdp.builtin_sensor,
+        params={"sensor_name": "robot/imu_ang_vel"},
+        noise=Unoise(n_min=-0.2, n_max=0.2),
+        history_length=robot_history_length,
+      ),
+      "joint_pos": ObservationTermCfg(
+        func=mdp.joint_pos_rel,
+        params={"biased": True},
+        noise=Unoise(n_min=-0.01, n_max=0.01),
+        history_length=robot_history_length,
+      ),
+      "joint_vel": ObservationTermCfg(
+        func=mdp.joint_vel_rel,
+        noise=Unoise(n_min=-0.5, n_max=0.5),
+        history_length=robot_history_length,
+      ),
+      "actions": ObservationTermCfg(
+        func=mdp.last_action,
+        history_length=robot_history_length,
+      ),
+    },
+    concatenate_terms=True,
+    enable_corruption=enable_corruption,
+  )
 
 
 def _unitree_g1_flat_tracking_env_cfg(
@@ -130,3 +221,22 @@ def unitree_g1_flat_tracking_bfm_env_cfg(
     has_state_estimation=has_state_estimation,
     play=play,
   )
+
+
+def unitree_g1_flat_tracking_bfm_1stage_env_cfg(
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create the sparse-observation 1-stage Unitree G1 flat tracking configuration."""
+  cfg = unitree_g1_flat_tracking_bfm_env_cfg(play=play)
+
+  motion_cmd = cfg.commands["motion"]
+  assert isinstance(motion_cmd, MultiMotionCommandCfg)
+  motion_cmd.history_steps = 0
+  motion_cmd.future_steps = 1
+
+  cfg.observations["actor"] = _unitree_g1_sparse_actor_cfg(
+    history_steps=motion_cmd.history_steps,
+    future_steps=motion_cmd.future_steps,
+    enable_corruption=not play,
+  )
+  return cfg

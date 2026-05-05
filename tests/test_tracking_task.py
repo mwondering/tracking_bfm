@@ -6,6 +6,7 @@ from mjlab.asset_zoo.robots import G1_ACTION_SCALE
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import MotionCommandCfg as MultiMotionCommandCfg
 
 
 @pytest.fixture(scope="module")
@@ -21,15 +22,15 @@ def g1_tracking_task_ids(tracking_task_ids: list[str]) -> list[str]:
 
 
 def test_tracking_tasks_have_motion_command(tracking_task_ids: list[str]) -> None:
-  """All tracking tasks should have a 'motion' command of type MotionCommandCfg."""
+  """All tracking tasks should have a single- or multi-motion command config."""
   for task_id in tracking_task_ids:
     cfg = load_env_cfg(task_id)
 
     assert "motion" in cfg.commands, f"Task {task_id} missing 'motion' command"
 
     motion_cmd = cfg.commands["motion"]
-    assert isinstance(motion_cmd, MotionCommandCfg), (
-      f"Task {task_id} motion command is not MotionCommandCfg"
+    assert isinstance(motion_cmd, (MotionCommandCfg, MultiMotionCommandCfg)), (
+      f"Task {task_id} motion command is not a supported motion command cfg"
     )
 
 
@@ -132,3 +133,36 @@ def test_g1_tracking_has_correct_action_scale(g1_tracking_task_ids: list[str]) -
     assert joint_pos_action.scale == G1_ACTION_SCALE, (
       f"Task {task_id} action scale mismatch, expected G1_ACTION_SCALE"
     )
+
+
+def test_tracking_1stage_task_uses_sparse_actor_obs() -> None:
+  """The 1-stage tracking task should expose sparse actor observations only."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-1Stage")
+
+  actor_terms = cfg.observations["actor"].terms
+  critic_terms = cfg.observations["critic"].terms
+
+  assert set(actor_terms.keys()) == {
+    "ee_pose",
+    "base_lin_vel_b",
+    "base_ang_vel_b",
+    "anchor_height_w",
+    "projected_gravity",
+    "base_ang_vel",
+    "joint_pos",
+    "joint_vel",
+    "actions",
+  }
+  assert actor_terms["ee_pose"].params["ee_body_names"] == (
+    "left_wrist_yaw_link",
+    "right_wrist_yaw_link",
+  )
+  assert actor_terms["ee_pose"].params["anchor_body_name"] == "pelvis"
+  assert actor_terms["base_lin_vel_b"].params["anchor_body_name"] == "pelvis"
+  assert actor_terms["base_ang_vel_b"].params["anchor_body_name"] == "pelvis"
+  assert actor_terms["anchor_height_w"].params["anchor_body_name"] == "pelvis"
+
+  assert "body_pos" in critic_terms
+  assert "body_ori" in critic_terms
+  assert cfg.commands["motion"].history_steps == 0
+  assert cfg.commands["motion"].future_steps == 1
