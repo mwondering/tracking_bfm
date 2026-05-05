@@ -8,11 +8,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
-MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/Data10k/mocapblender_take_020_edit_cont_inter05_S0-15_E699-15/motion.npz}"
-CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt_0501/model_48000.pt}"
+MOTION_FILE="${MOTION_FILE:-/data/wxy/test_motion/jk_test2.npz}"
+CHECKPOINT_FILE="${CHECKPOINT_FILE:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic/2026-05-01_10-38-32_multi_gpu_adaptive_nocommandwindow_16384_resume/model_82000.pt}"
 # /home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt_0501/model_48000.pt
 # /home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_0427/model_139000.pt
-NUM_ENVS="${NUM_ENVS:-10}"
+NUM_ENVS="${NUM_ENVS:-1}"
 VIEWER="${VIEWER:-viser}"
 
 #!/usr/bin/env bash

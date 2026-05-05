@@ -9,29 +9,31 @@ cd "$REPO_ROOT"
 #/home/lenovo/DATASETS/test_motion
 #/home/lenovo/DATASETS/Data10k
 TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
-MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/AMASS_LAFAN_Qingtong}"
-TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_filteredsonic/2026-04-25_11-04-39_multi_gpu_adaptive_resume/model_102000.pt}"
+MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
+TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic/2026-05-01_10-38-32_multi_gpu_adaptive_nocommandwindow_16384_resume/model_82000.pt}"
 NUM_ENVS="${NUM_ENVS:-16384}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 NUM_STEPS_PER_ENV="${NUM_STEPS_PER_ENV:-24}"
-SAVE_INTERVAL="${SAVE_INTERVAL:-1000}"
+SAVE_INTERVAL="${SAVE_INTERVAL:-10000}"
 BETA_DECAY_STEPS="${BETA_DECAY_STEPS:-1}"
 STUDENT_HISTORY_STEPS="${STUDENT_HISTORY_STEPS:-0}"
 STUDENT_FUTURE_STEPS="${STUDENT_FUTURE_STEPS:-1}"
 STUDENT_ROBOT_HISTORY_STEPS="${STUDENT_ROBOT_HISTORY_STEPS:-20}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_distillation}"
-RUN_NAME="${RUN_NAME:-distill_multi_gpu}"
+RUN_NAME="${RUN_NAME:-distill_multi_gpu_ncw_b}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
     --env.scene.num-envs "$NUM_ENVS" \
     --env.commands.motion.sampling-mode uniform \
+    --env.commands.motion.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.commands.motion.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_lin_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
+    --env.observations.student_actor.terms.base_ang_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.anchor_height_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.anchor_height_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.projected_gravity.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \

@@ -10,7 +10,7 @@ cd "$REPO_ROOT"
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
 NUM_ENVS="${NUM_ENVS:-16384}"
-EXPERIMENT_NAME="${EXPERIMENT_NAME:-teacher_amass_lafan_noiton_sonic}"
+EXPERIMENT_NAME="${EXPERIMENT_NAME:-teacher_amass_lafan_noiton_sonic_1stage}"
 
 RUN_NAME="${RUN_NAME:-multi_gpu_adaptive_nocommandwindow_16384_resume2}"
 
@@ -28,6 +28,4 @@ uv run train "$TASK" \
     --debug False \
     --agent.upload-model False \
     --gpu_ids "[0,1,2,3]" \
-    --agent.resume True \
-    --agent.load_run "2026-05-01_10-38-32_multi_gpu_adaptive_nocommandwindow_16384_resume" \
-    --agent.load_checkpoint "model_82000.pt" \
+
