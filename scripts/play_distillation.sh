@@ -8,8 +8,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
-CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/student_ckpt/model_1000.pt}"
-MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/test_motion/homejrhangmr_dataset_pbhc_contact_maskACCADMale2Walking_c3dB19-Walktopickupbox_posespkl/motion.npz}"
+CHECKPOINT_FILE="${CHECKPOINT_FILE:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic_sparse_1stage/2026-05-05_13-07-06_multi_gpu_adaptive_sparse_1stage_16384/model_26000.pt}"
+# /data/wxy/tracking_bfm/logs/rsl_rl/g1_distillation/2026-05-03_13-53-55_distill_multi_gpu_ncw_b/model_29000.pt
+#/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/student_ckpt/model_1000.pt
+MOTION_FILE="${MOTION_FILE:-/data/wxy/test_motion/pufu.npz}"
 VIEWER="${VIEWER:-viser}"
 NUM_ENVS="${NUM_ENVS:-1}"
 NO_TERMINATIONS="${NO_TERMINATIONS:-True}"
@@ -81,10 +83,10 @@ cmd+=(--viewer "$VIEWER" --num-envs "$NUM_ENVS" --agent "$AGENT")
 cmd+=(
   --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS"
   --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS"
-  --env.observations.student_actor.terms.base_lin_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS"
-  --env.observations.student_actor.terms.base_lin_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS"
-  --env.observations.student_actor.terms.base_ang_vel_w.params.history_steps "$STUDENT_HISTORY_STEPS"
-  --env.observations.student_actor.terms.base_ang_vel_w.params.future_steps "$STUDENT_FUTURE_STEPS"
+  --env.observations.student_actor.terms.base_lin_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS"
+  --env.observations.student_actor.terms.base_lin_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS"
+  --env.observations.student_actor.terms.base_ang_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS"
+  --env.observations.student_actor.terms.base_ang_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS"
   --env.observations.student_actor.terms.anchor_height_w.params.history_steps "$STUDENT_HISTORY_STEPS"
   --env.observations.student_actor.terms.anchor_height_w.params.future_steps "$STUDENT_FUTURE_STEPS"
   --env.observations.student_actor.terms.projected_gravity.history_length "$STUDENT_ROBOT_HISTORY_STEPS"

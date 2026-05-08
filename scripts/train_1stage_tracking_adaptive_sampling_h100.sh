@@ -27,4 +27,4 @@ uv run train "$TASK" \
     --agent.save_interval 2000 \
     --debug False \
     --agent.upload-model False \
-    --gpu_ids "[0,1,2,3]" \
+    --gpu_ids "[0,1,2,3,4,5]" \
