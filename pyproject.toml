@@ -63,6 +63,7 @@ list-envs = "mjlab.scripts.list_envs:main"
 viz-nan = "mjlab.scripts.nan_viz:main"
 export-scene = "mjlab.scripts.export_scene:main"
 data-filtering = "mjlab.scripts.data_filtering:main"
+export-tracking-bfm-onnx = "mjlab.scripts.export_tracking_bfm_onnx:main"
 
 [dependency-groups]
 dev = [
