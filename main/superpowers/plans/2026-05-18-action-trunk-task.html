@@ -1,0 +1,1268 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Action Trunk Task Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-05-18-action-trunk-task';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="May 18, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-05-18-action-trunk-task.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-05-18-action-trunk-task.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-05-18-action-trunk-task.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-05-18-action-trunk-task.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Action Trunk Task Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-config-and-action-space-plumbing">Task 1: Add Config and Action Space Plumbing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-implement-trunk-aware-actionmanager">Task 2: Implement Trunk-Aware ActionManager</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-apply-trunk-slices-in-the-env-step-loop">Task 3: Apply Trunk Slices in the Env Step Loop</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-make-action-rate-l2-trunk-aware">Task 4: Make <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> Trunk-Aware</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-register-the-new-g1-action-trunk-task">Task 5: Register the New G1 Action-Trunk Task</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-end-to-end-verification">Task 6: End-to-End Verification</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="action-trunk-task-implementation-plan">
+<h1>Action Trunk Task Implementation Plan<a class="headerlink" href="#action-trunk-task-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Add an isolated G1 tracking task whose policy outputs a 4-slice action trunk (<code class="docutils literal notranslate"><span class="pre">29</span> <span class="pre">*</span> <span class="pre">4</span> <span class="pre">=</span> <span class="pre">116</span></code>) while the environment applies one 29-D slice per decimation substep.</p>
+<p><strong>Architecture:</strong> Add optional trunk support at the framework level with <code class="docutils literal notranslate"><span class="pre">action_trunk_len=1</span></code> as the default, so existing tasks remain unchanged. The new task sets <code class="docutils literal notranslate"><span class="pre">action_trunk_len=4</span></code>, the wrapper exposes <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, and <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv.step()</span></code> passes the current decimation substep to <code class="docutils literal notranslate"><span class="pre">ActionManager.apply_action()</span></code>. Only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> changes reward semantics: it penalizes actual executed substep action differences instead of treating the trunk as one flat vector.</p>
+<p><strong>Tech Stack:</strong> Python dataclasses, PyTorch tensors, MuJoCo env loop, rsl_rl <code class="docutils literal notranslate"><span class="pre">VecEnv</span></code>, pytest.</p>
+<hr class="docutils" />
+<section id="file-structure">
+<h2>File Structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code>: add <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code> config, validate it, use policy action dim for action spaces, and pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> inside <code class="docutils literal notranslate"><span class="pre">step()</span></code>.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/managers/action_manager.py</span></code>: track both base action dimension and policy action dimension, store flat trunk history, select substep slices, and expose the currently applied 29-D slice.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/mdp/rewards.py</span></code>: update only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> to compute smoothness over the executed substep sequence.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/vecenv_wrapper.py</span></code>: expose <code class="docutils literal notranslate"><span class="pre">num_actions</span></code> as policy action dimension.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code>: add the action-trunk G1 BFM task config builder.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code>: add an action-trunk PPO runner config with a separate experiment name.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code>: register the new task ID.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code>: cover trunk shape validation, substep slice routing, and reset behavior.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code>: assert the new task is registered and keeps the expected G1 action scale.</p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code>: cover env config/action space integration and trunk-aware <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code>.</p></li>
+</ul>
+<hr class="docutils" />
+<section id="task-1-add-config-and-action-space-plumbing">
+<h3>Task 1: Add Config and Action Space Plumbing<a class="headerlink" href="#task-1-add-config-and-action-space-plumbing" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/vecenv_wrapper.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing config/action-space tests</strong></p></li>
+</ul>
+<p>Add <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Tests for action trunk support.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mock</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">mjlab.tasks</span>  <span class="c1"># noqa: F401 - registers tasks</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnvCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.action_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">RslRlVecEnvWrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_env_cfg</span><span class="p">,</span> <span class="n">list_tasks</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_mock_action_term</span><span class="p">(</span><span class="n">action_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">factory</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+    <span class="n">term</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+    <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span> <span class="o">=</span> <span class="n">action_dim</span>
+    <span class="n">term</span><span class="o">.</span><span class="n">raw_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">term</span><span class="o">.</span><span class="n">process_actions</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+    <span class="n">term</span><span class="o">.</span><span class="n">apply_actions</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+    <span class="n">term</span><span class="o">.</span><span class="n">reset</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">term</span>
+
+  <span class="k">return</span> <span class="n">factory</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_mock_env</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="n">action_trunk_len</span><span class="p">,</span> <span class="n">decimation</span><span class="o">=</span><span class="n">action_trunk_len</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">env</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_trunk_task_is_registered</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">assert</span> <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk&quot;</span> <span class="ow">in</span> <span class="n">list_tasks</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_trunk_task_config_uses_four_slices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk&quot;</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">==</span> <span class="mi">4</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span> <span class="o">==</span> <span class="mi">4</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_manager_policy_dim_expands_with_trunk_len</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_make_mock_env</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">build</span> <span class="o">=</span> <span class="n">_make_mock_action_term</span><span class="p">(</span><span class="n">action_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">entity_name</span> <span class="o">=</span> <span class="s2">&quot;robot&quot;</span>
+
+  <span class="n">manager</span> <span class="o">=</span> <span class="n">ActionManager</span><span class="p">({</span><span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="p">},</span> <span class="n">env</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">total_action_dim</span> <span class="o">==</span> <span class="mi">3</span>
+  <span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">policy_action_dim</span> <span class="o">==</span> <span class="mi">12</span>
+  <span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">action</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">manager</span><span class="o">.</span><span class="n">applied_action</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_action_trunk_len_must_match_decimation_for_trunk_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">ManagerBasedRlEnvCfg</span><span class="p">(</span>
+    <span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">scene</span><span class="o">=</span><span class="n">Mock</span><span class="p">(),</span>
+    <span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">==</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>The last test intentionally only checks dataclass construction. The runtime validation belongs in <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv.__init__</span></code>, because <code class="docutils literal notranslate"><span class="pre">scene</span></code> is a mock and this test should not construct MuJoCo state.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_action_trunk_task_config_uses_four_slices<span class="w"> </span>tests/test_action_trunk.py::test_action_manager_policy_dim_expands_with_trunk_len<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code>, <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, and the task registration do not exist.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code> to env config and action spaces</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code>, add this field to <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code> after <code class="docutils literal notranslate"><span class="pre">decimation</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="n">action_trunk_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Number of per-substep action slices emitted by one policy step.</span>
+
+<span class="sd">  The default value of 1 preserves standard action repeat behavior: one policy</span>
+<span class="sd">  action is processed once and applied on every decimation substep. When greater</span>
+<span class="sd">  than 1, the policy action is interpreted as a flat trunk of</span>
+<span class="sd">  ``action_trunk_len * base_action_dim`` values. Trunk mode requires</span>
+<span class="sd">  ``action_trunk_len == decimation`` so each physics substep receives exactly one</span>
+<span class="sd">  action slice.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv.__init__</span></code>, immediately after <code class="docutils literal notranslate"><span class="pre">self.cfg</span> <span class="pre">=</span> <span class="pre">cfg</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;action_trunk_len must be &gt;= 1.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s2">&quot;action_trunk_len must equal decimation when trunk mode is enabled. &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Received action_trunk_len=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;decimation=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="p">)</span>
+</pre></div>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">_configure_gym_env_spaces()</span></code>, replace:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">action_dim</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">action_term_dim</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">action_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">policy_action_dim</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Update rsl_rl wrapper action dimension</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/vecenv_wrapper.py</span></code>, replace:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">num_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">total_action_dim</span>
+</pre></div>
+</div>
+<p>with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">num_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">policy_action_dim</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run existing wrapper/action-space tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span>tests/test_action_trunk.py::test_action_manager_policy_dim_expands_with_trunk_len<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS after Task 2 adds <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>; until then the action-trunk test still fails.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/envs/manager_based_rl_env.py<span class="w"> </span>src/mjlab/rl/vecenv_wrapper.py<span class="w"> </span>tests/test_action_trunk.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add action trunk config plumbing&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-2-implement-trunk-aware-actionmanager">
+<h3>Task 2: Implement Trunk-Aware ActionManager<a class="headerlink" href="#task-2-implement-trunk-aware-actionmanager" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/managers/action_manager.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Update the mock env fixture for trunk defaults</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code>, update the <code class="docutils literal notranslate"><span class="pre">mock_env</span></code> fixture:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">mock_env</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create a mock environment for testing.&quot;&quot;&quot;</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="mi">4</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">decimation</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">env</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Add failing substep routing test</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_action_trunk_routes_substep_slices</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">action_term_cfg</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Action trunk mode routes one base action slice per substep.&quot;&quot;&quot;</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+  <span class="n">manager</span> <span class="o">=</span> <span class="n">ActionManager</span><span class="p">({</span><span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="n">action_term_cfg</span><span class="p">},</span> <span class="n">env</span><span class="p">)</span>
+  <span class="n">term</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_term</span><span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">)</span>
+
+  <span class="n">action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="mi">12</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+
+  <span class="n">manager</span><span class="o">.</span><span class="n">process_action</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">manager</span><span class="o">.</span><span class="n">applied_action</span><span class="p">,</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">])</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">term</span><span class="o">.</span><span class="n">process_actions</span><span class="o">.</span><span class="n">call_args</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">])</span>
+
+  <span class="n">manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">manager</span><span class="o">.</span><span class="n">applied_action</span><span class="p">,</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">])</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">term</span><span class="o">.</span><span class="n">process_actions</span><span class="o">.</span><span class="n">call_args</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">])</span>
+
+  <span class="n">manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">manager</span><span class="o">.</span><span class="n">applied_action</span><span class="p">,</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">9</span><span class="p">:</span><span class="mi">12</span><span class="p">])</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">term</span><span class="o">.</span><span class="n">process_actions</span><span class="o">.</span><span class="n">call_args</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">action</span><span class="p">[:,</span> <span class="mi">9</span><span class="p">:</span><span class="mi">12</span><span class="p">])</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add failing shape validation test</strong></p></li>
+</ul>
+<p>Append:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_action_trunk_validates_policy_action_shape</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">action_term_cfg</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Trunk mode validates policy action dimension, not base action dimension.&quot;&quot;&quot;</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+  <span class="n">manager</span> <span class="o">=</span> <span class="n">ActionManager</span><span class="p">({</span><span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="n">action_term_cfg</span><span class="p">},</span> <span class="n">env</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;expected: 12&quot;</span><span class="p">):</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">process_action</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_manager.py::test_action_trunk_routes_substep_slices<span class="w"> </span>tests/test_action_manager.py::test_action_trunk_validates_policy_action_shape<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, <code class="docutils literal notranslate"><span class="pre">applied_action</span></code>, and <code class="docutils literal notranslate"><span class="pre">apply_action(substep_idx=...)</span></code> are not implemented.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Implement policy/base action dimensions and buffers</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/managers/action_manager.py</span></code>, in <code class="docutils literal notranslate"><span class="pre">__init__</span></code>, replace the buffer block with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">_action_trunk_len</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">cfg</span><span class="p">,</span> <span class="s2">&quot;action_trunk_len&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Flat policy output history. In trunk mode this is</span>
+    <span class="c1"># (num_envs, action_trunk_len * total_action_dim).</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">)</span>
+
+    <span class="c1"># The base action slice currently routed to action terms.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Add these properties after <code class="docutils literal notranslate"><span class="pre">total_action_dim</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">action_trunk_len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action_trunk_len</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">policy_action_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">applied_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base action slice currently applied to action terms.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">action_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Current policy output as ``(num_envs, trunk_len, base_action_dim)``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span><span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">prev_action_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Previous policy output as ``(num_envs, trunk_len, base_action_dim)``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Implement substep slice routing</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/managers/action_manager.py</span></code>, replace <code class="docutils literal notranslate"><span class="pre">process_action()</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">process_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store the raw policy output and route the first substep slice.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span> <span class="o">!=</span> <span class="n">action</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Invalid action shape, expected: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span><span class="si">}</span><span class="s2">,&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot; received: </span><span class="si">{</span><span class="n">action</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_process_substep_action</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Add this private helper below <code class="docutils literal notranslate"><span class="pre">process_action()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">_process_substep_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">substep_idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">substep_idx</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;substep_idx must be in [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="si">}</span><span class="s2">); &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;received </span><span class="si">{</span><span class="n">substep_idx</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="p">)</span>
+    <span class="n">base_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_sequence</span><span class="p">[:,</span> <span class="n">substep_idx</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">base_action</span>
+
+    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="n">term_actions</span> <span class="o">=</span> <span class="n">base_action</span><span class="p">[:,</span> <span class="n">idx</span> <span class="p">:</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span><span class="p">]</span>
+      <span class="n">term</span><span class="o">.</span><span class="n">process_actions</span><span class="p">(</span><span class="n">term_actions</span><span class="p">)</span>
+      <span class="n">idx</span> <span class="o">+=</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">apply_action()</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>  <span class="k">def</span><span class="w"> </span><span class="nf">apply_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substep_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write processed actions to entity actuator targets.</span>
+
+<span class="sd">    If ``substep_idx`` is provided, first route that trunk slice to each action</span>
+<span class="sd">    term. Existing callers may omit it; they will apply the most recently</span>
+<span class="sd">    processed slice.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">substep_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_process_substep_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="n">term</span><span class="o">.</span><span class="n">apply_actions</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 7: Update reset to clear applied action</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">reset()</span></code>, after <code class="docutils literal notranslate"><span class="pre">self._action[env_ids]</span> <span class="pre">=</span> <span class="pre">0.0</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 8: Run action manager tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_manager.py<span class="w"> </span>tests/test_action_trunk.py::test_action_manager_policy_dim_expands_with_trunk_len<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 9: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/managers/action_manager.py<span class="w"> </span>tests/test_action_manager.py<span class="w"> </span>tests/test_action_trunk.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: route action trunk substep slices&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-3-apply-trunk-slices-in-the-env-step-loop">
+<h3>Task 3: Apply Trunk Slices in the Env Step Loop<a class="headerlink" href="#task-3-apply-trunk-slices-in-the-env-step-loop" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add a focused step-loop test with a fake action manager</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_step_loop_passes_substep_indices_to_action_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;The decimation loop applies one trunk slice per physics substep.&quot;&quot;&quot;</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs.manager_based_rl_env</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnv</span>
+
+  <span class="n">env</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">ManagerBasedRlEnv</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">auto_reset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_finite_horizon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">_manual_reset_pending</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">episode_length_buf</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">common_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">extras</span> <span class="o">=</span> <span class="p">{}</span>
+
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">scene</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">sim</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">metrics_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">terminated</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">time_outs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">reward_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">reward_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">command_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">event_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">available_modes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">observation_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">observation_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)}</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">recorder_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+
+  <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+
+  <span class="k">assert</span> <span class="p">[</span><span class="n">call</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;substep_idx&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="o">.</span><span class="n">call_args_list</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span>
+    <span class="mi">0</span><span class="p">,</span>
+    <span class="mi">1</span><span class="p">,</span>
+    <span class="mi">2</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">,</span>
+  <span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">apply_action()</span></code> is called without <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> in the decimation loop</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code>, replace:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">for</span> <span class="n">substep_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="o">=</span><span class="n">substep_idx</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run step-loop and existing env tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager<span class="w"> </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/envs/manager_based_rl_env.py<span class="w"> </span>tests/test_action_trunk.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: apply action trunk slices during decimation&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-4-make-action-rate-l2-trunk-aware">
+<h3>Task 4: Make <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> Trunk-Aware<a class="headerlink" href="#task-4-make-action-rate-l2-trunk-aware" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/mdp/rewards.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add failing reward test</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_action_rate_l2_penalizes_executed_trunk_sequence</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs.mdp.rewards</span><span class="w"> </span><span class="kn">import</span> <span class="n">action_rate_l2</span>
+
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_make_mock_env</span><span class="p">(</span><span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">build</span> <span class="o">=</span> <span class="n">_make_mock_action_term</span><span class="p">(</span><span class="n">action_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">entity_name</span> <span class="o">=</span> <span class="s2">&quot;robot&quot;</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span> <span class="o">=</span> <span class="n">ActionManager</span><span class="p">({</span><span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="p">},</span> <span class="n">env</span><span class="p">)</span>
+
+  <span class="n">prev</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+  <span class="n">current</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">11.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">]])</span>
+
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">process_action</span><span class="p">(</span><span class="n">prev</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">process_action</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+
+  <span class="n">result</span> <span class="o">=</span> <span class="n">action_rate_l2</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+
+  <span class="n">expected_env0</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">-</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">7.0</span> <span class="o">-</span> <span class="mf">4.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">11.0</span> <span class="o">-</span> <span class="mf">7.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+  <span class="n">expected_env1</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+  <span class="n">expected</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">expected_env0</span><span class="p">,</span> <span class="n">expected_env1</span><span class="p">])</span>
+
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_action_rate_l2_penalizes_executed_trunk_sequence<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: FAIL because the current implementation compares flat current trunk against flat previous trunk.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Update only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code></strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/mdp/rewards.py</span></code>, replace <code class="docutils literal notranslate"><span class="pre">action_rate_l2()</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">action_rate_l2</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">ManagerBasedRlEnv</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Penalize actual executed action changes.</span>
+
+<span class="sd">  For standard action repeat this is identical to the old behavior:</span>
+<span class="sd">  ``current_action - previous_action``. In trunk mode, the penalty follows the</span>
+<span class="sd">  executed substep sequence from the previous trunk&#39;s final slice into every</span>
+<span class="sd">  current trunk slice.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">action_manager</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span>
+  <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">action_manager</span><span class="p">,</span> <span class="s2">&quot;action_trunk_len&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+      <span class="n">torch</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">action_manager</span><span class="o">.</span><span class="n">action</span> <span class="o">-</span> <span class="n">action_manager</span><span class="o">.</span><span class="n">prev_action</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+
+  <span class="n">prev_tail</span> <span class="o">=</span> <span class="n">action_manager</span><span class="o">.</span><span class="n">prev_action_sequence</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span>
+  <span class="n">current_sequence</span> <span class="o">=</span> <span class="n">action_manager</span><span class="o">.</span><span class="n">action_sequence</span>
+  <span class="n">executed_sequence</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">prev_tail</span><span class="p">,</span> <span class="n">current_sequence</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">action_rate</span> <span class="o">=</span> <span class="n">executed_sequence</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">executed_sequence</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">action_rate</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run reward tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_action_rate_l2_penalizes_executed_trunk_sequence<span class="w"> </span>tests/test_rewards.py<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/envs/mdp/rewards.py<span class="w"> </span>tests/test_action_trunk.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: compute action rate over trunk execution sequence&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-5-register-the-new-g1-action-trunk-task">
+<h3>Task 5: Register the New G1 Action-Trunk Task<a class="headerlink" href="#task-5-register-the-new-g1-action-trunk-task" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add failing tracking task test</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code>, append:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_tracking_bfm_action_trunk_task_config</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;The action-trunk tracking task should expose a 4-slice policy action.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk&quot;</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">==</span> <span class="mi">4</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span> <span class="o">==</span> <span class="mi">4</span>
+  <span class="k">assert</span> <span class="s2">&quot;joint_pos&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">actions</span>
+  <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="s2">&quot;joint_pos&quot;</span><span class="p">],</span> <span class="n">JointPositionActionCfg</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="s2">&quot;joint_pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">scale</span> <span class="o">==</span> <span class="n">G1_ACTION_SCALE</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_task.py::test_tracking_bfm_action_trunk_task_config<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: FAIL because the task is not registered.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add the env cfg builder</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code>, after <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_env_cfg()</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_flat_tracking_bfm_action_trunk_env_cfg</span><span class="p">(</span>
+  <span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ManagerBasedRlEnvCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create the multi-motion Unitree G1 tracking task with 4-slice action trunk.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">unitree_g1_flat_tracking_bfm_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">)</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span>
+  <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Add the RL cfg builder</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code>, after <code class="docutils literal notranslate"><span class="pre">unitree_g1_trackingbfm_ppo_runner_cfg()</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_trackingbfm_action_trunk_ppo_runner_cfg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create RL runner configuration for the G1 BFM action-trunk task.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">unitree_g1_trackingbfm_ppo_runner_cfg</span><span class="p">()</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">experiment_name</span> <span class="o">=</span> <span class="s2">&quot;g1_tracking_action_trunk&quot;</span>
+  <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Register the new task</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code>, update imports:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">.env_cfgs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_flat_tracking_bfm_1stage_env_cfg</span><span class="p">,</span>
+  <span class="n">unitree_g1_flat_tracking_bfm_action_trunk_env_cfg</span><span class="p">,</span>
+  <span class="n">unitree_g1_flat_tracking_bfm_env_cfg</span><span class="p">,</span>
+  <span class="n">unitree_g1_flat_tracking_env_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.rl_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_tracking_ppo_runner_cfg</span><span class="p">,</span>
+  <span class="n">unitree_g1_trackingbfm_action_trunk_ppo_runner_cfg</span><span class="p">,</span>
+  <span class="n">unitree_g1_trackingbfm_ppo_runner_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Append:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">register_mjlab_task</span><span class="p">(</span>
+  <span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk&quot;</span><span class="p">,</span>
+  <span class="n">env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_tracking_bfm_action_trunk_env_cfg</span><span class="p">(),</span>
+  <span class="n">play_env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_tracking_bfm_action_trunk_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+  <span class="n">rl_cfg</span><span class="o">=</span><span class="n">unitree_g1_trackingbfm_action_trunk_ppo_runner_cfg</span><span class="p">(),</span>
+  <span class="n">runner_cls</span><span class="o">=</span><span class="n">MotionTrackingOnPolicyRunner</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Run task registration tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_action_trunk_task_is_registered<span class="w"> </span>tests/test_tracking_task.py::test_tracking_bfm_action_trunk_task_config<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 7: Commit</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/tracking/config/g1/env_cfgs.py<span class="w"> </span>src/mjlab/tasks/tracking/config/g1/rl_cfg.py<span class="w"> </span>src/mjlab/tasks/tracking/config/g1/__init__.py<span class="w"> </span>tests/test_tracking_task.py<span class="w"> </span>tests/test_action_trunk.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: register g1 action trunk tracking task&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-6-end-to-end-verification">
+<h3>Task 6: End-to-End Verification<a class="headerlink" href="#task-6-end-to-end-verification" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>No source changes expected.</p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_action_manager.py</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/test_runner.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Run focused test suite</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_manager.py<span class="w"> </span>tests/test_action_trunk.py<span class="w"> </span>tests/test_tracking_task.py<span class="w"> </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run task listing smoke check</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>list_envs
+</pre></div>
+</div>
+<p>Expected: output includes <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Run one short train construction smoke test</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk<span class="w"> </span>--agent.max_iterations<span class="w"> </span><span class="m">1</span><span class="w"> </span>--agent.num_steps_per_env<span class="w"> </span><span class="m">2</span><span class="w"> </span>--env.scene.num_envs<span class="w"> </span><span class="m">2</span><span class="w"> </span>--headless
+</pre></div>
+</div>
+<p>Expected: runner starts, constructs actor with 116 output actions, performs one iteration, and exits without action shape errors.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Commit if verification required generated no source changes</strong></p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>status<span class="w"> </span>--short
+</pre></div>
+</div>
+<p>Expected: clean working tree. If generated log files appear under ignored paths, no commit is needed.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="self-review">
+<h2>Self-Review<a class="headerlink" href="#self-review" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Spec coverage: The plan creates a new isolated task, keeps framework defaults compatible, changes the step loop to execute one trunk slice per decimation substep, and modifies only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> among rewards.</p></li>
+<li><p>Placeholder scan: No unresolved placeholders or open-ended implementation instructions remain.</p></li>
+<li><p>Type consistency: <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code>, <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, <code class="docutils literal notranslate"><span class="pre">applied_action</span></code>, <code class="docutils literal notranslate"><span class="pre">action_sequence</span></code>, and <code class="docutils literal notranslate"><span class="pre">prev_action_sequence</span></code> are introduced before later tasks use them.</p></li>
+<li><p>Deliberate non-goals: No changes to other reward terms, no distillation label changes, no ONNX/deployment adaptation beyond normal policy output shape. Those can be separate tasks after the training experiment proves useful.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-config-and-action-space-plumbing">Task 1: Add Config and Action Space Plumbing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-implement-trunk-aware-actionmanager">Task 2: Implement Trunk-Aware ActionManager</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-apply-trunk-slices-in-the-env-step-loop">Task 3: Apply Trunk Slices in the Env Step Loop</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-make-action-rate-l2-trunk-aware">Task 4: Make <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> Trunk-Aware</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-register-the-new-g1-action-trunk-task">Task 5: Register the New G1 Action-Trunk Task</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-end-to-end-verification">Task 6: End-to-End Verification</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on May 18, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

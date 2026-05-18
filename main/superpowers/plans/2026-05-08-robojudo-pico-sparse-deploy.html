@@ -1,0 +1,838 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RoboJuDo Pico Sparse Deploy Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-05-08-robojudo-pico-sparse-deploy';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="May 18, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-05-08-robojudo-pico-sparse-deploy.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-05-08-robojudo-pico-sparse-deploy.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-05-08-robojudo-pico-sparse-deploy.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-05-08-robojudo-pico-sparse-deploy.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>RoboJuDo Pico Sparse Deploy Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-unified-onnx-export-coverage-in-tracking-bfm">Task 1: Add Unified ONNX Export Coverage in tracking_bfm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-validate-embedded-normalizer-and-minimal-metadata">Task 2: Validate Embedded Normalizer and Minimal Metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-robojudo-sparse-onnx-policy-skeleton">Task 3: Add RoboJuDo Sparse ONNX Policy Skeleton</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-assemble-sparse-observations-in-robojudo">Task 4: Assemble Sparse Observations in RoboJuDo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-lightweight-pico-sparse-controller">Task 5: Add Lightweight Pico Sparse Controller</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-compose-the-g1-sim2sim-config-in-robojudo">Task 6: Compose the G1 Sim2Sim Config in RoboJuDo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-add-sparse-debug-visualization">Task 7: Add Sparse Debug Visualization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-8-end-to-end-verification">Task 8: End-to-End Verification</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="robojudo-pico-sparse-deploy-implementation-plan">
+<h1>RoboJuDo Pico Sparse Deploy Implementation Plan<a class="headerlink" href="#robojudo-pico-sparse-deploy-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Build phase-one support for lightweight Pico-driven G1 sim2sim deployment in RoboJuDo using sparse-controller ONNX exports from tracking_bfm.</p>
+<p><strong>Architecture:</strong> tracking_bfm exports a pure-actor ONNX with embedded observation normalization for both tracking and distillation checkpoints. RoboJuDo adds a sparse ONNX policy and a lightweight Pico controller, then composes them through its existing MuJoCo RL pipeline.</p>
+<p><strong>Tech Stack:</strong> Python, PyTorch, ONNX, onnxruntime, MuJoCo, RoboJuDo, xrobotoolkit_sdk, pytest, uv</p>
+<hr class="docutils" />
+<section id="task-1-add-unified-onnx-export-coverage-in-tracking-bfm">
+<h2>Task 1: Add Unified ONNX Export Coverage in tracking_bfm<a class="headerlink" href="#task-1-add-unified-onnx-export-coverage-in-tracking-bfm" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/deployment/checkpoint_inspector.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/deployment/tracking_bfm_onnx_export.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/scripts/export_tracking_bfm_onnx.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_onnx_export.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing export tests</strong></p></li>
+</ul>
+<p>Add tests that verify:</p>
+<ul class="simple">
+<li><p>tracking checkpoints are recognized</p></li>
+<li><p>distillation checkpoints are recognized</p></li>
+<li><p>default ONNX filename is <code class="docutils literal notranslate"><span class="pre">deploy_&lt;stem&gt;.onnx</span></code></p></li>
+<li><p>explicit output name overrides the default</p></li>
+<li><p>[ ] <strong>Step 2: Run the export tests to verify they fail</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_onnx_export.py</span> <span class="pre">-v</span></code>
+Expected: FAIL because exporter modules and CLI do not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement checkpoint inspection and ONNX export</strong></p></li>
+</ul>
+<p>Build a minimal deployment exporter that:</p>
+<ul class="simple">
+<li><p>detects checkpoint family by keys</p></li>
+<li><p>rebuilds the correct actor path</p></li>
+<li><p>embeds the actor normalizer in ONNX</p></li>
+<li><p>writes the ONNX next to the checkpoint</p></li>
+<li><p>[ ] <strong>Step 4: Run the export tests to verify they pass</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_onnx_export.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-2-validate-embedded-normalizer-and-minimal-metadata">
+<h2>Task 2: Validate Embedded Normalizer and Minimal Metadata<a class="headerlink" href="#task-2-validate-embedded-normalizer-and-minimal-metadata" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/deployment/tracking_bfm_onnx_export.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_onnx_export.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing normalizer test</strong></p></li>
+</ul>
+<p>Add a test that exports a model and inspects the ONNX graph/metadata to verify:</p>
+<ul class="simple">
+<li><p>normalizer is embedded in the ONNX graph</p></li>
+<li><p>input/output shapes are inferable from ONNX</p></li>
+<li><p>only minimal identity metadata is attached</p></li>
+<li><p>[ ] <strong>Step 2: Run the targeted test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_onnx_export.py</span> <span class="pre">-k</span> <span class="pre">normalizer</span> <span class="pre">-v</span></code>
+Expected: FAIL because the graph/metadata checks are not implemented yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement the minimal metadata policy</strong></p></li>
+</ul>
+<p>Ensure the exporter writes only:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">task_id</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs_group</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">checkpoint_family</span></code></p></li>
+<li><p>optional <code class="docutils literal notranslate"><span class="pre">robot_name</span></code></p></li>
+<li><p>[ ] <strong>Step 4: Re-run the targeted test</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_onnx_export.py</span> <span class="pre">-k</span> <span class="pre">normalizer</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-3-add-robojudo-sparse-onnx-policy-skeleton">
+<h2>Task 3: Add RoboJuDo Sparse ONNX Policy Skeleton<a class="headerlink" href="#task-3-add-robojudo-sparse-onnx-policy-skeleton" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">robojudo/policy/tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/policy/__init__.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/policy/policy_cfgs.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing policy-loading tests</strong></p></li>
+</ul>
+<p>Add tests that verify the policy:</p>
+<ul class="simple">
+<li><p>loads an ONNX file</p></li>
+<li><p>infers input/output dimensions from ONNX</p></li>
+<li><p>rejects dimension mismatches cleanly</p></li>
+<li><p>[ ] <strong>Step 2: Run the policy tests to verify they fail</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-v</span></code>
+Expected: FAIL because the policy class does not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement the ONNX sparse policy loader</strong></p></li>
+</ul>
+<p>Implement a minimal policy that:</p>
+<ul class="simple">
+<li><p>opens ONNX via onnxruntime</p></li>
+<li><p>inspects input/output specs</p></li>
+<li><p>exposes the standard RoboJuDo policy interface</p></li>
+<li><p>[ ] <strong>Step 4: Re-run the policy tests</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-4-assemble-sparse-observations-in-robojudo">
+<h2>Task 4: Assemble Sparse Observations in RoboJuDo<a class="headerlink" href="#task-4-assemble-sparse-observations-in-robojudo" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/policy/tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing observation-assembly tests</strong></p></li>
+</ul>
+<p>Add tests that verify:</p>
+<ul class="simple">
+<li><p>sparse command terms are concatenated in the expected order</p></li>
+<li><p>robot-state history is appended correctly</p></li>
+<li><p>the assembled observation dimension matches ONNX input dimension</p></li>
+<li><p>[ ] <strong>Step 2: Run the observation tests to verify they fail</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-k</span> <span class="pre">observation</span> <span class="pre">-v</span></code>
+Expected: FAIL because observation assembly is incomplete.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement sparse observation assembly</strong></p></li>
+</ul>
+<p>Use checkpoint-side config recovery plus RoboJuDo state buffers to assemble:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ee_pose</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_lin_vel_b</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel_b</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">anchor_height_w</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">projected_gravity</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_pos</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">last_action</span></code></p></li>
+<li><p>[ ] <strong>Step 4: Re-run the observation tests</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-k</span> <span class="pre">observation</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-5-add-lightweight-pico-sparse-controller">
+<h2>Task 5: Add Lightweight Pico Sparse Controller<a class="headerlink" href="#task-5-add-lightweight-pico-sparse-controller" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">robojudo/controller/pico_light_sparse_ctrl.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/controller/__init__.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/controller/ctrl_cfgs.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_pico_light_sparse_ctrl.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing Pico controller tests</strong></p></li>
+</ul>
+<p>Add tests that verify:</p>
+<ul class="simple">
+<li><p>state-machine transitions</p></li>
+<li><p>base command sign conventions</p></li>
+<li><p>anchor-height control behavior</p></li>
+<li><p>EE anchor/reset behavior</p></li>
+<li><p>[ ] <strong>Step 2: Run the Pico controller tests to verify they fail</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_pico_light_sparse_ctrl.py</span> <span class="pre">-v</span></code>
+Expected: FAIL because the controller does not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement Pico lightweight sparse mapping</strong></p></li>
+</ul>
+<p>Implement:</p>
+<ul class="simple">
+<li><p>Pico SDK input reader abstraction</p></li>
+<li><p>state machine</p></li>
+<li><p>coordinate conversion</p></li>
+<li><p>lightweight sparse command mapping</p></li>
+<li><p>[ ] <strong>Step 4: Re-run the Pico controller tests</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_pico_light_sparse_ctrl.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-6-compose-the-g1-sim2sim-config-in-robojudo">
+<h2>Task 6: Compose the G1 Sim2Sim Config in RoboJuDo<a class="headerlink" href="#task-6-compose-the-g1-sim2sim-config-in-robojudo" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">robojudo/config/g1/policy/g1_tracking_bfm_sparse_onnx_policy_cfg.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">robojudo/config/g1/ctrl/g1_pico_light_sparse_ctrl_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/config/g1/g1_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">scripts/run_pipeline.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_g1_config.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing config test</strong></p></li>
+</ul>
+<p>Add a test that verifies a config named <code class="docutils literal notranslate"><span class="pre">g1_tracking_bfm_pico_light_sim</span></code> resolves to:</p>
+<ul class="simple">
+<li><p>MuJoCo env</p></li>
+<li><p>Pico sparse controller</p></li>
+<li><p>tracking_bfm sparse ONNX policy</p></li>
+<li><p>[ ] <strong>Step 2: Run the config test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_g1_config.py</span> <span class="pre">-v</span></code>
+Expected: FAIL because the config does not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement the config composition</strong></p></li>
+</ul>
+<p>Wire the new policy and controller into G1 config registration without disrupting existing configs.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Re-run the config test</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_g1_config.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-7-add-sparse-debug-visualization">
+<h2>Task 7: Add Sparse Debug Visualization<a class="headerlink" href="#task-7-add-sparse-debug-visualization" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/policy/tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">robojudo/environment/utils/mujoco_viz.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing debug-viz test</strong></p></li>
+</ul>
+<p>Add a focused test that verifies debug-viz helpers are called with:</p>
+<ul class="simple">
+<li><p>EE target markers</p></li>
+<li><p>base velocity vector</p></li>
+<li><p>[ ] <strong>Step 2: Run the targeted test to verify it fails</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-k</span> <span class="pre">debug_viz</span> <span class="pre">-v</span></code>
+Expected: FAIL because visualization hooks are not implemented.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement sparse debug visualization</strong></p></li>
+</ul>
+<p>Add minimal policy debug visualization for:</p>
+<ul class="simple">
+<li><p>left and right EE targets</p></li>
+<li><p>base linear velocity arrow</p></li>
+<li><p>[ ] <strong>Step 4: Re-run the targeted test</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">-k</span> <span class="pre">debug_viz</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+<section id="task-8-end-to-end-verification">
+<h2>Task 8: End-to-End Verification<a class="headerlink" href="#task-8-end-to-end-verification" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_onnx_export.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_pico_light_sparse_ctrl.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Run tracking_bfm export verification</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_onnx_export.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run RoboJuDo policy/controller verification</strong></p></li>
+</ul>
+<p>Run: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_tracking_bfm_sparse_onnx_policy.py</span> <span class="pre">tests/test_pico_light_sparse_ctrl.py</span> <span class="pre">tests/test_tracking_bfm_g1_config.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Run focused type/lint checks where available</strong></p></li>
+</ul>
+<p>Run in <code class="docutils literal notranslate"><span class="pre">tracking_bfm</span></code>: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">pyright</span> <span class="pre">src/mjlab/deployment</span> <span class="pre">src/mjlab/scripts/export_tracking_bfm_onnx.py</span></code>
+Expected: PASS.</p>
+<p>Run in <code class="docutils literal notranslate"><span class="pre">RoboJuDo</span></code>: <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">tests/test_full_imports.py</span> <span class="pre">-v</span></code>
+Expected: PASS.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-unified-onnx-export-coverage-in-tracking-bfm">Task 1: Add Unified ONNX Export Coverage in tracking_bfm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-validate-embedded-normalizer-and-minimal-metadata">Task 2: Validate Embedded Normalizer and Minimal Metadata</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-robojudo-sparse-onnx-policy-skeleton">Task 3: Add RoboJuDo Sparse ONNX Policy Skeleton</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-assemble-sparse-observations-in-robojudo">Task 4: Assemble Sparse Observations in RoboJuDo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-lightweight-pico-sparse-controller">Task 5: Add Lightweight Pico Sparse Controller</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-compose-the-g1-sim2sim-config-in-robojudo">Task 6: Compose the G1 Sim2Sim Config in RoboJuDo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-add-sparse-debug-visualization">Task 7: Add Sparse Debug Visualization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-8-end-to-end-verification">Task 8: End-to-End Verification</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on May 18, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
