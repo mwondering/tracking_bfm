@@ -8,8 +8,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
-MOTION_FILE="${MOTION_FILE:-/data/wxy/test_motion/jk_test2.npz}"
-CHECKPOINT_FILE="${CHECKPOINT_FILE:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic/2026-05-01_10-38-32_multi_gpu_adaptive_nocommandwindow_16384_resume/model_82000.pt}"
+MOTION_FILE="${MOTION_FILE:-/data/wxy/test_motion/pufu.npz}"
+CHECKPOINT_FILE="${CHECKPOINT_FILE:-logs/rsl_rl/teacher_amass_lafan_noiton_sonic_prior/2026-05-16_15-15-49_teacher_2nd_decimation4_start/model_4000.pt}"
 # /home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt_0501/model_48000.pt
 # /home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_0427/model_139000.pt
 NUM_ENVS="${NUM_ENVS:-1}"
@@ -24,5 +24,8 @@ uv run play "$TASK" \
     --env.commands.motion.future_steps 1 \
     --motion-file "$MOTION_FILE" \
     --checkpoint-file "$CHECKPOINT_FILE" \
+    --env.commands.motion.history_steps 0 \
+    --env.commands.motion.future_steps 1 \
+    --env.decimation 4 \
     --num-envs 10 \
     --viewer viser
