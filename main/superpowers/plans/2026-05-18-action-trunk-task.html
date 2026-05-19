@@ -57,7 +57,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 18, 2026"/>
+    <meta name="docbuild:last-update" content="May 19, 2026"/>
   </head>
   
   
@@ -489,13 +489,13 @@ document.write(`
 <div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
 </div></blockquote>
 <p><strong>Goal:</strong> Add an isolated G1 tracking task whose policy outputs a 4-slice action trunk (<code class="docutils literal notranslate"><span class="pre">29</span> <span class="pre">*</span> <span class="pre">4</span> <span class="pre">=</span> <span class="pre">116</span></code>) while the environment applies one 29-D slice per decimation substep.</p>
-<p><strong>Architecture:</strong> Add optional trunk support at the framework level with <code class="docutils literal notranslate"><span class="pre">action_trunk_len=1</span></code> as the default, so existing tasks remain unchanged. The new task sets <code class="docutils literal notranslate"><span class="pre">action_trunk_len=4</span></code>, the wrapper exposes <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, and <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv.step()</span></code> passes the current decimation substep to <code class="docutils literal notranslate"><span class="pre">ActionManager.apply_action()</span></code>. Only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> changes reward semantics: it penalizes actual executed substep action differences instead of treating the trunk as one flat vector.</p>
+<p><strong>Architecture:</strong> Add optional trunk support at the framework level with <code class="docutils literal notranslate"><span class="pre">action_trunk_len=1</span></code> as the default, so existing tasks remain unchanged. The new task sets <code class="docutils literal notranslate"><span class="pre">action_trunk_len=4</span></code>, the wrapper exposes <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, and <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv.step()</span></code> passes the current decimation substep to <code class="docutils literal notranslate"><span class="pre">ActionManager.apply_action()</span></code> only when trunk mode is enabled. Only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> changes reward semantics: it penalizes actual executed substep action differences instead of treating the trunk as one flat vector.</p>
 <p><strong>Tech Stack:</strong> Python dataclasses, PyTorch tensors, MuJoCo env loop, rsl_rl <code class="docutils literal notranslate"><span class="pre">VecEnv</span></code>, pytest.</p>
 <hr class="docutils" />
 <section id="file-structure">
 <h2>File Structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code>: add <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code> config, validate it, use policy action dim for action spaces, and pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> inside <code class="docutils literal notranslate"><span class="pre">step()</span></code>.</p></li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/manager_based_rl_env.py</span></code>: add <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code> config, validate it, use policy action dim for action spaces, and pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> inside <code class="docutils literal notranslate"><span class="pre">step()</span></code> only for trunk-enabled tasks.</p></li>
 <li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/managers/action_manager.py</span></code>: track both base action dimension and policy action dimension, store flat trunk history, select substep slices, and expose the currently applied 29-D slice.</p></li>
 <li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/envs/mdp/rewards.py</span></code>: update only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> to compute smoothness over the executed substep sequence.</p></li>
 <li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/vecenv_wrapper.py</span></code>: expose <code class="docutils literal notranslate"><span class="pre">num_actions</span></code> as policy action dimension.</p></li>
@@ -858,12 +858,17 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <li><p>[ ] <strong>Step 1: Add a focused step-loop test with a fake action manager</strong></p></li>
 </ul>
 <p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_action_trunk.py</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_step_loop_passes_substep_indices_to_action_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;The decimation loop applies one trunk slice per physics substep.&quot;&quot;&quot;</span>
   <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs.manager_based_rl_env</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnv</span>
 
   <span class="n">env</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">ManagerBasedRlEnv</span><span class="p">)</span>
-  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span><span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">auto_reset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_finite_horizon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span>
+    <span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">auto_reset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">is_finite_horizon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span>
   <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
   <span class="n">env</span><span class="o">.</span><span class="n">_manual_reset_pending</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
   <span class="n">env</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
@@ -897,16 +902,59 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
     <span class="mi">2</span><span class="p">,</span>
     <span class="mi">3</span><span class="p">,</span>
   <span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_step_loop_preserves_action_repeat_for_standard_tracking</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Default action mode keeps the old process-once/apply-repeat behavior.&quot;&quot;&quot;</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs.manager_based_rl_env</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnv</span>
+
+  <span class="n">env</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">ManagerBasedRlEnv</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">(</span>
+    <span class="n">decimation</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">action_trunk_len</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">auto_reset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">is_finite_horizon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">_manual_reset_pending</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">episode_length_buf</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">common_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">extras</span> <span class="o">=</span> <span class="p">{}</span>
+
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">scene</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">sim</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">metrics_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">terminated</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">termination_manager</span><span class="o">.</span><span class="n">time_outs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">reward_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">reward_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">command_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">event_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">available_modes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">observation_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">observation_manager</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)}</span>
+  <span class="n">env</span><span class="o">.</span><span class="n">recorder_manager</span> <span class="o">=</span> <span class="n">Mock</span><span class="p">()</span>
+
+  <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+  <span class="k">assert</span> <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">process_action</span><span class="o">.</span><span class="n">call_count</span> <span class="o">==</span> <span class="mi">1</span>
+  <span class="k">assert</span> <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="o">.</span><span class="n">call_count</span> <span class="o">==</span> <span class="mi">4</span>
+  <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">==</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="o">.</span><span class="n">call_args_list</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
 </ul>
 <p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager<span class="w"> </span>-v
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_preserves_action_repeat_for_standard_tracking<span class="w"> </span>-v
 </pre></div>
 </div>
-<p>Expected: FAIL because <code class="docutils literal notranslate"><span class="pre">apply_action()</span></code> is called without <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code>.</p>
+<p>Expected: FAIL because trunk mode does not pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> yet, and standard mode protection is not implemented yet.</p>
 <ul class="simple">
 <li><p>[ ] <strong>Step 3: Pass <code class="docutils literal notranslate"><span class="pre">substep_idx</span></code> in the decimation loop</strong></p></li>
 </ul>
@@ -919,14 +967,17 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <p>with:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">for</span> <span class="n">substep_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="p">):</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="o">=</span><span class="n">substep_idx</span><span class="p">)</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="o">=</span><span class="n">substep_idx</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">apply_action</span><span class="p">()</span>
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>[ ] <strong>Step 4: Run step-loop and existing env tests</strong></p></li>
 </ul>
 <p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager<span class="w"> </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span>-v
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode<span class="w"> </span>tests/test_action_trunk.py::test_step_loop_preserves_action_repeat_for_standard_tracking<span class="w"> </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span>-v
 </pre></div>
 </div>
 <p>Expected: PASS.</p>
@@ -1163,7 +1214,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <section id="self-review">
 <h2>Self-Review<a class="headerlink" href="#self-review" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Spec coverage: The plan creates a new isolated task, keeps framework defaults compatible, changes the step loop to execute one trunk slice per decimation substep, and modifies only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> among rewards.</p></li>
+<li><p>Spec coverage: The plan creates a new isolated task, keeps framework defaults compatible, changes the step loop to execute one trunk slice per decimation substep only in trunk mode, preserves standard action repeat for existing tracking tasks, and modifies only <code class="docutils literal notranslate"><span class="pre">action_rate_l2</span></code> among rewards.</p></li>
 <li><p>Placeholder scan: No unresolved placeholders or open-ended implementation instructions remain.</p></li>
 <li><p>Type consistency: <code class="docutils literal notranslate"><span class="pre">action_trunk_len</span></code>, <code class="docutils literal notranslate"><span class="pre">policy_action_dim</span></code>, <code class="docutils literal notranslate"><span class="pre">applied_action</span></code>, <code class="docutils literal notranslate"><span class="pre">action_sequence</span></code>, and <code class="docutils literal notranslate"><span class="pre">prev_action_sequence</span></code> are introduced before later tasks use them.</p></li>
 <li><p>Deliberate non-goals: No changes to other reward terms, no distillation label changes, no ONNX/deployment adaptation beyond normal policy output shape. Those can be separate tasks after the training experiment proves useful.</p></li>
@@ -1241,7 +1292,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 18, 2026.
+  Last updated on May 19, 2026.
   <br/>
 </p>
   </div>
