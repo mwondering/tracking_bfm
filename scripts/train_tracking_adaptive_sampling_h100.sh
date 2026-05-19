@@ -9,10 +9,10 @@ cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
-NUM_ENVS="${NUM_ENVS:-16384}"
+NUM_ENVS="${NUM_ENVS:-8192}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-teacher_amass_lafan_noiton_sonic_prior}"
 
-RUN_NAME="${RUN_NAME:-teacher_v2_decimation4_5gpu_16384_resume1}"
+RUN_NAME="${RUN_NAME:-teacher_v2_decimation4_5gpu_16384_baseline_start}"
 
 uv run train "$TASK" \
     --env.commands.motion.motion-path "$MOTION_PATH" \
@@ -27,7 +27,7 @@ uv run train "$TASK" \
     --agent.save_interval 2000 \
     --debug False \
     --agent.upload-model False \
-    --gpu_ids "[3,4,5,6,7]" \
-    --agent.resume True \
-    --agent.load_run "2026-05-16_15-15-49_teacher_2nd_decimation4_start" \
-    --agent.load_checkpoint "model_6000.pt" \
+    --gpu_ids "[5,6]" \
+    # --agent.resume True \
+    # --agent.load_run "2026-05-16_15-15-49_teacher_2nd_decimation4_start" \
+    # --agent.load_checkpoint "model_6000.pt" \

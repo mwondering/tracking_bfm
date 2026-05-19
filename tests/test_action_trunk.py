@@ -164,7 +164,7 @@ def test_step_loop_preserves_action_repeat_for_standard_tracking() -> None:
   )
 
 
-def test_action_rate_l2_penalizes_executed_trunk_sequence() -> None:
+def test_action_rate_l2_penalizes_first_trunk_slice_only() -> None:
   from mjlab.envs.mdp.rewards import action_rate_l2
 
   env = _make_mock_env(action_trunk_len=4)
@@ -181,12 +181,8 @@ def test_action_rate_l2_penalizes_executed_trunk_sequence() -> None:
 
   result = action_rate_l2(env)
 
-  expected_env0 = (
-    (2.0 - 1.0) ** 2 + (4.0 - 2.0) ** 2 + (7.0 - 4.0) ** 2 + (11.0 - 7.0) ** 2
-  )
-  expected_env1 = (
-    (2.0 - 1.0) ** 2 + (2.0 - 2.0) ** 2 + (2.0 - 2.0) ** 2 + (2.0 - 2.0) ** 2
-  )
+  expected_env0 = (2.0 - 0.0) ** 2
+  expected_env1 = (2.0 - 1.0) ** 2
   expected = torch.tensor([expected_env0, expected_env1])
 
   torch.testing.assert_close(result, expected)
