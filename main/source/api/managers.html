@@ -512,6 +512,9 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.action"><code class="docutils literal notranslate"><span class="pre">ActionManager.action</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_action</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_prev_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_prev_action</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.applied_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.applied_action</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.action_sequence"><code class="docutils literal notranslate"><span class="pre">ActionManager.action_sequence</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_action_sequence"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_action_sequence</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.reset"><code class="docutils literal notranslate"><span class="pre">ActionManager.reset()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.process_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.process_action()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.apply_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.apply_action()</span></code></a></li>
@@ -1012,21 +1015,39 @@ routes each slice to the appropriate action term.</p>
 <dt class="sig sig-object py" id="mjlab.managers.ActionManager.action">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">action</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.action" title="Link to this definition">#</a></dt>
 <dd><p>Raw policy output from the current step, before per-term
-scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">total_action_dim)</span></code>.</p>
+scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">policy_action_dim)</span></code>.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="mjlab.managers.ActionManager.prev_action">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">prev_action</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.prev_action" title="Link to this definition">#</a></dt>
 <dd><p>Raw policy output from the previous step, before per-term
-scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">total_action_dim)</span></code>.</p>
+scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">policy_action_dim)</span></code>.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="mjlab.managers.ActionManager.prev_prev_action">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">prev_prev_action</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.prev_prev_action" title="Link to this definition">#</a></dt>
 <dd><p>Raw policy output from two steps ago, before per-term
-scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">total_action_dim)</span></code>.</p>
+scale/offset. Shape: <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">policy_action_dim)</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="mjlab.managers.ActionManager.applied_action">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">applied_action</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.applied_action" title="Link to this definition">#</a></dt>
+<dd><p>Base action slice currently routed to action terms.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="mjlab.managers.ActionManager.action_sequence">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">action_sequence</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.action_sequence" title="Link to this definition">#</a></dt>
+<dd><p>Current policy output as <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">trunk_len,</span> <span class="pre">base_action_dim)</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="mjlab.managers.ActionManager.prev_action_sequence">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">prev_action_sequence</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tensor</span></em><a class="headerlink" href="#mjlab.managers.ActionManager.prev_action_sequence" title="Link to this definition">#</a></dt>
+<dd><p>Previous policy output as <code class="docutils literal notranslate"><span class="pre">(num_envs,</span> <span class="pre">trunk_len,</span> <span class="pre">base_action_dim)</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1048,7 +1069,7 @@ independently applies its own affine transformation via
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mjlab.managers.ActionManager.apply_action">
-<span class="sig-name descname"><span class="pre">apply_action</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mjlab/managers/action_manager.html#ActionManager.apply_action"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mjlab.managers.ActionManager.apply_action" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">apply_action</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">substep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mjlab/managers/action_manager.html#ActionManager.apply_action"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mjlab.managers.ActionManager.apply_action" title="Link to this definition">#</a></dt>
 <dd><p>Write processed actions to entity actuator targets.</p>
 <p>Called on every decimation substep (physics step), not just once per policy
 step. Each term writes its most recently processed targets to the simulation.</p>
@@ -2042,6 +2063,9 @@ supported because recorder terms are stateful (file handles, buffers, etc.).</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.action"><code class="docutils literal notranslate"><span class="pre">ActionManager.action</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_action</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_prev_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_prev_action</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.applied_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.applied_action</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.action_sequence"><code class="docutils literal notranslate"><span class="pre">ActionManager.action_sequence</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.prev_action_sequence"><code class="docutils literal notranslate"><span class="pre">ActionManager.prev_action_sequence</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.reset"><code class="docutils literal notranslate"><span class="pre">ActionManager.reset()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.process_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.process_action()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.managers.ActionManager.apply_action"><code class="docutils literal notranslate"><span class="pre">ActionManager.apply_action()</span></code></a></li>

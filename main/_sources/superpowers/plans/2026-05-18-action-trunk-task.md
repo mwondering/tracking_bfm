@@ -16,6 +16,7 @@
 - Modify `src/mjlab/managers/action_manager.py`: track both base action dimension and policy action dimension, store flat trunk history, select substep slices, and expose the currently applied 29-D slice.
 - Modify `src/mjlab/envs/mdp/rewards.py`: update only `action_rate_l2` to compute smoothness over the executed substep sequence.
 - Modify `src/mjlab/rl/vecenv_wrapper.py`: expose `num_actions` as policy action dimension.
+- Do not modify `src/mjlab/envs/mdp/observations.py`: `last_action()` continues to return the full raw policy action. In trunk mode this means the previous executed policy trunk, not the current 29-D substep slice.
 - Modify `src/mjlab/tasks/tracking/config/g1/env_cfgs.py`: add the action-trunk G1 BFM task config builder.
 - Modify `src/mjlab/tasks/tracking/config/g1/rl_cfg.py`: add an action-trunk PPO runner config with a separate experiment name.
 - Modify `src/mjlab/tasks/tracking/config/g1/__init__.py`: register the new task ID.
@@ -97,6 +98,22 @@ def test_action_manager_policy_dim_expands_with_trunk_len() -> None:
   assert manager.applied_action.shape == (2, 3)
 
 
+def test_last_action_observation_returns_full_trunk() -> None:
+  from mjlab.envs.mdp.observations import last_action
+
+  env = _make_mock_env(action_trunk_len=4)
+  cfg = Mock()
+  cfg.build = _make_mock_action_term(action_dim=3)
+  cfg.entity_name = "robot"
+  env.action_manager = ActionManager({"action": cfg}, env)
+  action = torch.arange(2 * 12, dtype=torch.float32).reshape(2, 12)
+
+  env.action_manager.process_action(action)
+
+  torch.testing.assert_close(last_action(env), action)
+  assert last_action(env).shape == (2, 12)
+
+
 def test_action_trunk_len_must_match_decimation_for_trunk_mode() -> None:
   cfg = ManagerBasedRlEnvCfg(
     decimation=4,
@@ -113,7 +130,7 @@ The last test intentionally only checks dataclass construction. The runtime vali
 Run:
 
 ```bash
-uv run pytest tests/test_action_trunk.py::test_action_trunk_task_config_uses_four_slices tests/test_action_trunk.py::test_action_manager_policy_dim_expands_with_trunk_len -v
+uv run pytest tests/test_action_trunk.py::test_action_trunk_task_config_uses_four_slices tests/test_action_trunk.py::test_action_manager_policy_dim_expands_with_trunk_len tests/test_action_trunk.py::test_last_action_observation_returns_full_trunk -v
 ```
 
 Expected: FAIL because `action_trunk_len`, `policy_action_dim`, and the task registration do not exist.
@@ -803,3 +820,4 @@ Expected: clean working tree. If generated log files appear under ignored paths,
 - Placeholder scan: No unresolved placeholders or open-ended implementation instructions remain.
 - Type consistency: `action_trunk_len`, `policy_action_dim`, `applied_action`, `action_sequence`, and `prev_action_sequence` are introduced before later tasks use them.
 - Deliberate non-goals: No changes to other reward terms, no distillation label changes, no ONNX/deployment adaptation beyond normal policy output shape. Those can be separate tasks after the training experiment proves useful.
+- Observation semantics: `last_action()` remains the full raw policy output. Existing tasks still observe 29-D actions; the action-trunk task observes 116-D previous trunks.

@@ -497,12 +497,20 @@ document.write(`
     <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">cfg</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
 
-    <span class="c1"># Create buffers to store actions.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_action_trunk_len</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+      <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="s2">&quot;cfg&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="s2">&quot;action_trunk_len&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Flat policy output history. In trunk mode this is</span>
+    <span class="c1"># (num_envs, action_trunk_len * total_action_dim).</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
-      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
     <span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">)</span></div>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+    <span class="p">)</span></div>
 
 
   <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -525,26 +533,53 @@ document.write(`
     <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">action_term_dim</span><span class="p">)</span>
 
   <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">action_trunk_len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action_trunk_len</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">policy_action_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span>
+
+  <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">action_term_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">term</span><span class="o">.</span><span class="n">action_dim</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Raw policy output from the current step, before per-term</span>
-<span class="sd">    scale/offset. Shape: ``(num_envs, total_action_dim)``.&quot;&quot;&quot;</span>
+<span class="sd">    scale/offset. Shape: ``(num_envs, policy_action_dim)``.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">prev_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Raw policy output from the previous step, before per-term</span>
-<span class="sd">    scale/offset. Shape: ``(num_envs, total_action_dim)``.&quot;&quot;&quot;</span>
+<span class="sd">    scale/offset. Shape: ``(num_envs, policy_action_dim)``.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">prev_prev_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Raw policy output from two steps ago, before per-term</span>
-<span class="sd">    scale/offset. Shape: ``(num_envs, total_action_dim)``.&quot;&quot;&quot;</span>
+<span class="sd">    scale/offset. Shape: ``(num_envs, policy_action_dim)``.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">applied_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base action slice currently routed to action terms.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">action_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Current policy output as ``(num_envs, trunk_len, base_action_dim)``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span>
+    <span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">prev_action_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Previous policy output as ``(num_envs, trunk_len, base_action_dim)``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span>
+    <span class="p">)</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">active_terms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -564,6 +599,7 @@ document.write(`
     <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="c1"># Reset action terms.</span>
     <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">term</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">env_ids</span><span class="o">=</span><span class="n">env_ids</span><span class="p">)</span>
@@ -581,31 +617,42 @@ document.write(`
 <span class="sd">    independently applies its own affine transformation via</span>
 <span class="sd">    :meth:`ActionTerm.process_actions`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span> <span class="o">!=</span> <span class="n">action</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span> <span class="o">!=</span> <span class="n">action</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Invalid action shape, expected: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_action_dim</span><span class="si">}</span><span class="s2">,&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Invalid action shape, expected: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">policy_action_dim</span><span class="si">}</span><span class="s2">,&quot;</span>
         <span class="sa">f</span><span class="s2">&quot; received: </span><span class="si">{</span><span class="n">action</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
       <span class="p">)</span>
     <span class="c1"># Shift history: prev_prev ← prev ← current ← new.</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_prev_prev_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_prev_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-    <span class="c1"># Split the flat action vector and route each slice to its term.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_process_substep_action</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_process_substep_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">substep_idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">substep_idx</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;substep_idx must be in [0, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">action_trunk_len</span><span class="si">}</span><span class="s2">); received </span><span class="si">{</span><span class="n">substep_idx</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="p">)</span>
+    <span class="n">base_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_sequence</span><span class="p">[:,</span> <span class="n">substep_idx</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_applied_action</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">base_action</span>
+
     <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-      <span class="n">term_actions</span> <span class="o">=</span> <span class="n">action</span><span class="p">[:,</span> <span class="n">idx</span> <span class="p">:</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span><span class="p">]</span>
+      <span class="n">term_actions</span> <span class="o">=</span> <span class="n">base_action</span><span class="p">[:,</span> <span class="n">idx</span> <span class="p">:</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span><span class="p">]</span>
       <span class="n">term</span><span class="o">.</span><span class="n">process_actions</span><span class="p">(</span><span class="n">term_actions</span><span class="p">)</span>
-      <span class="n">idx</span> <span class="o">+=</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span></div>
-
+      <span class="n">idx</span> <span class="o">+=</span> <span class="n">term</span><span class="o">.</span><span class="n">action_dim</span>
 
 <div class="viewcode-block" id="ActionManager.apply_action">
 <a class="viewcode-back" href="../../../source/api/managers.html#mjlab.managers.ActionManager.apply_action">[docs]</a>
-  <span class="k">def</span><span class="w"> </span><span class="nf">apply_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">apply_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">substep_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write processed actions to entity actuator targets.</span>
 
 <span class="sd">    Called on every decimation substep (physics step), not just once per policy</span>
 <span class="sd">    step. Each term writes its most recently processed targets to the simulation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">substep_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_process_substep_action</span><span class="p">(</span><span class="n">substep_idx</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">term</span><span class="o">.</span><span class="n">apply_actions</span><span class="p">()</span></div>
 

@@ -478,6 +478,7 @@ document.write(`
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.decimation"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.decimation</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.action_trunk_len"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.action_trunk_len</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.scene"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.scene</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.observations"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.observations</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.actions"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.actions</span></code></a></li>
@@ -643,6 +644,18 @@ with a 2ms physics timestep and decimation=10, the environment runs at 50Hz.</p>
 <span class="sig-name descname"><span class="pre">decimation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#mjlab.envs.ManagerBasedRlEnvCfg.decimation" title="Link to this definition">#</a></dt>
 <dd><p>Number of physics simulation steps per environment step. Higher values mean
 coarser control frequency. Environment step duration = physics_dt * decimation.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mjlab.envs.ManagerBasedRlEnvCfg.action_trunk_len">
+<span class="sig-name descname"><span class="pre">action_trunk_len</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#mjlab.envs.ManagerBasedRlEnvCfg.action_trunk_len" title="Link to this definition">#</a></dt>
+<dd><p>Number of per-substep action slices emitted by one policy step.</p>
+<p>The default value of 1 preserves standard action repeat behavior: one policy
+action is processed once and applied on every decimation substep. When greater
+than 1, the policy action is interpreted as a flat trunk of
+<code class="docutils literal notranslate"><span class="pre">action_trunk_len</span> <span class="pre">*</span> <span class="pre">base_action_dim</span></code> values. Trunk mode requires
+<code class="docutils literal notranslate"><span class="pre">action_trunk_len</span> <span class="pre">==</span> <span class="pre">decimation</span></code> so each physics substep receives exactly one
+action slice.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -866,6 +879,7 @@ If iterable is specified the tuple is initialized from iterable’s items.</p>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.decimation"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.decimation</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.action_trunk_len"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.action_trunk_len</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.scene"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.scene</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.observations"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.observations</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.envs.ManagerBasedRlEnvCfg.actions"><code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg.actions</span></code></a></li>
