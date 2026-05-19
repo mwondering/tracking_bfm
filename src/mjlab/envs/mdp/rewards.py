@@ -56,13 +56,24 @@ def joint_acc_l2(
 
 
 def action_rate_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
-  """Penalize the rate of change of the actions using L2 squared kernel.
+  """Penalize actual executed action changes.
 
-  Operates on raw policy output (before per-term scale/offset).
+  For standard action repeat this is identical to the old behavior:
+  ``current_action - previous_action``. In trunk mode, the penalty follows the
+  executed substep sequence from the previous trunk's final slice into every
+  current trunk slice.
   """
-  return torch.sum(
-    torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1
-  )
+  action_manager = env.action_manager
+  if getattr(action_manager, "action_trunk_len", 1) == 1:
+    return torch.sum(
+      torch.square(action_manager.action - action_manager.prev_action), dim=1
+    )
+
+  prev_tail = action_manager.prev_action_sequence[:, -1:, :]
+  current_sequence = action_manager.action_sequence
+  executed_sequence = torch.cat((prev_tail, current_sequence), dim=1)
+  action_rate = executed_sequence[:, 1:, :] - executed_sequence[:, :-1, :]
+  return torch.sum(torch.square(action_rate), dim=(1, 2))
 
 
 def action_acc_l2(env: ManagerBasedRlEnv) -> torch.Tensor:

@@ -66,6 +66,17 @@ class ManagerBasedRlEnvCfg:
   """Number of physics simulation steps per environment step. Higher values mean
   coarser control frequency. Environment step duration = physics_dt * decimation."""
 
+  action_trunk_len: int = 1
+  """Number of per-substep action slices emitted by one policy step.
+
+  The default value of 1 preserves standard action repeat behavior: one policy
+  action is processed once and applied on every decimation substep. When greater
+  than 1, the policy action is interpreted as a flat trunk of
+  ``action_trunk_len * base_action_dim`` values. Trunk mode requires
+  ``action_trunk_len == decimation`` so each physics substep receives exactly one
+  action slice.
+  """
+
   scene: SceneCfg
   """Scene configuration defining terrain, entities, and sensors. The scene
   specifies ``num_envs``, the number of parallel environments."""
@@ -183,6 +194,16 @@ class ManagerBasedRlEnv:
   ) -> None:
     # Initialize base environment state.
     self.cfg = cfg
+    if self.cfg.action_trunk_len < 1:
+      raise ValueError("action_trunk_len must be >= 1.")
+    if (
+      self.cfg.action_trunk_len > 1 and self.cfg.action_trunk_len != self.cfg.decimation
+    ):
+      raise ValueError(
+        "action_trunk_len must equal decimation when trunk mode is enabled. "
+        f"Received action_trunk_len={self.cfg.action_trunk_len}, "
+        f"decimation={self.cfg.decimation}."
+      )
     if self.cfg.seed is not None:
       self.cfg.seed = self.seed(self.cfg.seed)
     self._sim_step_counter = 0
@@ -411,9 +432,12 @@ class ManagerBasedRlEnv:
 
     self.action_manager.process_action(action.to(self.device))
 
-    for _ in range(self.cfg.decimation):
+    for substep_idx in range(self.cfg.decimation):
       self._sim_step_counter += 1
-      self.action_manager.apply_action()
+      if self.cfg.action_trunk_len > 1:
+        self.action_manager.apply_action(substep_idx=substep_idx)
+      else:
+        self.action_manager.apply_action()
       self.scene.write_data_to_sim()
       self.sim.step()
       self.scene.update(dt=self.physics_dt)
@@ -534,7 +558,7 @@ class ManagerBasedRlEnv:
           )
         self.single_observation_space.spaces[group_name] = group_space
 
-    action_dim = sum(self.action_manager.action_term_dim)
+    action_dim = self.action_manager.policy_action_dim
     self.single_action_space = Box(shape=(action_dim,), low=-math.inf, high=math.inf)
 
     self.observation_space = batch_space(self.single_observation_space, self.num_envs)

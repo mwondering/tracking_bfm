@@ -6,7 +6,9 @@ from mjlab.asset_zoo.robots import G1_ACTION_SCALE
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
-from mjlab.tasks.tracking.mdp.multi_commands import MotionCommandCfg as MultiMotionCommandCfg
+from mjlab.tasks.tracking.mdp.multi_commands import (
+  MotionCommandCfg as MultiMotionCommandCfg,
+)
 
 
 @pytest.fixture(scope="module")
@@ -166,3 +168,14 @@ def test_tracking_1stage_task_uses_sparse_actor_obs() -> None:
   assert "body_ori" in critic_terms
   assert cfg.commands["motion"].history_steps == 0
   assert cfg.commands["motion"].future_steps == 1
+
+
+def test_tracking_bfm_action_trunk_task_config() -> None:
+  """The action-trunk tracking task should expose a 4-slice policy action."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk")
+
+  assert cfg.action_trunk_len == 4
+  assert cfg.decimation == 4
+  assert "joint_pos" in cfg.actions
+  assert isinstance(cfg.actions["joint_pos"], JointPositionActionCfg)
+  assert cfg.actions["joint_pos"].scale == G1_ACTION_SCALE

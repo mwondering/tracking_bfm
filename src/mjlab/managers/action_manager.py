@@ -80,12 +80,20 @@ class ActionManager(ManagerBase):
     self.cfg = cfg
     super().__init__(env=env)
 
-    # Create buffers to store actions.
+    self._action_trunk_len = int(
+      getattr(getattr(env, "cfg", None), "action_trunk_len", 1)
+    )
+
+    # Flat policy output history. In trunk mode this is
+    # (num_envs, action_trunk_len * total_action_dim).
     self._action = torch.zeros(
-      (self.num_envs, self.total_action_dim), device=self.device
+      (self.num_envs, self.policy_action_dim), device=self.device
     )
     self._prev_action = torch.zeros_like(self._action)
     self._prev_prev_action = torch.zeros_like(self._action)
+    self._applied_action = torch.zeros(
+      (self.num_envs, self.total_action_dim), device=self.device
+    )
 
   def __str__(self) -> str:
     msg = f"<ActionManager> contains {len(self._term_names)} active terms.\n"
@@ -107,26 +115,53 @@ class ActionManager(ManagerBase):
     return sum(self.action_term_dim)
 
   @property
+  def action_trunk_len(self) -> int:
+    return self._action_trunk_len
+
+  @property
+  def policy_action_dim(self) -> int:
+    return self.total_action_dim * self.action_trunk_len
+
+  @property
   def action_term_dim(self) -> list[int]:
     return [term.action_dim for term in self._terms.values()]
 
   @property
   def action(self) -> torch.Tensor:
     """Raw policy output from the current step, before per-term
-    scale/offset. Shape: ``(num_envs, total_action_dim)``."""
+    scale/offset. Shape: ``(num_envs, policy_action_dim)``."""
     return self._action
 
   @property
   def prev_action(self) -> torch.Tensor:
     """Raw policy output from the previous step, before per-term
-    scale/offset. Shape: ``(num_envs, total_action_dim)``."""
+    scale/offset. Shape: ``(num_envs, policy_action_dim)``."""
     return self._prev_action
 
   @property
   def prev_prev_action(self) -> torch.Tensor:
     """Raw policy output from two steps ago, before per-term
-    scale/offset. Shape: ``(num_envs, total_action_dim)``."""
+    scale/offset. Shape: ``(num_envs, policy_action_dim)``."""
     return self._prev_prev_action
+
+  @property
+  def applied_action(self) -> torch.Tensor:
+    """Base action slice currently routed to action terms."""
+    return self._applied_action
+
+  @property
+  def action_sequence(self) -> torch.Tensor:
+    """Current policy output as ``(num_envs, trunk_len, base_action_dim)``."""
+    return self._action.view(
+      self.num_envs, self.action_trunk_len, self.total_action_dim
+    )
+
+  @property
+  def prev_action_sequence(self) -> torch.Tensor:
+    """Previous policy output as ``(num_envs, trunk_len, base_action_dim)``."""
+    return self._prev_action.view(
+      self.num_envs, self.action_trunk_len, self.total_action_dim
+    )
 
   @property
   def active_terms(self) -> list[str]:
@@ -144,6 +179,7 @@ class ActionManager(ManagerBase):
     self._prev_action[env_ids] = 0.0
     self._prev_prev_action[env_ids] = 0.0
     self._action[env_ids] = 0.0
+    self._applied_action[env_ids] = 0.0
     # Reset action terms.
     for term in self._terms.values():
       term.reset(env_ids=env_ids)
@@ -158,28 +194,39 @@ class ActionManager(ManagerBase):
     independently applies its own affine transformation via
     :meth:`ActionTerm.process_actions`.
     """
-    if self.total_action_dim != action.shape[1]:
+    if self.policy_action_dim != action.shape[1]:
       raise ValueError(
-        f"Invalid action shape, expected: {self.total_action_dim},"
+        f"Invalid action shape, expected: {self.policy_action_dim},"
         f" received: {action.shape[1]}."
       )
     # Shift history: prev_prev ← prev ← current ← new.
     self._prev_prev_action[:] = self._prev_action
     self._prev_action[:] = self._action
     self._action[:] = action.to(self.device)
-    # Split the flat action vector and route each slice to its term.
+    self._process_substep_action(0)
+
+  def _process_substep_action(self, substep_idx: int) -> None:
+    if substep_idx < 0 or substep_idx >= self.action_trunk_len:
+      raise ValueError(
+        f"substep_idx must be in [0, {self.action_trunk_len}); received {substep_idx}."
+      )
+    base_action = self.action_sequence[:, substep_idx, :]
+    self._applied_action[:] = base_action
+
     idx = 0
     for term in self._terms.values():
-      term_actions = action[:, idx : idx + term.action_dim]
+      term_actions = base_action[:, idx : idx + term.action_dim]
       term.process_actions(term_actions)
       idx += term.action_dim
 
-  def apply_action(self) -> None:
+  def apply_action(self, substep_idx: int | None = None) -> None:
     """Write processed actions to entity actuator targets.
 
     Called on every decimation substep (physics step), not just once per policy
     step. Each term writes its most recently processed targets to the simulation.
     """
+    if substep_idx is not None:
+      self._process_substep_action(substep_idx)
     for term in self._terms.values():
       term.apply_actions()
 

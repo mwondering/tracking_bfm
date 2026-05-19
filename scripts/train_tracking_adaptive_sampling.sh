@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
+TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1-ActionTrunk}"
 MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
 NUM_ENVS="${NUM_ENVS:-512}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-0518debug}"

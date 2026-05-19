@@ -18,7 +18,7 @@ class RslRlVecEnvWrapper(VecEnv):
     self.num_envs = self.unwrapped.num_envs
     self.device = torch.device(self.unwrapped.device)
     self.max_episode_length = self.unwrapped.max_episode_length
-    self.num_actions = self.unwrapped.action_manager.total_action_dim
+    self.num_actions = self.unwrapped.action_manager.policy_action_dim
     self._modify_action_space()
 
     # Reset at the start since rsl_rl does not call reset.
