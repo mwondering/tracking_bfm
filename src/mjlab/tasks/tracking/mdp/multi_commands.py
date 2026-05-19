@@ -4,7 +4,7 @@ import copy
 import math
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal
 
 import mujoco
 import numpy as np
@@ -535,6 +535,7 @@ class MultiMotionCommand(CommandTerm):
     self.bin_failure_count = torch.full_like(self.bin_episode_count, init_count)
     self.bin_episode_count.masked_fill_(~self.bin_valid_mask, 0.0)
     self.bin_failure_count.masked_fill_(~self.bin_valid_mask, 0.0)
+    self._init_adaptive_sampling_window()
     self._adaptive_sampling_phase = "idle"
     self._skip_current_adaptive_episode_count = torch.zeros(
       self.num_envs, dtype=torch.bool, device=self.device
@@ -635,8 +636,91 @@ class MultiMotionCommand(CommandTerm):
     return torch.minimum(raw_bin_indices, max_bin_indices)
 
   def _compute_failure_rate(self) -> torch.Tensor:
-    failure_rate = self.bin_failure_count / torch.clamp(self.bin_episode_count, min=1e-12)
+    failure_rate = self.bin_failure_count / torch.clamp(
+      self.bin_episode_count, min=1e-12
+    )
     return failure_rate.masked_fill(~self.bin_valid_mask, 0.0)
+
+  def _init_adaptive_sampling_window(self) -> None:
+    window_iterations = getattr(
+      self.cfg, "adaptive_failure_rate_window_iterations", None
+    )
+    self._adaptive_window_episode_chunks: torch.Tensor | None = None
+    self._adaptive_window_failure_chunks: torch.Tensor | None = None
+    self._adaptive_window_chunk_size = 0
+    self._adaptive_window_current_chunk = 0
+    self._adaptive_window_base_iteration: int | None = None
+    self._adaptive_window_last_logical_chunk = 0
+
+    if window_iterations is None or int(window_iterations) <= 0:
+      return
+
+    window_iterations = max(int(window_iterations), 1)
+    num_chunks = max(
+      int(getattr(self.cfg, "adaptive_failure_rate_window_chunks", 40)), 1
+    )
+    num_chunks = min(num_chunks, window_iterations)
+    self._adaptive_window_chunk_size = max(
+      int(math.ceil(window_iterations / num_chunks)), 1
+    )
+    chunk_shape = (num_chunks, *self.bin_episode_count.shape)
+    self._adaptive_window_episode_chunks = torch.zeros(
+      chunk_shape,
+      dtype=self.bin_episode_count.dtype,
+      device=self.bin_episode_count.device,
+    )
+    self._adaptive_window_failure_chunks = torch.zeros_like(
+      self._adaptive_window_episode_chunks
+    )
+    self._adaptive_window_episode_chunks[0].copy_(self.bin_episode_count)
+    self._adaptive_window_failure_chunks[0].copy_(self.bin_failure_count)
+
+  def begin_adaptive_sampling_iteration(self, iteration: int) -> None:
+    if (
+      self.cfg.sampling_mode != "adaptive"
+      or self._adaptive_window_episode_chunks is None
+      or self._adaptive_window_failure_chunks is None
+    ):
+      return
+
+    if self._adaptive_window_base_iteration is None:
+      self._adaptive_window_base_iteration = int(iteration)
+      return
+
+    chunk_size = max(self._adaptive_window_chunk_size, 1)
+    logical_chunk = max(
+      (int(iteration) - self._adaptive_window_base_iteration) // chunk_size,
+      0,
+    )
+    if logical_chunk <= self._adaptive_window_last_logical_chunk:
+      return
+
+    num_chunks = self._adaptive_window_episode_chunks.shape[0]
+    for next_logical_chunk in range(
+      self._adaptive_window_last_logical_chunk + 1,
+      logical_chunk + 1,
+    ):
+      chunk_index = next_logical_chunk % num_chunks
+      self.bin_episode_count -= self._adaptive_window_episode_chunks[chunk_index]
+      self.bin_failure_count -= self._adaptive_window_failure_chunks[chunk_index]
+      self._adaptive_window_episode_chunks[chunk_index].zero_()
+      self._adaptive_window_failure_chunks[chunk_index].zero_()
+      self._adaptive_window_current_chunk = chunk_index
+
+    self.bin_episode_count.clamp_(min=0.0)
+    self.bin_failure_count.clamp_(min=0.0)
+    self._adaptive_window_last_logical_chunk = logical_chunk
+
+  def _record_adaptive_sampling_window_increments(
+    self, episode_increments: torch.Tensor, failure_increments: torch.Tensor
+  ) -> None:
+    episode_chunks = getattr(self, "_adaptive_window_episode_chunks", None)
+    failure_chunks = getattr(self, "_adaptive_window_failure_chunks", None)
+    if episode_chunks is None or failure_chunks is None:
+      return
+
+    episode_chunks[self._adaptive_window_current_chunk] += episode_increments
+    failure_chunks[self._adaptive_window_current_chunk] += failure_increments
 
   def _accumulate_adaptive_sampling_stats(
     self,
@@ -657,14 +741,22 @@ class MultiMotionCommand(CommandTerm):
     )
     self.bin_episode_count += episode_increments
 
+    failure_increments = torch.zeros_like(self.bin_failure_count)
     if failure_mask is None or not failure_mask.any():
+      self._record_adaptive_sampling_window_increments(
+        episode_increments, failure_increments
+      )
       return
 
     failed_linear_indices = linear_indices[failure_mask]
     failed_counts = torch.bincount(
       failed_linear_indices, minlength=self.motion.num_files * self.bin_count
     ).view(self.motion.num_files, self.bin_count)
-    self.bin_failure_count += failed_counts.float()
+    failure_increments = failed_counts.float()
+    self.bin_failure_count += failure_increments
+    self._record_adaptive_sampling_window_increments(
+      episode_increments, failure_increments
+    )
 
   def _stage_pre_resample_adaptive_stats(self, env_ids: torch.Tensor) -> None:
     if self.cfg.sampling_mode != "adaptive" or env_ids.numel() == 0:
@@ -1395,6 +1487,8 @@ class MultiMotionCommandCfg(CommandTermCfg):
   adaptive_bin_width_s: float = 1.0
   adaptive_bin_width_steps: int | None = None
   adaptive_init_num_failures: float = 1.0
+  adaptive_failure_rate_window_iterations: int | None = None
+  adaptive_failure_rate_window_chunks: int = 40
   adaptive_failure_rate_max_over_mean: float = 200.0
   adaptive_sequence_length_agnostic: bool = True
   adaptive_max_prob_per_bin: float | Literal["auto"] | None = "auto"

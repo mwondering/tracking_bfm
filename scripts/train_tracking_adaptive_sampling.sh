@@ -9,8 +9,8 @@ cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
-NUM_ENVS="${NUM_ENVS:-1024}"
-EXPERIMENT_NAME="${EXPERIMENT_NAME:-0422debug}"
+NUM_ENVS="${NUM_ENVS:-512}"
+EXPERIMENT_NAME="${EXPERIMENT_NAME:-0518debug}"
 
 RUN_NAME="${RUN_NAME:-adaptive}"
 
@@ -24,7 +24,9 @@ uv run train "$TASK" \
     --env.commands.motion.adaptive_pre_failure_sample_window_steps 200 \
     --env.commands.motion.history_steps 0 \
     --env.commands.motion.future_steps 1 \
-    --debug False
+    --debug True \
+    --env.commands.motion.adaptive-failure-rate-window-iterations 400 \
+    --env.commands.motion.adaptive_failure_rate_window_chunks 40
 
 
     # --env.commands.motion.future_steps 1 \

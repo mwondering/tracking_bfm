@@ -4,7 +4,7 @@
 
 **Goal:** Add an isolated G1 tracking task whose policy outputs a 4-slice action trunk (`29 * 4 = 116`) while the environment applies one 29-D slice per decimation substep.
 
-**Architecture:** Add optional trunk support at the framework level with `action_trunk_len=1` as the default, so existing tasks remain unchanged. The new task sets `action_trunk_len=4`, the wrapper exposes `policy_action_dim`, and `ManagerBasedRlEnv.step()` passes the current decimation substep to `ActionManager.apply_action()`. Only `action_rate_l2` changes reward semantics: it penalizes actual executed substep action differences instead of treating the trunk as one flat vector.
+**Architecture:** Add optional trunk support at the framework level with `action_trunk_len=1` as the default, so existing tasks remain unchanged. The new task sets `action_trunk_len=4`, the wrapper exposes `policy_action_dim`, and `ManagerBasedRlEnv.step()` passes the current decimation substep to `ActionManager.apply_action()` only when trunk mode is enabled. Only `action_rate_l2` changes reward semantics: it penalizes actual executed substep action differences instead of treating the trunk as one flat vector.
 
 **Tech Stack:** Python dataclasses, PyTorch tensors, MuJoCo env loop, rsl_rl `VecEnv`, pytest.
 
@@ -12,7 +12,7 @@
 
 ## File Structure
 
-- Modify `src/mjlab/envs/manager_based_rl_env.py`: add `action_trunk_len` config, validate it, use policy action dim for action spaces, and pass `substep_idx` inside `step()`.
+- Modify `src/mjlab/envs/manager_based_rl_env.py`: add `action_trunk_len` config, validate it, use policy action dim for action spaces, and pass `substep_idx` inside `step()` only for trunk-enabled tasks.
 - Modify `src/mjlab/managers/action_manager.py`: track both base action dimension and policy action dimension, store flat trunk history, select substep slices, and expose the currently applied 29-D slice.
 - Modify `src/mjlab/envs/mdp/rewards.py`: update only `action_rate_l2` to compute smoothness over the executed substep sequence.
 - Modify `src/mjlab/rl/vecenv_wrapper.py`: expose `num_actions` as policy action dimension.
@@ -412,12 +412,17 @@ git commit -m "feat: route action trunk substep slices"
 Append to `tests/test_action_trunk.py`:
 
 ```python
-def test_step_loop_passes_substep_indices_to_action_manager() -> None:
+def test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode() -> None:
   """The decimation loop applies one trunk slice per physics substep."""
   from mjlab.envs.manager_based_rl_env import ManagerBasedRlEnv
 
   env = object.__new__(ManagerBasedRlEnv)
-  env.cfg = Mock(decimation=4, auto_reset=True, is_finite_horizon=False)
+  env.cfg = Mock(
+    decimation=4,
+    action_trunk_len=4,
+    auto_reset=True,
+    is_finite_horizon=False,
+  )
   env.device = "cpu"
   env._manual_reset_pending = torch.zeros(1, dtype=torch.bool)
   env._sim_step_counter = 0
@@ -451,6 +456,49 @@ def test_step_loop_passes_substep_indices_to_action_manager() -> None:
     2,
     3,
   ]
+
+
+def test_step_loop_preserves_action_repeat_for_standard_tracking() -> None:
+  """Default action mode keeps the old process-once/apply-repeat behavior."""
+  from mjlab.envs.manager_based_rl_env import ManagerBasedRlEnv
+
+  env = object.__new__(ManagerBasedRlEnv)
+  env.cfg = Mock(
+    decimation=4,
+    action_trunk_len=1,
+    auto_reset=True,
+    is_finite_horizon=False,
+  )
+  env.device = "cpu"
+  env._manual_reset_pending = torch.zeros(1, dtype=torch.bool)
+  env._sim_step_counter = 0
+  env.episode_length_buf = torch.zeros(1, dtype=torch.long)
+  env.common_step_counter = 0
+  env.extras = {}
+
+  env.action_manager = Mock()
+  env.action_manager.apply_action = Mock()
+  env.scene = Mock()
+  env.sim = Mock()
+  env.metrics_manager = Mock()
+  env.termination_manager = Mock()
+  env.termination_manager.compute.return_value = torch.zeros(1, dtype=torch.bool)
+  env.termination_manager.terminated = torch.zeros(1, dtype=torch.bool)
+  env.termination_manager.time_outs = torch.zeros(1, dtype=torch.bool)
+  env.reward_manager = Mock()
+  env.reward_manager.compute.return_value = torch.zeros(1)
+  env.command_manager = Mock()
+  env.event_manager = Mock()
+  env.event_manager.available_modes = set()
+  env.observation_manager = Mock()
+  env.observation_manager.compute.return_value = {"actor": torch.zeros(1, 1)}
+  env.recorder_manager = Mock()
+
+  env.step(torch.zeros(1, 3))
+
+  assert env.action_manager.process_action.call_count == 1
+  assert env.action_manager.apply_action.call_count == 4
+  assert all(call.kwargs == {} for call in env.action_manager.apply_action.call_args_list)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -458,10 +506,10 @@ def test_step_loop_passes_substep_indices_to_action_manager() -> None:
 Run:
 
 ```bash
-uv run pytest tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager -v
+uv run pytest tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode tests/test_action_trunk.py::test_step_loop_preserves_action_repeat_for_standard_tracking -v
 ```
 
-Expected: FAIL because `apply_action()` is called without `substep_idx`.
+Expected: FAIL because trunk mode does not pass `substep_idx` yet, and standard mode protection is not implemented yet.
 
 - [ ] **Step 3: Pass `substep_idx` in the decimation loop**
 
@@ -478,7 +526,10 @@ with:
 ```python
     for substep_idx in range(self.cfg.decimation):
       self._sim_step_counter += 1
-      self.action_manager.apply_action(substep_idx=substep_idx)
+      if self.cfg.action_trunk_len > 1:
+        self.action_manager.apply_action(substep_idx=substep_idx)
+      else:
+        self.action_manager.apply_action()
 ```
 
 - [ ] **Step 4: Run step-loop and existing env tests**
@@ -486,7 +537,7 @@ with:
 Run:
 
 ```bash
-uv run pytest tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager tests/test_runner.py::test_runner_persists_common_step_counter -v
+uv run pytest tests/test_action_trunk.py::test_step_loop_passes_substep_indices_to_action_manager_in_trunk_mode tests/test_action_trunk.py::test_step_loop_preserves_action_repeat_for_standard_tracking tests/test_runner.py::test_runner_persists_common_step_counter -v
 ```
 
 Expected: PASS.
@@ -748,7 +799,7 @@ Expected: clean working tree. If generated log files appear under ignored paths,
 
 ## Self-Review
 
-- Spec coverage: The plan creates a new isolated task, keeps framework defaults compatible, changes the step loop to execute one trunk slice per decimation substep, and modifies only `action_rate_l2` among rewards.
+- Spec coverage: The plan creates a new isolated task, keeps framework defaults compatible, changes the step loop to execute one trunk slice per decimation substep only in trunk mode, preserves standard action repeat for existing tracking tasks, and modifies only `action_rate_l2` among rewards.
 - Placeholder scan: No unresolved placeholders or open-ended implementation instructions remain.
 - Type consistency: `action_trunk_len`, `policy_action_dim`, `applied_action`, `action_sequence`, and `prev_action_sequence` are introduced before later tasks use them.
 - Deliberate non-goals: No changes to other reward terms, no distillation label changes, no ONNX/deployment adaptation beyond normal policy output shape. Those can be separate tasks after the training experiment proves useful.
