@@ -172,6 +172,77 @@ def test_latent_distillation_runner_learn_smoke() -> None:
     assert Path(tmpdir, "model_0.pt").exists()
 
 
+def test_latent_distillation_runner_can_use_wae_mmd_regularization() -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    save_interval=1,
+    num_steps_per_env=3,
+    max_iterations=1,
+    num_learning_epochs=1,
+    num_mini_batches=1,
+    upload_model=False,
+    student_model_type="latent",
+    student_obs_group="unused_student_actor",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    latent_regularization="wae_mmd",
+    mmd_weight=1.0e-2,
+  )
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  runner = DistillationRunner(
+    env,
+    asdict(cfg),
+    log_dir=None,
+    device="cpu",
+    teacher_adapter=teacher_adapter,
+  )
+
+  runner.learn(num_learning_iterations=1)
+
+  assert runner.last_loss_dict["kl_weight"] == 0.0
+  assert runner.last_loss_dict["mmd_weight"] == 1.0e-2
+  assert "mmd_loss" in runner.last_loss_dict
+
+
+def test_latent_distillation_runner_passes_rollout_shape_and_dones_to_algorithm() -> None:
+  env = _DummyVecEnv(num_envs=3)
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    num_steps_per_env=2,
+    max_iterations=1,
+    num_learning_epochs=1,
+    num_mini_batches=1,
+    upload_model=False,
+    student_model_type="latent",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    latent_smooth_weight=1.0e-3,
+  )
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+  runner = DistillationRunner(
+    env,
+    asdict(cfg),
+    log_dir=None,
+    device="cpu",
+    teacher_adapter=teacher_adapter,
+  )
+
+  with patch.object(runner.alg, "update", wraps=runner.alg.update) as update:
+    runner.learn(num_learning_iterations=1)
+
+  kwargs = update.call_args.kwargs
+  assert kwargs["rollout_shape"] == (2, 3)
+  assert kwargs["dones"].shape == (2, 3)
+
+
 def test_latent_distillation_runner_save_load_round_trip() -> None:
   env = _DummyVecEnv()
   cfg = DistillationRunnerCfg(

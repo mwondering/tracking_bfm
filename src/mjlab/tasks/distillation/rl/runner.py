@@ -107,6 +107,9 @@ class DistillationRunner:
         kl_weight=float(self.cfg["kl_weight"]),
         kl_warmup_iterations=int(self.cfg["kl_warmup_iterations"]),
         free_nats_per_dim=float(self.cfg["free_nats_per_dim"]),
+        latent_regularization=self.cfg.get("latent_regularization", "kl"),
+        mmd_weight=float(self.cfg.get("mmd_weight", 0.0)),
+        mmd_kernel_scales=tuple(self.cfg.get("mmd_kernel_scales", (0.5, 1.0, 2.0, 4.0))),
         latent_smooth_weight=float(self.cfg["latent_smooth_weight"]),
         multi_gpu_cfg=self.multi_gpu_cfg,
       )
@@ -262,6 +265,7 @@ class DistillationRunner:
       student_rollout: dict[str, list[torch.Tensor]] = defaultdict(list)
       teacher_rollout: list[torch.Tensor] = []
       teacher_masks: list[torch.Tensor] = []
+      done_rollout: list[torch.Tensor] = []
 
       with torch.no_grad():
         beta = self.mix_schedule(it)
@@ -288,6 +292,7 @@ class DistillationRunner:
             student_rollout[obs_group].append(student_obs[obs_group].detach().clone())
           teacher_rollout.append(teacher_actions.detach().clone())
           teacher_masks.append(teacher_mask.detach().clone())
+          done_rollout.append(dones.detach().clone())
 
           episode_log = extras.get("episode") or extras.get("log")
           if episode_log is not None:
@@ -320,6 +325,8 @@ class DistillationRunner:
           num_learning_epochs=int(self.cfg["num_learning_epochs"]),
           num_mini_batches=int(self.cfg["num_mini_batches"]),
           iteration=it,
+          rollout_shape=(self.num_steps_per_env, self.env.num_envs),
+          dones=torch.stack(done_rollout, dim=0),
         )
       else:
         update_metrics = self.alg.update(

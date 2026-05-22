@@ -144,6 +144,85 @@ def test_latent_action_distillation_algorithm_updates_student() -> None:
   )
 
 
+def test_latent_action_distillation_algorithm_supports_wae_mmd_regularization() -> None:
+  from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
+  from mjlab.tasks.distillation.rl.models import build_latent_student_model
+
+  obs = TensorDict(
+    {
+      "teacher_actor": torch.randn(24, 7),
+      "proprio_actor": torch.randn(24, 4),
+    },
+    batch_size=[24],
+  )
+  teacher_actions = obs["teacher_actor"][:, :3] * 0.25
+  model = build_latent_student_model(
+    obs=obs,
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    action_dim=3,
+    latent_dim=5,
+    encoder_hidden_dims=(32, 32),
+    decoder_hidden_dims=(32, 32),
+    activation="elu",
+  )
+  algorithm = LatentActionDistillationAlgorithm(
+    policy=model,
+    learning_rate=1.0e-2,
+    max_grad_norm=1.0,
+    latent_regularization="wae_mmd",
+    mmd_weight=1.0e-2,
+    mmd_kernel_scales=(0.5, 1.0, 2.0),
+    kl_weight=1.0e-3,
+    kl_warmup_iterations=10,
+  )
+
+  metrics = algorithm.update(
+    obs=obs,
+    teacher_actions=teacher_actions,
+    num_learning_epochs=1,
+    num_mini_batches=3,
+    iteration=5,
+  )
+
+  assert metrics["kl_weight"] == 0.0
+  assert metrics["mmd_weight"] == 1.0e-2
+  assert metrics["mmd_loss"] >= 0.0
+  assert "aggregate_mean_norm" in metrics
+  assert "aggregate_std_mean" in metrics
+  assert "total_loss" in metrics
+
+
+def test_latent_smoothness_uses_temporal_pairs_and_done_mask() -> None:
+  from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
+
+  mu = torch.tensor(
+    [
+      [0.0],
+      [10.0],
+      [1.0],
+      [20.0],
+      [2.0],
+      [30.0],
+    ]
+  )
+  dones = torch.tensor(
+    [
+      [False, True],
+      [False, False],
+      [False, False],
+    ]
+  )
+
+  smoothness = LatentActionDistillationAlgorithm._trajectory_latent_smoothness(
+    mu=mu,
+    rollout_shape=(3, 2),
+    dones=dones,
+  )
+
+  assert smoothness.item() == torch.tensor((1.0 + 1.0 + 100.0) / 3.0).item()
+
+
 def test_action_distillation_algorithm_broadcast_parameters_noops_without_multi_gpu() -> None:
   obs = TensorDict({"student_actor": torch.randn(8, 5)}, batch_size=[8])
   model = build_student_model(

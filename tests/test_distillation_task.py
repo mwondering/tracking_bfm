@@ -34,6 +34,8 @@ def test_latent_distillation_task_is_registered() -> None:
   assert rl_cfg.student_obs_group == "student_actor"
   assert rl_cfg.encoder_obs_group == "teacher_actor"
   assert rl_cfg.decoder_obs_group == "proprio_actor"
+  assert rl_cfg.latent_regularization == "kl"
+  assert rl_cfg.mmd_weight == 0.0
   assert runner_cls is not None
 
 
