@@ -7,7 +7,10 @@ from dataclasses import dataclass
 
 from mjlab.managers.observation_manager import ObservationGroupCfg
 from mjlab.tasks.distillation.mdp.commands import StudentSparseCommandVisCfg
-from mjlab.tasks.distillation.mdp.observations import build_student_actor_terms
+from mjlab.tasks.distillation.mdp.observations import (
+  build_proprio_actor_terms,
+  build_student_actor_terms,
+)
 from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
 
 
@@ -38,9 +41,15 @@ def make_distillation_env_cfg(play: bool = False):
     concatenate_terms=True,
     enable_corruption=False,
   )
+  proprio_actor = ObservationGroupCfg(
+    terms=build_proprio_actor_terms(history_steps=student_command_cfg.history_steps),
+    concatenate_terms=True,
+    enable_corruption=False,
+  )
 
   cfg.observations["teacher_actor"] = teacher_actor
   cfg.observations["student_actor"] = student_actor
+  cfg.observations["proprio_actor"] = proprio_actor
 
   if play:
     cfg.commands["motion"].debug_vis = True

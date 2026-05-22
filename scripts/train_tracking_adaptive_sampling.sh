@@ -26,8 +26,8 @@ uv run train "$TASK" \
     --env.commands.motion.future_steps 1 \
     --debug True \
     --env.commands.motion.adaptive-failure-rate-window-iterations 400 \
-    --env.commands.motion.adaptive_failure_rate_window_chunks 40
-
+    --env.commands.motion.adaptive_failure_rate_window_chunks 40 \
+    --agent.algorithm.entropy_coef 0.001 \
 
     # --env.commands.motion.future_steps 1 \
     # --env.commands.motion.history_steps 0 \

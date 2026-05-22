@@ -50,6 +50,7 @@ class _DummyVecEnv:
         "actor": base.clone(),
         "teacher_actor": base.clone(),
         "student_actor": base.clone(),
+        "proprio_actor": base[:, :4].clone(),
       },
       batch_size=[self.num_envs],
     )
@@ -128,6 +129,93 @@ def test_distillation_runner_learn_smoke() -> None:
     assert "action_mse" in runner.last_loss_dict
     assert "teacher_action_ratio" in runner.last_train_metrics
     assert Path(tmpdir, "model_0.pt").exists()
+
+
+def test_latent_distillation_runner_learn_smoke() -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    save_interval=1,
+    num_steps_per_env=3,
+    max_iterations=1,
+    num_learning_epochs=2,
+    num_mini_batches=2,
+    upload_model=False,
+    student_model_type="latent",
+    student_obs_group="unused_student_actor",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    latent_dim=5,
+    encoder_hidden_dims=(32, 32),
+    decoder_hidden_dims=(32, 32),
+    kl_weight=1.0e-3,
+    kl_warmup_iterations=10,
+    free_nats_per_dim=0.01,
+    latent_smooth_weight=1.0e-3,
+  )
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  with TemporaryDirectory() as tmpdir:
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=tmpdir,
+      device="cpu",
+      teacher_adapter=teacher_adapter,
+    )
+
+    runner.learn(num_learning_iterations=1)
+
+    assert "action_mse" in runner.last_loss_dict
+    assert "kl_loss" in runner.last_loss_dict
+    assert "latent_std_mean" in runner.last_loss_dict
+    assert Path(tmpdir, "model_0.pt").exists()
+
+
+def test_latent_distillation_runner_save_load_round_trip() -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    upload_model=False,
+    student_model_type="latent",
+    student_obs_group="unused_student_actor",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+  )
+
+  with TemporaryDirectory() as tmpdir:
+    save_path = Path(tmpdir, "latent_model.pt")
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=tmpdir,
+      device="cpu",
+    )
+    runner.save(str(save_path))
+
+    checkpoint = torch.load(save_path, map_location="cpu", weights_only=False)
+    assert checkpoint["model_type"] == "latent"
+    assert "encoder_state_dict" in checkpoint
+    assert "decoder_state_dict" in checkpoint
+    assert checkpoint["latent_cfg"]["latent_dim"] == 5
+
+    reloaded_runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=None,
+      device="cpu",
+    )
+    infos = reloaded_runner.load(
+      str(save_path),
+      load_cfg={"actor": True},
+      strict=True,
+      map_location="cpu",
+    )
+
+  assert infos is not None
 
 
 def test_distillation_runner_accepts_tracking_runner_kwargs() -> None:

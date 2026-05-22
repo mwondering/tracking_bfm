@@ -15,8 +15,8 @@ from tensordict import TensorDict
 
 from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.registry import load_rl_cfg, load_runner_cls
-from .algorithm import ActionDistillationAlgorithm
-from .models import build_student_model
+from .algorithm import ActionDistillationAlgorithm, LatentActionDistillationAlgorithm
+from .models import build_latent_student_model, build_student_model
 from .schedules import LinearTeacherMixSchedule
 from .teacher import TeacherPolicyAdapter
 
@@ -69,6 +69,9 @@ class DistillationRunner:
     self.save_interval = int(self.cfg["save_interval"])
     self.student_obs_group = self.cfg["student_obs_group"]
     self.teacher_obs_group = self.cfg["teacher_obs_group"]
+    self.student_model_type = self.cfg.get("student_model_type", "mlp")
+    self.encoder_obs_group = self.cfg.get("encoder_obs_group", self.teacher_obs_group)
+    self.decoder_obs_group = self.cfg.get("decoder_obs_group", self.student_obs_group)
 
     self.git_status_repos: list[str] = []
     self.writer = None
@@ -83,20 +86,47 @@ class DistillationRunner:
     self.last_train_metrics: dict[str, float] = {}
 
     obs = self.env.get_observations().to(self.device)
-    self.student_policy = build_student_model(
-      obs=obs,
-      student_obs_group=self.student_obs_group,
-      action_dim=self.env.num_actions,
-      hidden_dims=tuple(self.cfg["student_hidden_dims"]),
-      activation=self.cfg["student_activation"],
-      obs_normalization=True,
-    ).to(self.device)
-    self.alg = ActionDistillationAlgorithm(
-      policy=self.student_policy,
-      learning_rate=float(self.cfg["learning_rate"]),
-      max_grad_norm=1.0,
-      multi_gpu_cfg=self.multi_gpu_cfg,
-    )
+    if self.student_model_type == "latent":
+      self.student_policy = build_latent_student_model(
+        obs=obs,
+        encoder_obs_group=self.encoder_obs_group,
+        decoder_obs_group=self.decoder_obs_group,
+        action_dim=self.env.num_actions,
+        latent_dim=int(self.cfg["latent_dim"]),
+        encoder_hidden_dims=tuple(self.cfg["encoder_hidden_dims"]),
+        decoder_hidden_dims=tuple(self.cfg["decoder_hidden_dims"]),
+        activation=self.cfg["latent_activation"],
+        obs_normalization=True,
+        log_std_min=float(self.cfg.get("latent_log_std_min", -5.0)),
+        log_std_max=float(self.cfg.get("latent_log_std_max", 2.0)),
+      ).to(self.device)
+      self.alg = LatentActionDistillationAlgorithm(
+        policy=self.student_policy,
+        learning_rate=float(self.cfg["learning_rate"]),
+        max_grad_norm=1.0,
+        kl_weight=float(self.cfg["kl_weight"]),
+        kl_warmup_iterations=int(self.cfg["kl_warmup_iterations"]),
+        free_nats_per_dim=float(self.cfg["free_nats_per_dim"]),
+        latent_smooth_weight=float(self.cfg["latent_smooth_weight"]),
+        multi_gpu_cfg=self.multi_gpu_cfg,
+      )
+    elif self.student_model_type == "mlp":
+      self.student_policy = build_student_model(
+        obs=obs,
+        student_obs_group=self.student_obs_group,
+        action_dim=self.env.num_actions,
+        hidden_dims=tuple(self.cfg["student_hidden_dims"]),
+        activation=self.cfg["student_activation"],
+        obs_normalization=True,
+      ).to(self.device)
+      self.alg = ActionDistillationAlgorithm(
+        policy=self.student_policy,
+        learning_rate=float(self.cfg["learning_rate"]),
+        max_grad_norm=1.0,
+        multi_gpu_cfg=self.multi_gpu_cfg,
+      )
+    else:
+      raise ValueError(f"Unsupported student_model_type: {self.student_model_type}")
     self.mix_schedule = LinearTeacherMixSchedule(
       beta_start=float(self.cfg["beta_start"]),
       beta_end=float(self.cfg["beta_end"]),
@@ -148,6 +178,8 @@ class DistillationRunner:
     self.eval_mode()
     if device is not None:
       self.student_policy.to(device)
+    if self.student_model_type == "latent":
+      return self.student_policy.act
     return self.student_policy
 
   def save(self, path: str, infos=None) -> None:
@@ -227,7 +259,7 @@ class DistillationRunner:
     for it in range(start_iter, tot_iter):
       start_time = time.time()
       ep_infos: list[dict[str, Any]] = []
-      student_rollout: list[torch.Tensor] = []
+      student_rollout: dict[str, list[torch.Tensor]] = defaultdict(list)
       teacher_rollout: list[torch.Tensor] = []
       teacher_masks: list[torch.Tensor] = []
 
@@ -235,7 +267,10 @@ class DistillationRunner:
         beta = self.mix_schedule(it)
         for _ in range(self.num_steps_per_env):
           student_obs = self._student_obs_from(obs)
-          student_actions = self.student_policy(student_obs)
+          if self.student_model_type == "latent":
+            student_actions = self.student_policy.act(student_obs, deterministic=False)
+          else:
+            student_actions = self.student_policy(student_obs)
           teacher_actions = teacher_adapter.act_mean(obs)
           rollout_actions, teacher_mask = mix_rollout_actions(
             student_actions, teacher_actions, beta
@@ -249,7 +284,8 @@ class DistillationRunner:
           rewards = rewards.to(self.device)
           dones = dones.to(self.device)
 
-          student_rollout.append(student_obs[self.student_obs_group].detach().clone())
+          for obs_group in student_obs.keys():
+            student_rollout[obs_group].append(student_obs[obs_group].detach().clone())
           teacher_rollout.append(teacher_actions.detach().clone())
           teacher_masks.append(teacher_mask.detach().clone())
 
@@ -272,21 +308,29 @@ class DistillationRunner:
       learn_start = time.time()
 
       student_batch = TensorDict(
-        {
-          self.student_obs_group: torch.cat(student_rollout, dim=0),
-        },
+        {key: torch.cat(value, dim=0) for key, value in student_rollout.items()},
         batch_size=[self.env.num_envs * self.num_steps_per_env],
         device=self.device,
       )
       teacher_batch = torch.cat(teacher_rollout, dim=0)
+      if self.student_model_type == "latent":
+        update_metrics = self.alg.update(
+          obs=student_batch,
+          teacher_actions=teacher_batch,
+          num_learning_epochs=int(self.cfg["num_learning_epochs"]),
+          num_mini_batches=int(self.cfg["num_mini_batches"]),
+          iteration=it,
+        )
+      else:
+        update_metrics = self.alg.update(
+          student_obs=student_batch,
+          teacher_actions=teacher_batch,
+          num_learning_epochs=int(self.cfg["num_learning_epochs"]),
+          num_mini_batches=int(self.cfg["num_mini_batches"]),
+        )
       self.last_loss_dict = {
         key: self._distributed_mean(value)
-        for key, value in self.alg.update(
-        student_obs=student_batch,
-        teacher_actions=teacher_batch,
-        num_learning_epochs=int(self.cfg["num_learning_epochs"]),
-        num_mini_batches=int(self.cfg["num_mini_batches"]),
-        ).items()
+        for key, value in update_metrics.items()
       }
       learn_time = time.time() - learn_start
 
@@ -524,6 +568,15 @@ class DistillationRunner:
     return "\n".join(lines)
 
   def _student_obs_from(self, obs: TensorDict) -> TensorDict:
+    if self.student_model_type == "latent":
+      return TensorDict(
+        {
+          self.encoder_obs_group: obs[self.encoder_obs_group],
+          self.decoder_obs_group: obs[self.decoder_obs_group],
+        },
+        batch_size=list(obs.batch_size),
+        device=obs.device,
+      )
     return TensorDict(
       {self.student_obs_group: obs[self.student_obs_group]},
       batch_size=list(obs.batch_size),

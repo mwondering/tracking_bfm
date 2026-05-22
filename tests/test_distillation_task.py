@@ -17,6 +17,26 @@ def test_distillation_task_is_registered() -> None:
   assert "Mjlab-Distillation-Flat-Unitree-G1" in list_tasks()
 
 
+def test_latent_distillation_task_is_registered() -> None:
+  task_id = "Mjlab-LatentDistillation-Flat-Unitree-G1"
+
+  assert task_id in list_tasks()
+
+  env_cfg = load_env_cfg(task_id)
+  rl_cfg = load_rl_cfg(task_id)
+  runner_cls = load_runner_cls(task_id)
+
+  assert "teacher_actor" in env_cfg.observations
+  assert "proprio_actor" in env_cfg.observations
+  assert env_cfg.observations["proprio_actor"].enable_corruption is False
+  assert rl_cfg.class_name == "DistillationRunner"
+  assert rl_cfg.student_model_type == "latent"
+  assert rl_cfg.student_obs_group == "student_actor"
+  assert rl_cfg.encoder_obs_group == "teacher_actor"
+  assert rl_cfg.decoder_obs_group == "proprio_actor"
+  assert runner_cls is not None
+
+
 def test_distillation_task_loads_cfgs() -> None:
   task_id = "Mjlab-Distillation-Flat-Unitree-G1"
   env_cfg = load_env_cfg(task_id)
@@ -32,6 +52,18 @@ def test_distillation_task_loads_cfgs() -> None:
   assert student_actor_terms["ee_pose"].params["future_steps"] == 1
   assert runner_cls is not None
   assert rl_cfg.class_name == "DistillationRunner"
+
+
+def test_proprio_actor_excludes_command_terms() -> None:
+  env_cfg = load_env_cfg("Mjlab-Distillation-Flat-Unitree-G1")
+
+  terms = set(env_cfg.observations["proprio_actor"].terms.keys())
+
+  assert {"projected_gravity", "base_ang_vel", "joint_pos", "joint_vel", "actions"} <= terms
+  assert "ee_pose" not in terms
+  assert "base_lin_vel_b" not in terms
+  assert "base_ang_vel_b" not in terms
+  assert "anchor_height_w" not in terms
 
 
 def test_student_actor_robot_state_history_tracks_student_history_steps() -> None:

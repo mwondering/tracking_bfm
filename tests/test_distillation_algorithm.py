@@ -23,6 +23,35 @@ def test_build_student_model_matches_action_dim() -> None:
   assert out.shape == (2, 4)
 
 
+def test_latent_distillation_model_outputs_actions_and_latent_stats() -> None:
+  from mjlab.tasks.distillation.rl.models import build_latent_student_model
+
+  obs = TensorDict(
+    {
+      "teacher_actor": torch.randn(5, 7),
+      "proprio_actor": torch.randn(5, 4),
+    },
+    batch_size=[5],
+  )
+  model = build_latent_student_model(
+    obs=obs,
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    action_dim=3,
+    latent_dim=6,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    activation="elu",
+  )
+
+  actions, latent = model(obs, deterministic=True)
+
+  assert actions.shape == (5, 3)
+  assert latent["mu"].shape == (5, 6)
+  assert latent["log_std"].shape == (5, 6)
+  assert latent["z"].shape == (5, 6)
+
+
 def test_action_distillation_algorithm_updates_student() -> None:
   obs = TensorDict({"student_actor": torch.randn(32, 5)}, batch_size=[32])
   teacher_actions = obs["student_actor"][:, :3] * 0.5
@@ -56,6 +85,63 @@ def test_action_distillation_algorithm_updates_student() -> None:
   assert "action_l1" in metrics
   assert "grad_norm" in metrics
   assert after < before
+
+
+def test_latent_action_distillation_algorithm_updates_student() -> None:
+  from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
+  from mjlab.tasks.distillation.rl.models import build_latent_student_model
+
+  obs = TensorDict(
+    {
+      "teacher_actor": torch.randn(32, 7),
+      "proprio_actor": torch.randn(32, 4),
+    },
+    batch_size=[32],
+  )
+  teacher_actions = obs["teacher_actor"][:, :3] * 0.25
+  model = build_latent_student_model(
+    obs=obs,
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    action_dim=3,
+    latent_dim=5,
+    encoder_hidden_dims=(32, 32),
+    decoder_hidden_dims=(32, 32),
+    activation="elu",
+  )
+  algorithm = LatentActionDistillationAlgorithm(
+    policy=model,
+    learning_rate=1.0e-2,
+    max_grad_norm=1.0,
+    kl_weight=1.0e-3,
+    kl_warmup_iterations=10,
+    free_nats_per_dim=0.01,
+    latent_smooth_weight=1.0e-3,
+  )
+
+  before = {name: param.detach().clone() for name, param in model.named_parameters()}
+  metrics = algorithm.update(
+    obs=obs,
+    teacher_actions=teacher_actions,
+    num_learning_epochs=2,
+    num_mini_batches=4,
+    iteration=5,
+  )
+
+  assert "action_mse" in metrics
+  assert "action_l1" in metrics
+  assert "kl_loss" in metrics
+  assert "kl_per_dim" in metrics
+  assert "kl_weight" in metrics
+  assert "latent_mu_norm" in metrics
+  assert "latent_std_mean" in metrics
+  assert "latent_smooth_loss" in metrics
+  assert "total_loss" in metrics
+  assert "grad_norm" in metrics
+  assert any(
+    not torch.allclose(before[name], param.detach())
+    for name, param in model.named_parameters()
+  )
 
 
 def test_action_distillation_algorithm_broadcast_parameters_noops_without_multi_gpu() -> None:

@@ -11,8 +11,8 @@ def test_student_obs_terms_are_exact() -> None:
 
   assert terms == {
     "ee_pose",
-    "base_lin_vel_w",
-    "base_ang_vel_w",
+    "base_lin_vel_b",
+    "base_ang_vel_b",
     "anchor_height_w",
     "projected_gravity",
     "base_ang_vel",
@@ -31,6 +31,6 @@ def test_student_obs_body_selection_is_configured_from_env_cfg() -> None:
     "right_wrist_yaw_link",
   )
   assert terms["ee_pose"].params["anchor_body_name"] == "pelvis"
-  assert terms["base_lin_vel_w"].params["anchor_body_name"] == "pelvis"
-  assert terms["base_ang_vel_w"].params["anchor_body_name"] == "pelvis"
+  assert terms["base_lin_vel_b"].params["anchor_body_name"] == "pelvis"
+  assert terms["base_ang_vel_b"].params["anchor_body_name"] == "pelvis"
   assert terms["anchor_height_w"].params["anchor_body_name"] == "pelvis"

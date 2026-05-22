@@ -13,12 +13,25 @@ class DistillationRunnerCfg(RslRlBaseRunnerCfg):
   teacher_checkpoint_path: str = ""
   teacher_obs_group: str = "teacher_actor"
   student_obs_group: str = "student_actor"
+  student_model_type: Literal["mlp", "latent"] = "mlp"
+  encoder_obs_group: str = "teacher_actor"
+  decoder_obs_group: str = "proprio_actor"
   beta_schedule: Literal["linear"] = "linear"
   beta_start: float = 1.0
   beta_end: float = 0.0
   beta_decay_steps: int = 2_00
   student_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (4096,2048,2048,1024, 1024, 1024, 512, 256, 128))
   student_activation: str = "elu"
+  latent_dim: int = 64
+  encoder_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (1024, 1024, 512))
+  decoder_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (1024, 1024, 512, 256))
+  latent_activation: str = "elu"
+  kl_weight: float = 1.0e-4
+  kl_warmup_iterations: int = 2_000
+  free_nats_per_dim: float = 0.02
+  latent_smooth_weight: float = 1.0e-3
+  latent_log_std_min: float = -5.0
+  latent_log_std_max: float = 2.0
   learning_rate: float = 1.0e-3
   num_learning_epochs: int = 5
   num_mini_batches: int = 4
@@ -30,4 +43,16 @@ def unitree_g1_distillation_runner_cfg() -> DistillationRunnerCfg:
     save_interval=5000,
     num_steps_per_env=24,
     max_iterations=30_000,
+  )
+
+
+def unitree_g1_latent_distillation_runner_cfg() -> DistillationRunnerCfg:
+  return DistillationRunnerCfg(
+    experiment_name="g1_latent_distillation",
+    save_interval=5000,
+    num_steps_per_env=24,
+    max_iterations=30_000,
+    student_model_type="latent",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
   )
