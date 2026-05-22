@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Adaptive Sampling Motion Failure Reporting Design &#8212; mjlab Documentation</title>
+    <title>Latent Distillation G1 Implementation Plan &#8212; mjlab Documentation</title>
   
   
   
@@ -51,7 +51,7 @@
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-05-22-latent-distillation-g1';</script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -169,7 +169,7 @@
 <div class="sidebar-version-switcher">
   <label class="sidebar-version-label" for="version-select">Version</label>
   <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
-    <option value="2026-04-23-adaptive-sampling-motion-failure-report-design.html" selected>main</option>
+    <option value="2026-05-22-latent-distillation-g1.html" selected>main</option>
   </select>
 </div>
 </div>
@@ -321,7 +321,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-05-22-latent-distillation-g1.md" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -338,7 +338,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-05-22-latent-distillation-g1.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -368,7 +368,7 @@
       
       
       
-      <li><a href="../../_sources/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+      <li><a href="../../_sources/superpowers/plans/2026-05-22-latent-distillation-g1.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -452,7 +452,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Adaptive Sampling Motion Failure Reporting Design</h1>
+    <h1>Latent Distillation G1 Implementation Plan</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -462,22 +462,11 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-environment-config-and-task-registration">Task 1: Environment Config and Task Registration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-latent-model">Task 2: Latent Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-latent-distillation-algorithm">Task 3: Latent Distillation Algorithm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-runner-wiring-and-checkpoints">Task 4: Runner Wiring and Checkpoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-focused-verification">Task 5: Focused Verification</a></li>
 </ul>
             </nav>
         </div>
@@ -489,193 +478,181 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="adaptive-sampling-motion-failure-reporting-design">
-<h1>Adaptive Sampling Motion Failure Reporting Design<a class="headerlink" href="#adaptive-sampling-motion-failure-reporting-design" title="Link to this heading">#</a></h1>
-<section id="goal">
-<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
-<p>Make adaptive sampling behavior easier to interpret by exposing motion-level failure statistics in Weights &amp; Biases.</p>
-<p>For each motion in the local motion subset owned by the current rank, define:</p>
+  <section id="latent-distillation-g1-implementation-plan">
+<h1>Latent Distillation G1 Implementation Plan<a class="headerlink" href="#latent-distillation-g1-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Add <code class="docutils literal notranslate"><span class="pre">Mjlab-LatentDistillation-Flat-Unitree-G1</span></code> as a first-stage CVAE/VIB-style action distillation task.</p>
+<p><strong>Architecture:</strong> Extend the existing distillation stack with a config-selected latent student path while preserving the original MLP student path. The latent path uses <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> for the encoder and a new <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> group for the decoder, and optimizes action reconstruction plus fixed-standard-normal KL and latent smoothness losses.</p>
+<p><strong>Tech Stack:</strong> Python, PyTorch, TensorDict, RSL-RL <code class="docutils literal notranslate"><span class="pre">MLPModel</span></code>, mjlab task registry, pytest.</p>
+<hr class="docutils" />
+<section id="task-1-environment-config-and-task-registration">
+<h2>Task 1: Environment Config and Task Registration<a class="headerlink" href="#task-1-environment-config-and-task-registration" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_failures</span> <span class="pre">=</span> <span class="pre">sum(bin_failure_count[motion,</span> <span class="pre">:])</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_visits</span> <span class="pre">=</span> <span class="pre">sum(bin_episode_count[motion,</span> <span class="pre">:])</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_failure_rate</span> <span class="pre">=</span> <span class="pre">motion_total_failures</span> <span class="pre">/</span> <span class="pre">motion_total_visits</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/mdp/observations.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/distillation_env_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/config/g1/rl_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/config/g1/__init__.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing tests</strong></p></li>
 </ul>
-<p>The system should publish the highest-failure motions for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> only, using rank-local statistics only. No cross-rank aggregation is required.</p>
+<p>Add tests that assert:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_latent_distillation_task_is_registered</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="kn">import</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.config.g1</span>  <span class="c1"># noqa: F401</span>
+
+  <span class="n">env_cfg</span><span class="p">,</span> <span class="n">rl_cfg</span> <span class="o">=</span> <span class="n">load_mjlab_cfgs</span><span class="p">(</span><span class="s2">&quot;Mjlab-LatentDistillation-Flat-Unitree-G1&quot;</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;teacher_actor&quot;</span> <span class="ow">in</span> <span class="n">env_cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="s2">&quot;proprio_actor&quot;</span> <span class="ow">in</span> <span class="n">env_cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">student_model_type</span> <span class="o">==</span> <span class="s2">&quot;latent&quot;</span>
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">encoder_obs_group</span> <span class="o">==</span> <span class="s2">&quot;teacher_actor&quot;</span>
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">decoder_obs_group</span> <span class="o">==</span> <span class="s2">&quot;proprio_actor&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_proprio_actor_excludes_command_terms</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env_cfg</span> <span class="o">=</span> <span class="n">unitree_g1_flat_distillation_env_cfg</span><span class="p">()</span>
+
+  <span class="n">terms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">env_cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">terms</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+  <span class="k">assert</span> <span class="p">{</span><span class="s2">&quot;projected_gravity&quot;</span><span class="p">,</span> <span class="s2">&quot;base_ang_vel&quot;</span><span class="p">,</span> <span class="s2">&quot;joint_pos&quot;</span><span class="p">,</span> <span class="s2">&quot;joint_vel&quot;</span><span class="p">,</span> <span class="s2">&quot;actions&quot;</span><span class="p">}</span> <span class="o">&lt;=</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;ee_pose&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;base_lin_vel_b&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;anchor_height_w&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify failure</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_task.py::test_latent_distillation_task_is_registered<span class="w"> </span>tests/test_distillation_task.py::test_proprio_actor_excludes_command_terms<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because the new task and <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> do not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement config and registration</strong></p></li>
+</ul>
+<p>Add <code class="docutils literal notranslate"><span class="pre">build_proprio_actor_terms()</span></code> using robot proprio terms only. Add <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> to <code class="docutils literal notranslate"><span class="pre">make_distillation_env_cfg()</span></code>. Add latent config fields and <code class="docutils literal notranslate"><span class="pre">unitree_g1_latent_distillation_runner_cfg()</span></code>. Register <code class="docutils literal notranslate"><span class="pre">Mjlab-LatentDistillation-Flat-Unitree-G1</span></code> with the same env cfg and the latent runner cfg.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run tests to verify pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_task.py::test_latent_distillation_task_is_registered<span class="w"> </span>tests/test_distillation_task.py::test_proprio_actor_excludes_command_terms<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 </section>
-<section id="scope">
-<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
-<p>In scope:</p>
+<section id="task-2-latent-model">
+<h2>Task 2: Latent Model<a class="headerlink" href="#task-2-latent-model" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
 <ul class="simple">
-<li><p>Compute motion-level failure rates from existing adaptive sampling bin statistics.</p></li>
-<li><p>Preserve a stable mapping from motion index to human-readable motion name.</p></li>
-<li><p>Expose summary scalars for motion-level failure rates.</p></li>
-<li><p>Expose a top-10 worst-motion buffer to W&amp;B without printing it in the terminal log.</p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/models.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_algorithm.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing model test</strong></p></li>
 </ul>
-<p>Out of scope:</p>
+<p>Add a test that builds <code class="docutils literal notranslate"><span class="pre">LatentDistillationModel</span></code> from TensorDict observations and asserts action, latent mean, and latent log-std shapes.</p>
 <ul class="simple">
-<li><p>Cross-rank or global motion aggregation.</p></li>
-<li><p>Changing adaptive sampling behavior or probabilities.</p></li>
-<li><p>Changing terminal logging format to include motion lists.</p></li>
-<li><p>Adding new viewer/debug visualization for these statistics.</p></li>
+<li><p>[ ] <strong>Step 2: Run test to verify failure</strong></p></li>
 </ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_algorithm.py::test_latent_distillation_model_outputs_actions_and_latent_stats<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because <code class="docutils literal notranslate"><span class="pre">build_latent_student_model</span></code> is missing.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement model</strong></p></li>
+</ul>
+<p>Add <code class="docutils literal notranslate"><span class="pre">LatentDistillationModel</span></code> and <code class="docutils literal notranslate"><span class="pre">build_latent_student_model()</span></code>. Use RSL-RL <code class="docutils literal notranslate"><span class="pre">MLPModel</span></code> for encoder trunk and decoder. The encoder outputs <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">latent_dim</span></code> values split into <code class="docutils literal notranslate"><span class="pre">mu</span></code> and <code class="docutils literal notranslate"><span class="pre">log_std</span></code>; the decoder consumes a TensorDict key containing concatenated decoder observations and sampled latent.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run test to verify pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_algorithm.py::test_latent_distillation_model_outputs_actions_and_latent_stats<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 </section>
-<section id="current-state">
-<h2>Current State<a class="headerlink" href="#current-state" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> already maintains adaptive sampling bookkeeping:</p>
+<section id="task-3-latent-distillation-algorithm">
+<h2>Task 3: Latent Distillation Algorithm<a class="headerlink" href="#task-3-latent-distillation-algorithm" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">bin_episode_count[motion,</span> <span class="pre">bin]</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">bin_failure_count[motion,</span> <span class="pre">bin]</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/algorithm.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_algorithm.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing algorithm tests</strong></p></li>
 </ul>
-<p>These are updated during adaptive sampling bookkeeping and are already used to derive per-bin failure rates for sampling.</p>
-<p>The motion file ordering is stable because <code class="docutils literal notranslate"><span class="pre">_resolve_motion_files()</span></code> collects and sorts <code class="docutils literal notranslate"><span class="pre">.npz</span></code> files before constructing <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>. That ordering is the authoritative mapping used by <code class="docutils literal notranslate"><span class="pre">motion_idx</span></code>.</p>
-<p>Training logging currently has two paths:</p>
+<p>Add tests that assert <code class="docutils literal notranslate"><span class="pre">LatentActionDistillationAlgorithm.update()</span></code> changes parameters and returns <code class="docutils literal notranslate"><span class="pre">action_mse</span></code>, <code class="docutils literal notranslate"><span class="pre">kl_loss</span></code>, <code class="docutils literal notranslate"><span class="pre">kl_weight</span></code>, <code class="docutils literal notranslate"><span class="pre">latent_mu_norm</span></code>, <code class="docutils literal notranslate"><span class="pre">latent_std_mean</span></code>, and <code class="docutils literal notranslate"><span class="pre">total_loss</span></code>.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, which is aggregated by the runner and sent to both terminal and W&amp;B.</p></li>
-<li><p>direct writer logging in the runner via <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code> or W&amp;B-native calls.</p></li>
+<li><p>[ ] <strong>Step 2: Run tests to verify failure</strong></p></li>
 </ul>
-<p>Because the motion top-10 list should not clutter terminal output, it should not be routed through <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>.</p>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_algorithm.py::test_latent_action_distillation_algorithm_updates_student<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because the algorithm class is missing.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement algorithm</strong></p></li>
+</ul>
+<p>Add KL calculation, KL warmup, free-bits per dimension, latent smoothness over mini-batch latent means, optimizer, distributed gradient reduction, save, and load methods.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run tests to verify pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_algorithm.py::test_latent_action_distillation_algorithm_updates_student<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 </section>
-<section id="proposed-design">
-<h2>Proposed Design<a class="headerlink" href="#proposed-design" title="Link to this heading">#</a></h2>
-<section id="motion-identity-and-display-names">
-<h3>1. Motion identity and display names<a class="headerlink" href="#motion-identity-and-display-names" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will retain the resolved motion file list used to initialize <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>.</p>
-<p>It will derive a display name per motion:</p>
+<section id="task-4-runner-wiring-and-checkpoints">
+<h2>Task 4: Runner Wiring and Checkpoints<a class="headerlink" href="#task-4-runner-wiring-and-checkpoints" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
 <ul class="simple">
-<li><p>if <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> is set, use the relative path from <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> to the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file, with the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix removed</p></li>
-<li><p>otherwise, use the file basename without the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix</p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/distillation/rl/runner.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_distillation_runner_smoke.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing runner tests</strong></p></li>
 </ul>
-<p>This keeps names stable and more collision-resistant than basename-only naming.</p>
+<p>Add tests for latent runner smoke learn and latent save/load round trip using the existing fake env and injected teacher adapter.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify failure</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_runner_smoke.py::test_latent_distillation_runner_learn_smoke<span class="w"> </span>tests/test_distillation_runner_smoke.py::test_latent_distillation_runner_save_load_round_trip<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because the runner always builds the MLP student.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement runner wiring</strong></p></li>
+</ul>
+<p>Switch on <code class="docutils literal notranslate"><span class="pre">student_model_type</span></code>. For latent mode, build latent student and latent algorithm. During rollout, collect both encoder and decoder observations. During update, pass a TensorDict with both groups to the latent algorithm. Preserve the original MLP path and checkpoint validation.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run tests to verify pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_runner_smoke.py::test_latent_distillation_runner_learn_smoke<span class="w"> </span>tests/test_distillation_runner_smoke.py::test_latent_distillation_runner_save_load_round_trip<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 </section>
-<section id="motion-level-aggregate-statistics">
-<h3>2. Motion-level aggregate statistics<a class="headerlink" href="#motion-level-aggregate-statistics" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose helper methods that derive motion-level aggregates from existing bin-level tensors:</p>
+<section id="task-5-focused-verification">
+<h2>Task 5: Focused Verification<a class="headerlink" href="#task-5-focused-verification" title="Link to this heading">#</a></h2>
+<p><strong>Files:</strong></p>
 <ul class="simple">
-<li><p>total visits per motion</p></li>
-<li><p>total failures per motion</p></li>
-<li><p>failure rate per motion</p></li>
+<li><p>No new files.</p></li>
+<li><p>[ ] <strong>Step 1: Run focused distillation tests</strong></p></li>
 </ul>
-<p>Failure rate computation will clamp the denominator to avoid division by zero, and motions with zero visits will resolve to failure rate <code class="docutils literal notranslate"><span class="pre">0.0</span></code>.</p>
-<p>These helpers will be pure derivations over the existing bookkeeping tensors. No new adaptive sampling state machine is needed.</p>
-</section>
-<section id="top-10-worst-motion-snapshot">
-<h3>3. Top-10 worst-motion snapshot<a class="headerlink" href="#top-10-worst-motion-snapshot" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose a snapshot builder that returns the top 10 motions ranked by:</p>
-<ol class="arabic simple">
-<li><p>descending motion failure rate</p></li>
-<li><p>descending total failures</p></li>
-<li><p>ascending motion index</p></li>
-</ol>
-<p>Each row will contain:</p>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_task.py<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>tests/test_distillation_runner_smoke.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_rank</span></code> within the top-10 list</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
+<li><p>[ ] <strong>Step 2: Run related distillation tests</strong></p></li>
 </ul>
-<p>Only motions from the current process’s local motion subset are considered.</p>
-</section>
-<section id="w-b-only-reporting-path">
-<h3>4. W&amp;B-only reporting path<a class="headerlink" href="#w-b-only-reporting-path" title="Link to this heading">#</a></h3>
-<p>The tracking runner will own reporting.</p>
-<p>At training-log time, if all of the following are true:</p>
-<ul class="simple">
-<li><p>logger type is W&amp;B</p></li>
-<li><p>logging is enabled</p></li>
-<li><p>current process is <code class="docutils literal notranslate"><span class="pre">rank0</span></code></p></li>
-<li><p>the active <code class="docutils literal notranslate"><span class="pre">motion</span></code> command term is <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code></p></li>
-</ul>
-<p>then the runner will:</p>
-<ul class="simple">
-<li><p>write scalar summaries with <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code></p></li>
-<li><p>publish the top-10 snapshot as a <code class="docutils literal notranslate"><span class="pre">wandb.Table</span></code></p></li>
-</ul>
-<p>This reporting will bypass <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, so the top-10 list does not appear in terminal output.</p>
-</section>
-<section id="logged-outputs">
-<h3>5. Logged outputs<a class="headerlink" href="#logged-outputs" title="Link to this heading">#</a></h3>
-<p>Scalars:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_mean</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_max</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_top10_min</span></code></p></li>
-</ul>
-<p>Table:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/top10_motion_failure_rate</span></code></p></li>
-</ul>
-<p>Recommended table columns:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rank</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
-</ul>
-<p>The <code class="docutils literal notranslate"><span class="pre">rank</span></code> column here means position inside the sorted top-10 table, not distributed rank.</p>
-</section>
-</section>
-<section id="data-flow">
-<h2>Data Flow<a class="headerlink" href="#data-flow" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p>Adaptive sampling continues updating <code class="docutils literal notranslate"><span class="pre">bin_episode_count</span></code> and <code class="docutils literal notranslate"><span class="pre">bin_failure_count</span></code> inside <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>.</p></li>
-<li><p>At runner logging time, the runner reads the active motion command term.</p></li>
-<li><p>If the term is multi-motion adaptive sampling, the runner requests:</p>
-<ul class="simple">
-<li><p>motion-level aggregate stats</p></li>
-<li><p>top-10 worst-motion snapshot</p></li>
-</ul>
-</li>
-<li><p>The runner writes summary scalars and one W&amp;B table for the current iteration.</p></li>
-<li><p>Terminal log behavior remains unchanged.</p></li>
-</ol>
-</section>
-<section id="error-handling">
-<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>If the active motion term is not <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>, the runner skips this reporting.</p></li>
-<li><p>If logger type is not W&amp;B, the runner skips the table report entirely.</p></li>
-<li><p>If fewer than 10 motions exist locally, the table contains only the available motions.</p></li>
-<li><p>If all motions have zero visits, all failure rates remain <code class="docutils literal notranslate"><span class="pre">0.0</span></code>, and the table still reports a deterministic top subset.</p></li>
-</ul>
-</section>
-<section id="testing">
-<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
-<p>Add unit tests covering:</p>
-<ul class="simple">
-<li><p>motion-level aggregation from known bin counts</p></li>
-<li><p>top-10 ranking order</p></li>
-<li><p>stable mapping from motion index to motion display name</p></li>
-<li><p>zero-visit behavior produces finite failure rates</p></li>
-<li><p>runner-side payload construction for W&amp;B table rows without requiring a real networked W&amp;B session</p></li>
-</ul>
-<p>Testing should avoid network calls and should assert payload shape and values rather than real upload behavior.</p>
-</section>
-<section id="tradeoffs">
-<h2>Tradeoffs<a class="headerlink" href="#tradeoffs" title="Link to this heading">#</a></h2>
-<p>Chosen design benefits:</p>
-<ul class="simple">
-<li><p>minimal change to adaptive sampling logic</p></li>
-<li><p>no cross-rank synchronization</p></li>
-<li><p>no terminal spam</p></li>
-<li><p>clear separation between statistics ownership (command term) and reporting ownership (runner)</p></li>
-</ul>
-<p>Accepted limitations:</p>
-<ul class="simple">
-<li><p>reported top-10 is only for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> local motions, not the global dataset</p></li>
-<li><p>table history may grow in W&amp;B across iterations, which is acceptable for this debugging-oriented feature</p></li>
-</ul>
-</section>
-<section id="implementation-notes">
-<h2>Implementation Notes<a class="headerlink" href="#implementation-notes" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Prefer adding read-only helper methods on <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> rather than mutating its reset/log pathways.</p></li>
-<li><p>Keep the W&amp;B-specific code in the tracking runner so non-W&amp;B loggers remain unaffected.</p></li>
-<li><p>Do not serialize the top-10 list into scalar tags; use a table for names plus rates.</p></li>
-</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation*.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
 </section>
 </section>
 
@@ -706,22 +683,11 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-environment-config-and-task-registration">Task 1: Environment Config and Task Registration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-latent-model">Task 2: Latent Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-latent-distillation-algorithm">Task 3: Latent Distillation Algorithm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-runner-wiring-and-checkpoints">Task 4: Runner Wiring and Checkpoints</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-focused-verification">Task 5: Focused Verification</a></li>
 </ul>
   </nav></div>
 

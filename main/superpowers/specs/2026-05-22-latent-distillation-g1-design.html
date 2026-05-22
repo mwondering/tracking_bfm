@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Adaptive Sampling Motion Failure Reporting Design &#8212; mjlab Documentation</title>
+    <title>Latent Distillation G1 Design &#8212; mjlab Documentation</title>
   
   
   
@@ -51,7 +51,7 @@
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-05-22-latent-distillation-g1-design';</script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -169,7 +169,7 @@
 <div class="sidebar-version-switcher">
   <label class="sidebar-version-label" for="version-select">Version</label>
   <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
-    <option value="2026-04-23-adaptive-sampling-motion-failure-report-design.html" selected>main</option>
+    <option value="2026-05-22-latent-distillation-g1-design.html" selected>main</option>
   </select>
 </div>
 </div>
@@ -321,7 +321,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-05-22-latent-distillation-g1-design.md" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -338,7 +338,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-05-22-latent-distillation-g1-design.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -368,7 +368,7 @@
       
       
       
-      <li><a href="../../_sources/superpowers/specs/2026-04-23-adaptive-sampling-motion-failure-report-design.md" target="_blank"
+      <li><a href="../../_sources/superpowers/specs/2026-05-22-latent-distillation-g1-design.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -452,7 +452,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Adaptive Sampling Motion Failure Reporting Design</h1>
+    <h1>Latent Distillation G1 Design</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -464,20 +464,12 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observations">Observations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-format">Checkpoint Format</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
 </ul>
             </nav>
         </div>
@@ -489,193 +481,145 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="adaptive-sampling-motion-failure-reporting-design">
-<h1>Adaptive Sampling Motion Failure Reporting Design<a class="headerlink" href="#adaptive-sampling-motion-failure-reporting-design" title="Link to this heading">#</a></h1>
+  <section id="latent-distillation-g1-design">
+<h1>Latent Distillation G1 Design<a class="headerlink" href="#latent-distillation-g1-design" title="Link to this heading">#</a></h1>
 <section id="goal">
 <h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
-<p>Make adaptive sampling behavior easier to interpret by exposing motion-level failure statistics in Weights &amp; Biases.</p>
-<p>For each motion in the local motion subset owned by the current rank, define:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_failures</span> <span class="pre">=</span> <span class="pre">sum(bin_failure_count[motion,</span> <span class="pre">:])</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_total_visits</span> <span class="pre">=</span> <span class="pre">sum(bin_episode_count[motion,</span> <span class="pre">:])</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_failure_rate</span> <span class="pre">=</span> <span class="pre">motion_total_failures</span> <span class="pre">/</span> <span class="pre">motion_total_visits</span></code></p></li>
-</ul>
-<p>The system should publish the highest-failure motions for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> only, using rank-local statistics only. No cross-rank aggregation is required.</p>
+<p>Add a first-stage latent distillation task for Unitree G1:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Mjlab-LatentDistillation-Flat-Unitree-G1
+</pre></div>
+</div>
+<p>The task distills the existing whole-body tracking teacher
+<code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1</span></code> into a reusable motor decoder:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>encoder(teacher_actor_obs) -&gt; latent distribution
+decoder(proprio_actor_obs, latent) -&gt; joint action
+</pre></div>
+</div>
+<p>This stage does not implement the second-stage velocity-conditioned RL encoder.</p>
 </section>
 <section id="scope">
 <h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
 <p>In scope:</p>
 <ul class="simple">
-<li><p>Compute motion-level failure rates from existing adaptive sampling bin statistics.</p></li>
-<li><p>Preserve a stable mapping from motion index to human-readable motion name.</p></li>
-<li><p>Expose summary scalars for motion-level failure rates.</p></li>
-<li><p>Expose a top-10 worst-motion buffer to W&amp;B without printing it in the terminal log.</p></li>
+<li><p>Register a new task ID for latent distillation.</p></li>
+<li><p>Add a pure proprioception observation group for the decoder.</p></li>
+<li><p>Add a latent distillation model with encoder, reparameterized latent, and decoder.</p></li>
+<li><p>Add a latent action distillation algorithm with action reconstruction, KL, and latent smoothness losses.</p></li>
+<li><p>Extend the existing distillation runner to select either the original MLP student or the new latent student from config.</p></li>
+<li><p>Save latent checkpoints with both full policy state and explicit encoder/decoder state dictionaries.</p></li>
+<li><p>Preserve the existing <code class="docutils literal notranslate"><span class="pre">Mjlab-Distillation-Flat-Unitree-G1</span></code> behavior.</p></li>
 </ul>
 <p>Out of scope:</p>
 <ul class="simple">
-<li><p>Cross-rank or global motion aggregation.</p></li>
-<li><p>Changing adaptive sampling behavior or probabilities.</p></li>
-<li><p>Changing terminal logging format to include motion lists.</p></li>
-<li><p>Adding new viewer/debug visualization for these statistics.</p></li>
+<li><p>Second-stage velocity latent PPO.</p></li>
+<li><p>Frozen decoder policy wrappers.</p></li>
+<li><p>Learned prior, mixture prior, flow prior, or VQ latent.</p></li>
+<li><p>ONNX export for latent policies.</p></li>
+<li><p>Training script changes beyond task registration and config support.</p></li>
 </ul>
 </section>
-<section id="current-state">
-<h2>Current State<a class="headerlink" href="#current-state" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> already maintains adaptive sampling bookkeeping:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">bin_episode_count[motion,</span> <span class="pre">bin]</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">bin_failure_count[motion,</span> <span class="pre">bin]</span></code></p></li>
-</ul>
-<p>These are updated during adaptive sampling bookkeeping and are already used to derive per-bin failure rates for sampling.</p>
-<p>The motion file ordering is stable because <code class="docutils literal notranslate"><span class="pre">_resolve_motion_files()</span></code> collects and sorts <code class="docutils literal notranslate"><span class="pre">.npz</span></code> files before constructing <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>. That ordering is the authoritative mapping used by <code class="docutils literal notranslate"><span class="pre">motion_idx</span></code>.</p>
-<p>Training logging currently has two paths:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, which is aggregated by the runner and sent to both terminal and W&amp;B.</p></li>
-<li><p>direct writer logging in the runner via <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code> or W&amp;B-native calls.</p></li>
-</ul>
-<p>Because the motion top-10 list should not clutter terminal output, it should not be routed through <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>.</p>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading">#</a></h2>
+<p>The existing distillation stack remains the owner of first-stage distillation. The new task reuses <code class="docutils literal notranslate"><span class="pre">DistillationRunner</span></code>, but the runner switches implementation based on a config field:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>student_model_type = &quot;mlp&quot; | &quot;latent&quot;
+</pre></div>
+</div>
+<p>The original task keeps <code class="docutils literal notranslate"><span class="pre">student_model_type=&quot;mlp&quot;</span></code>. The new latent task uses:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>student_model_type=&quot;latent&quot;
+encoder_obs_group=&quot;teacher_actor&quot;
+decoder_obs_group=&quot;proprio_actor&quot;
+latent_dim=64
+</pre></div>
+</div>
+<p>During rollout, the latent policy samples <code class="docutils literal notranslate"><span class="pre">z</span></code> from the encoder and decodes actions from proprioception. Teacher/student action mixing is unchanged. During update, batches contain both encoder and decoder observations.</p>
 </section>
-<section id="proposed-design">
-<h2>Proposed Design<a class="headerlink" href="#proposed-design" title="Link to this heading">#</a></h2>
-<section id="motion-identity-and-display-names">
-<h3>1. Motion identity and display names<a class="headerlink" href="#motion-identity-and-display-names" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will retain the resolved motion file list used to initialize <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code>.</p>
-<p>It will derive a display name per motion:</p>
-<ul class="simple">
-<li><p>if <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> is set, use the relative path from <code class="docutils literal notranslate"><span class="pre">motion_path</span></code> to the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file, with the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix removed</p></li>
-<li><p>otherwise, use the file basename without the <code class="docutils literal notranslate"><span class="pre">.npz</span></code> suffix</p></li>
-</ul>
-<p>This keeps names stable and more collision-resistant than basename-only naming.</p>
+<section id="observations">
+<h2>Observations<a class="headerlink" href="#observations" title="Link to this heading">#</a></h2>
+<p>The environment config will expose three observation groups:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>teacher_actor: original tracking actor observation
+student_actor: existing sparse-command student observation
+proprio_actor: decoder-only proprioception observation
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> contains robot state only:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>projected_gravity
+base_ang_vel
+joint_pos
+joint_vel
+actions
+</pre></div>
+</div>
+<p>It intentionally excludes motion reference, sparse end-effector command, future command, target body pose, and command-derived base velocity terms. This keeps the decoder interface compatible with the second-stage plan:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>decoder(proprio, z) -&gt; action
+</pre></div>
+</div>
 </section>
-<section id="motion-level-aggregate-statistics">
-<h3>2. Motion-level aggregate statistics<a class="headerlink" href="#motion-level-aggregate-statistics" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose helper methods that derive motion-level aggregates from existing bin-level tensors:</p>
+<section id="model">
+<h2>Model<a class="headerlink" href="#model" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">LatentDistillationModel</span></code> owns:</p>
 <ul class="simple">
-<li><p>total visits per motion</p></li>
-<li><p>total failures per motion</p></li>
-<li><p>failure rate per motion</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">encoder</span></code>: normalized MLP over <code class="docutils literal notranslate"><span class="pre">encoder_obs_group</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mu_head</span></code>: latent mean projection.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">log_std_head</span></code>: latent log-standard-deviation projection.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">decoder</span></code>: normalized MLP over <code class="docutils literal notranslate"><span class="pre">decoder_obs_group</span> <span class="pre">+</span> <span class="pre">z</span></code>.</p></li>
 </ul>
-<p>Failure rate computation will clamp the denominator to avoid division by zero, and motions with zero visits will resolve to failure rate <code class="docutils literal notranslate"><span class="pre">0.0</span></code>.</p>
-<p>These helpers will be pure derivations over the existing bookkeeping tensors. No new adaptive sampling state machine is needed.</p>
+<p>The model clamps <code class="docutils literal notranslate"><span class="pre">log_std</span></code> to a configured range before sampling. It exposes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">encode</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]</span>
+<span class="n">sample</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">log_std</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span>
+<span class="n">decode</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span>
+<span class="n">forward</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">deterministic</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>Inference uses deterministic <code class="docutils literal notranslate"><span class="pre">z=mu</span></code> unless stochastic sampling is explicitly requested.</p>
 </section>
-<section id="top-10-worst-motion-snapshot">
-<h3>3. Top-10 worst-motion snapshot<a class="headerlink" href="#top-10-worst-motion-snapshot" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> will expose a snapshot builder that returns the top 10 motions ranked by:</p>
-<ol class="arabic simple">
-<li><p>descending motion failure rate</p></li>
-<li><p>descending total failures</p></li>
-<li><p>ascending motion index</p></li>
-</ol>
-<p>Each row will contain:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_rank</span></code> within the top-10 list</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
-</ul>
-<p>Only motions from the current process’s local motion subset are considered.</p>
+<section id="losses">
+<h2>Losses<a class="headerlink" href="#losses" title="Link to this heading">#</a></h2>
+<p>The latent algorithm optimizes:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>total_loss = action_mse
+           + effective_kl_weight * free-bits KL
+           + latent_smooth_weight * latent_smooth_loss
+</pre></div>
+</div>
+<p>KL is against a fixed standard normal:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>KL(q(z | teacher_actor) || N(0, I))
+</pre></div>
+</div>
+<p>The KL weight warms up linearly over <code class="docutils literal notranslate"><span class="pre">kl_warmup_iterations</span></code>. Free bits are applied per dimension to avoid posterior collapse while keeping the latent distribution regularized.</p>
+<p>Latent smoothness is computed over the flattened rollout order by penalizing adjacent latent mean differences within each mini-batch. It is a light regularizer and does not require recurrent state.</p>
 </section>
-<section id="w-b-only-reporting-path">
-<h3>4. W&amp;B-only reporting path<a class="headerlink" href="#w-b-only-reporting-path" title="Link to this heading">#</a></h3>
-<p>The tracking runner will own reporting.</p>
-<p>At training-log time, if all of the following are true:</p>
-<ul class="simple">
-<li><p>logger type is W&amp;B</p></li>
-<li><p>logging is enabled</p></li>
-<li><p>current process is <code class="docutils literal notranslate"><span class="pre">rank0</span></code></p></li>
-<li><p>the active <code class="docutils literal notranslate"><span class="pre">motion</span></code> command term is <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code></p></li>
-</ul>
-<p>then the runner will:</p>
-<ul class="simple">
-<li><p>write scalar summaries with <code class="docutils literal notranslate"><span class="pre">writer.add_scalar(...)</span></code></p></li>
-<li><p>publish the top-10 snapshot as a <code class="docutils literal notranslate"><span class="pre">wandb.Table</span></code></p></li>
-</ul>
-<p>This reporting will bypass <code class="docutils literal notranslate"><span class="pre">extras[&quot;log&quot;]</span></code>, so the top-10 list does not appear in terminal output.</p>
-</section>
-<section id="logged-outputs">
-<h3>5. Logged outputs<a class="headerlink" href="#logged-outputs" title="Link to this heading">#</a></h3>
-<p>Scalars:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_mean</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_max</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/motion_failure_rate_top10_min</span></code></p></li>
-</ul>
-<p>Table:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Train/adaptive_sampling/top10_motion_failure_rate</span></code></p></li>
-</ul>
-<p>Recommended table columns:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rank</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_name</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">motion_index</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">failure_rate</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_failures</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">total_visits</span></code></p></li>
-</ul>
-<p>The <code class="docutils literal notranslate"><span class="pre">rank</span></code> column here means position inside the sorted top-10 table, not distributed rank.</p>
-</section>
-</section>
-<section id="data-flow">
-<h2>Data Flow<a class="headerlink" href="#data-flow" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p>Adaptive sampling continues updating <code class="docutils literal notranslate"><span class="pre">bin_episode_count</span></code> and <code class="docutils literal notranslate"><span class="pre">bin_failure_count</span></code> inside <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>.</p></li>
-<li><p>At runner logging time, the runner reads the active motion command term.</p></li>
-<li><p>If the term is multi-motion adaptive sampling, the runner requests:</p>
-<ul class="simple">
-<li><p>motion-level aggregate stats</p></li>
-<li><p>top-10 worst-motion snapshot</p></li>
-</ul>
-</li>
-<li><p>The runner writes summary scalars and one W&amp;B table for the current iteration.</p></li>
-<li><p>Terminal log behavior remains unchanged.</p></li>
-</ol>
-</section>
-<section id="error-handling">
-<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>If the active motion term is not <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code>, the runner skips this reporting.</p></li>
-<li><p>If logger type is not W&amp;B, the runner skips the table report entirely.</p></li>
-<li><p>If fewer than 10 motions exist locally, the table contains only the available motions.</p></li>
-<li><p>If all motions have zero visits, all failure rates remain <code class="docutils literal notranslate"><span class="pre">0.0</span></code>, and the table still reports a deterministic top subset.</p></li>
-</ul>
+<section id="checkpoint-format">
+<h2>Checkpoint Format<a class="headerlink" href="#checkpoint-format" title="Link to this heading">#</a></h2>
+<p>MLP checkpoints remain unchanged.</p>
+<p>Latent checkpoints include:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>model_type = &quot;latent&quot;
+policy_state_dict
+encoder_state_dict
+decoder_state_dict
+optimizer_state_dict
+latent_cfg
+iter
+infos.env_state
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">policy_state_dict</span></code> keeps runner load/play behavior simple. <code class="docutils literal notranslate"><span class="pre">decoder_state_dict</span></code> makes the later second-stage implementation straightforward.</p>
 </section>
 <section id="testing">
 <h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
-<p>Add unit tests covering:</p>
+<p>Focused tests cover:</p>
 <ul class="simple">
-<li><p>motion-level aggregation from known bin counts</p></li>
-<li><p>top-10 ranking order</p></li>
-<li><p>stable mapping from motion index to motion display name</p></li>
-<li><p>zero-visit behavior produces finite failure rates</p></li>
-<li><p>runner-side payload construction for W&amp;B table rows without requiring a real networked W&amp;B session</p></li>
+<li><p>New task registration and config fields.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> exists and excludes sparse command terms.</p></li>
+<li><p>Latent model forward shape and latent stats.</p></li>
+<li><p>Latent algorithm update changes parameters and reports KL metrics.</p></li>
+<li><p>Distillation runner latent smoke learning with injected teacher adapter.</p></li>
+<li><p>Latent save/load round trip.</p></li>
+<li><p>Existing plain distillation tests continue to pass.</p></li>
 </ul>
-<p>Testing should avoid network calls and should assert payload shape and values rather than real upload behavior.</p>
-</section>
-<section id="tradeoffs">
-<h2>Tradeoffs<a class="headerlink" href="#tradeoffs" title="Link to this heading">#</a></h2>
-<p>Chosen design benefits:</p>
-<ul class="simple">
-<li><p>minimal change to adaptive sampling logic</p></li>
-<li><p>no cross-rank synchronization</p></li>
-<li><p>no terminal spam</p></li>
-<li><p>clear separation between statistics ownership (command term) and reporting ownership (runner)</p></li>
-</ul>
-<p>Accepted limitations:</p>
-<ul class="simple">
-<li><p>reported top-10 is only for <code class="docutils literal notranslate"><span class="pre">rank0</span></code> local motions, not the global dataset</p></li>
-<li><p>table history may grow in W&amp;B across iterations, which is acceptable for this debugging-oriented feature</p></li>
-</ul>
-</section>
-<section id="implementation-notes">
-<h2>Implementation Notes<a class="headerlink" href="#implementation-notes" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p>Prefer adding read-only helper methods on <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> rather than mutating its reset/log pathways.</p></li>
-<li><p>Keep the W&amp;B-specific code in the tracking runner so non-W&amp;B loggers remain unaffected.</p></li>
-<li><p>Do not serialize the top-10 list into scalar tags; use a table for names plus rates.</p></li>
-</ul>
+<p>Verification commands:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_task.py<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>tests/test_distillation_runner_smoke.py
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation*.py
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -708,20 +652,12 @@ document.write(`
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-state">Current State</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#proposed-design">Proposed Design</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-identity-and-display-names">1. Motion identity and display names</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-level-aggregate-statistics">2. Motion-level aggregate statistics</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#top-10-worst-motion-snapshot">3. Top-10 worst-motion snapshot</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#w-b-only-reporting-path">4. W&amp;B-only reporting path</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#logged-outputs">5. Logged outputs</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-flow">Data Flow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observations">Observations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-format">Checkpoint Format</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tradeoffs">Tradeoffs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-notes">Implementation Notes</a></li>
 </ul>
   </nav></div>
 
