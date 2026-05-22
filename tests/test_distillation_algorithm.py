@@ -193,6 +193,103 @@ def test_latent_action_distillation_algorithm_supports_wae_mmd_regularization() 
   assert "total_loss" in metrics
 
 
+def test_latent_kl_regularization_does_not_compute_mmd() -> None:
+  from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
+  from mjlab.tasks.distillation.rl.models import build_latent_student_model
+
+  obs = TensorDict(
+    {
+      "teacher_actor": torch.randn(16, 7),
+      "proprio_actor": torch.randn(16, 4),
+    },
+    batch_size=[16],
+  )
+  teacher_actions = obs["teacher_actor"][:, :3] * 0.25
+  model = build_latent_student_model(
+    obs=obs,
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    action_dim=3,
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    activation="elu",
+  )
+  algorithm = LatentActionDistillationAlgorithm(
+    policy=model,
+    learning_rate=1.0e-2,
+    max_grad_norm=1.0,
+    latent_regularization="kl",
+    mmd_weight=1.0,
+  )
+
+  with patch.object(
+    LatentActionDistillationAlgorithm,
+    "_mmd_rbf",
+    side_effect=AssertionError("MMD should not be computed in KL mode"),
+  ):
+    metrics = algorithm.update(
+      obs=obs,
+      teacher_actions=teacher_actions,
+      num_learning_epochs=1,
+      num_mini_batches=2,
+      iteration=1,
+    )
+
+  assert metrics["mmd_weight"] == 0.0
+  assert metrics["mmd_loss"] == 0.0
+
+
+def test_wae_mmd_subsamples_pairwise_kernel_inputs() -> None:
+  from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
+  from mjlab.tasks.distillation.rl.models import build_latent_student_model
+
+  obs = TensorDict(
+    {
+      "teacher_actor": torch.randn(48, 7),
+      "proprio_actor": torch.randn(48, 4),
+    },
+    batch_size=[48],
+  )
+  teacher_actions = obs["teacher_actor"][:, :3] * 0.25
+  model = build_latent_student_model(
+    obs=obs,
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    action_dim=3,
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    activation="elu",
+  )
+  algorithm = LatentActionDistillationAlgorithm(
+    policy=model,
+    learning_rate=1.0e-2,
+    max_grad_norm=1.0,
+    latent_regularization="wae_mmd",
+    mmd_weight=1.0e-2,
+    mmd_max_samples=7,
+  )
+  cdist_rows: list[int] = []
+  original_cdist = torch.cdist
+
+  def _record_cdist(x1: torch.Tensor, x2: torch.Tensor):
+    cdist_rows.extend([x1.shape[0], x2.shape[0]])
+    return original_cdist(x1, x2)
+
+  with patch("torch.cdist", side_effect=_record_cdist):
+    algorithm.update(
+      obs=obs,
+      teacher_actions=teacher_actions,
+      num_learning_epochs=1,
+      num_mini_batches=1,
+      iteration=1,
+    )
+
+  assert cdist_rows
+  assert max(cdist_rows) <= 7
+
+
 def test_latent_smoothness_uses_temporal_pairs_and_done_mask() -> None:
   from mjlab.tasks.distillation.rl.algorithm import LatentActionDistillationAlgorithm
 

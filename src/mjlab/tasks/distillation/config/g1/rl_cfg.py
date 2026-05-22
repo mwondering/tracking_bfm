@@ -32,7 +32,9 @@ class DistillationRunnerCfg(RslRlBaseRunnerCfg):
   free_nats_per_dim: float = 0.02
   mmd_weight: float = 0.0
   mmd_kernel_scales: tuple[float, ...] = field(default_factory=lambda: (0.5, 1.0, 2.0, 4.0))
+  mmd_max_samples: int = 1024
   latent_smooth_weight: float = 1.0e-3
+  latent_smooth_max_pairs: int = 2048
   latent_log_std_min: float = -5.0
   latent_log_std_max: float = 2.0
   learning_rate: float = 1.0e-3

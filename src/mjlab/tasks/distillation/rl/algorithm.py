@@ -127,7 +127,9 @@ class LatentActionDistillationAlgorithm:
     latent_regularization: str = "kl",
     mmd_weight: float = 0.0,
     mmd_kernel_scales: tuple[float, ...] = (0.5, 1.0, 2.0, 4.0),
+    mmd_max_samples: int = 1024,
     latent_smooth_weight: float = 1.0e-3,
+    latent_smooth_max_pairs: int = 2048,
     multi_gpu_cfg: dict | None = None,
   ):
     self.policy = policy
@@ -144,7 +146,9 @@ class LatentActionDistillationAlgorithm:
     self.latent_regularization = latent_regularization
     self.mmd_weight = float(mmd_weight)
     self.mmd_kernel_scales = tuple(float(scale) for scale in mmd_kernel_scales)
+    self.mmd_max_samples = int(mmd_max_samples)
     self.latent_smooth_weight = float(latent_smooth_weight)
+    self.latent_smooth_max_pairs = int(latent_smooth_max_pairs)
     self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=learning_rate)
     self.is_multi_gpu = multi_gpu_cfg is not None
     if multi_gpu_cfg is not None:
@@ -221,8 +225,12 @@ class LatentActionDistillationAlgorithm:
         l1_loss = F.l1_loss(pred_actions, batch_teacher)
         raw_kl = self._standard_normal_kl(latent["mu"], latent["log_std"])
         kl_loss = torch.clamp(raw_kl, min=self.free_nats_per_dim).sum(dim=-1).mean()
-        prior_z = torch.randn_like(latent["z"])
-        mmd_loss = self._mmd_rbf(latent["z"], prior_z, self.mmd_kernel_scales)
+        if effective_mmd_weight > 0.0:
+          mmd_z = self._subsample_rows(latent["z"], self.mmd_max_samples)
+          prior_z = torch.randn_like(mmd_z)
+          mmd_loss = self._mmd_rbf(mmd_z, prior_z, self.mmd_kernel_scales)
+        else:
+          mmd_loss = latent["z"].new_zeros(())
         smooth_loss = self._sample_trajectory_latent_smoothness(
           obs=obs,
           rollout_shape=rollout_shape,
@@ -276,7 +284,9 @@ class LatentActionDistillationAlgorithm:
         "free_nats_per_dim": self.free_nats_per_dim,
         "mmd_weight": self.mmd_weight,
         "mmd_kernel_scales": self.mmd_kernel_scales,
+        "mmd_max_samples": self.mmd_max_samples,
         "latent_smooth_weight": self.latent_smooth_weight,
+        "latent_smooth_max_pairs": self.latent_smooth_max_pairs,
       },
       "latent_cfg": self.policy.latent_cfg()
       if hasattr(self.policy, "latent_cfg")
@@ -325,7 +335,13 @@ class LatentActionDistillationAlgorithm:
     if pair_idx.numel() == 0:
       return sample_tensor.new_zeros(())
 
-    sample_size = min(int(batch_size), int(pair_idx.numel()))
+    sample_size = min(
+      int(batch_size),
+      int(pair_idx.numel()),
+      max(self.latent_smooth_max_pairs, 0),
+    )
+    if sample_size <= 0:
+      return sample_tensor.new_zeros(())
     sampled = torch.randint(pair_idx.numel(), (sample_size,), device=pair_idx.device)
     current_obs = obs[pair_idx[sampled]]
     next_obs = obs[next_pair_idx[sampled]]
@@ -403,3 +419,11 @@ class LatentActionDistillationAlgorithm:
       k_xy = torch.exp(-gamma * sq_xy).mean()
       mmd = mmd + k_xx + k_yy - 2.0 * k_xy
     return torch.clamp(mmd / max(len(kernel_scales), 1), min=0.0)
+
+  @staticmethod
+  def _subsample_rows(samples: torch.Tensor, max_samples: int) -> torch.Tensor:
+    max_samples = int(max_samples)
+    if max_samples <= 0 or samples.shape[0] <= max_samples:
+      return samples
+    sample_idx = torch.randperm(samples.shape[0], device=samples.device)[:max_samples]
+    return samples[sample_idx]

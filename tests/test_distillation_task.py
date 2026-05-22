@@ -36,6 +36,8 @@ def test_latent_distillation_task_is_registered() -> None:
   assert rl_cfg.decoder_obs_group == "proprio_actor"
   assert rl_cfg.latent_regularization == "kl"
   assert rl_cfg.mmd_weight == 0.0
+  assert rl_cfg.mmd_max_samples == 1024
+  assert rl_cfg.latent_smooth_max_pairs == 2048
   assert runner_cls is not None
 
 

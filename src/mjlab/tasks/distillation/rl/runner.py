@@ -110,7 +110,9 @@ class DistillationRunner:
         latent_regularization=self.cfg.get("latent_regularization", "kl"),
         mmd_weight=float(self.cfg.get("mmd_weight", 0.0)),
         mmd_kernel_scales=tuple(self.cfg.get("mmd_kernel_scales", (0.5, 1.0, 2.0, 4.0))),
+        mmd_max_samples=int(self.cfg.get("mmd_max_samples", 1024)),
         latent_smooth_weight=float(self.cfg["latent_smooth_weight"]),
+        latent_smooth_max_pairs=int(self.cfg.get("latent_smooth_max_pairs", 2048)),
         multi_gpu_cfg=self.multi_gpu_cfg,
       )
     elif self.student_model_type == "mlp":
