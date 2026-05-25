@@ -1,0 +1,1549 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Latent Velocity RL Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-05-24-latent-velocity-rl';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="May 25, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-05-24-latent-velocity-rl.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-05-24-latent-velocity-rl.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-05-24-latent-velocity-rl.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-05-24-latent-velocity-rl.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Latent Velocity RL Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope-and-boundaries">Scope And Boundaries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-register-a-latent-velocity-env-variant">Task 1: Register A Latent Velocity Env Variant</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-latent-rl-config-and-task-registration">Task 2: Add Latent RL Config And Task Registration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-implement-frozen-decoder-vecenv-wrapper">Task 3: Implement Frozen Decoder VecEnv Wrapper</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-load-frozen-decoder-checkpoint-in-runner">Task 4: Load Frozen Decoder Checkpoint In Runner</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-training-script">Task 5: Add Training Script</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-add-smoke-tests-for-cli-and-registry">Task 6: Add Smoke Tests For CLI And Registry</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-manual-training-dry-run">Task 7: Manual Training Dry Run</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluation-checklist">Evaluation Checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="latent-velocity-rl-implementation-plan">
+<h1>Latent Velocity RL Implementation Plan<a class="headerlink" href="#latent-velocity-rl-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Add a second-stage direct latent RL walking task for Unitree G1 that trains a high-level PPO policy in the learned latent space and decodes latents through the frozen first-stage latent distillation decoder.</p>
+<p><strong>Architecture:</strong> The new <code class="docutils literal notranslate"><span class="pre">latentvelocity</span></code> task package imports the flat G1 velocity env factory as its baseline, then adds only the <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> observation group and latent RL runner/config in its own directory. RSL-RL sees a 64D latent action space; a custom VecEnv wrapper clips latent actions to <code class="docutils literal notranslate"><span class="pre">[-6,</span> <span class="pre">6]</span></code>, decodes them with a frozen decoder checkpoint using <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> observations, then steps the original velocity env with decoded joint actions.</p>
+<p><strong>Tech Stack:</strong> Python, PyTorch, TensorDict, RSL-RL PPO, <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnv</span></code>, <code class="docutils literal notranslate"><span class="pre">RslRlVecEnvWrapper</span></code>, existing latent distillation decoder.</p>
+<hr class="docutils" />
+<section id="scope-and-boundaries">
+<h2>Scope And Boundaries<a class="headerlink" href="#scope-and-boundaries" title="Link to this heading">#</a></h2>
+<p><strong>Must change:</strong></p>
+<ul class="simple">
+<li><p>Add a new task id: <code class="docutils literal notranslate"><span class="pre">Mjlab-LatentRL-Flat-Unitree-G1</span></code>.</p></li>
+<li><p>Add a new isolated task package under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/</span></code>.</p></li>
+<li><p>Add a latent velocity env variant in the new package that imports and extends the flat G1 velocity env with a <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> observation group for the frozen decoder.</p></li>
+<li><p>Add a latent RL runner and VecEnv wrapper under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/</span></code>.</p></li>
+<li><p>Add latent RL config under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/rl_cfg.py</span></code>.</p></li>
+<li><p>Add a training script <code class="docutils literal notranslate"><span class="pre">scripts/train_latent_velocity_rl.sh</span></code>.</p></li>
+<li><p>Add focused tests for registration, reward parity, wrapper decode behavior, checkpoint validation, and script defaults.</p></li>
+</ul>
+<p><strong>Must not change:</strong></p>
+<ul class="simple">
+<li><p>Do not modify velocity reward functions or weights.</p></li>
+<li><p>Do not modify velocity command sampling, termination rules, curriculum, or randomization.</p></li>
+<li><p>Do not modify <code class="docutils literal notranslate"><span class="pre">Mjlab-Velocity-Flat-Unitree-G1</span></code> baseline behavior.</p></li>
+<li><p>Do not add latent RL classes, wrappers, configs, or tests under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/velocity/</span></code>.</p></li>
+<li><p>Do not use tracking motion commands or tracking rewards.</p></li>
+<li><p>Do not use the first-stage teacher encoder during second-stage RL.</p></li>
+<li><p>Do not train or update the decoder during second-stage RL.</p></li>
+</ul>
+</section>
+<section id="file-structure">
+<h2>File Structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/__init__.py</span></code></p>
+<ul>
+<li><p>Empty package marker. <code class="docutils literal notranslate"><span class="pre">mjlab.tasks</span></code> auto-imports task packages.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/__init__.py</span></code></p>
+<ul>
+<li><p>Empty package marker.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/env_cfgs.py</span></code></p>
+<ul>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_latent_rl_env_cfg(play:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False)</span></code>.</p></li>
+<li><p>It imports <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_env_cfg(play=play)</span></code> from <code class="docutils literal notranslate"><span class="pre">mjlab.tasks.velocity.config.g1.env_cfgs</span></code> and adds <code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> observations matching first-stage latent distillation.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/rl_cfg.py</span></code></p>
+<ul>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">LatentVelocityPpoRunnerCfg</span></code>, extending <code class="docutils literal notranslate"><span class="pre">RslRlOnPolicyRunnerCfg</span></code> with latent decoder fields.</p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">unitree_g1_latent_velocity_ppo_runner_cfg()</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/__init__.py</span></code></p>
+<ul>
+<li><p>Register <code class="docutils literal notranslate"><span class="pre">Mjlab-LatentRL-Flat-Unitree-G1</span></code> with <code class="docutils literal notranslate"><span class="pre">LatentVelocityOnPolicyRunner</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/latent_decoder_wrapper.py</span></code></p>
+<ul>
+<li><p>Owns frozen decoder checkpoint loading, latent clipping, decode, and diagnostics.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/runner.py</span></code></p>
+<ul>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">LatentVelocityOnPolicyRunner</span></code>.</p></li>
+<li><p>It can subclass <code class="docutils literal notranslate"><span class="pre">mjlab.tasks.velocity.rl.VelocityOnPolicyRunner</span></code> only for save/export behavior, but all latent-specific logic lives in <code class="docutils literal notranslate"><span class="pre">latentvelocity</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/__init__.py</span></code></p>
+<ul>
+<li><p>Export <code class="docutils literal notranslate"><span class="pre">LatentVelocityOnPolicyRunner</span></code> and <code class="docutils literal notranslate"><span class="pre">LatentDecoderVecEnvWrapper</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">scripts/train_latent_velocity_rl.sh</span></code></p>
+<ul>
+<li><p>Launches the new task with direct latent PPO and <code class="docutils literal notranslate"><span class="pre">latent_action_clip=6.0</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Add tests:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_wrapper.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_train_latent_velocity_rl_script.py</span></code></p></li>
+</ul>
+</li>
+</ul>
+<hr class="docutils" />
+<section id="task-1-register-a-latent-velocity-env-variant">
+<h3>Task 1: Register A Latent Velocity Env Variant<a class="headerlink" href="#task-1-register-a-latent-velocity-env-variant" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/__init__.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/__init__.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/env_cfgs.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write the failing registration/env test</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Tests for latent velocity RL task configuration.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_tasks</span><span class="p">,</span> <span class="n">load_env_cfg</span><span class="p">,</span> <span class="n">load_rl_cfg</span><span class="p">,</span> <span class="n">load_runner_cls</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.velocity.config.g1.env_cfgs</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitree_g1_flat_env_cfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">LatentVelocityOnPolicyRunner</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_velocity_task_is_registered</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">task_id</span> <span class="o">=</span> <span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span>
+
+  <span class="k">assert</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">list_tasks</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">load_runner_cls</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span> <span class="ow">is</span> <span class="n">LatentVelocityOnPolicyRunner</span>
+  <span class="k">assert</span> <span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">==</span> <span class="mi">64</span>
+  <span class="k">assert</span> <span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span><span class="o">.</span><span class="n">latent_action_clip</span> <span class="o">==</span> <span class="mf">6.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_velocity_env_keeps_velocity_rewards_unchanged</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">baseline</span> <span class="o">=</span> <span class="n">unitree_g1_flat_env_cfg</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">rewards</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">baseline</span><span class="o">.</span><span class="n">rewards</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+  <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">reward</span> <span class="ow">in</span> <span class="n">baseline</span><span class="o">.</span><span class="n">rewards</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">latent_reward</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">rewards</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">latent_reward</span><span class="o">.</span><span class="n">func</span> <span class="ow">is</span> <span class="n">reward</span><span class="o">.</span><span class="n">func</span>
+    <span class="k">assert</span> <span class="n">latent_reward</span><span class="o">.</span><span class="n">weight</span> <span class="o">==</span> <span class="n">reward</span><span class="o">.</span><span class="n">weight</span>
+    <span class="k">assert</span> <span class="n">latent_reward</span><span class="o">.</span><span class="n">params</span> <span class="o">==</span> <span class="n">reward</span><span class="o">.</span><span class="n">params</span>
+
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">baseline</span><span class="o">.</span><span class="n">commands</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">terminations</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">baseline</span><span class="o">.</span><span class="n">terminations</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">curriculum</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">baseline</span><span class="o">.</span><span class="n">curriculum</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_velocity_proprio_actor_matches_first_stage_proprio_terms</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;proprio_actor&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="n">terms</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">terms</span>
+  <span class="k">assert</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">terms</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">(</span>
+    <span class="s2">&quot;projected_gravity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;base_ang_vel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;joint_pos&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;joint_vel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;actions&quot;</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">terms</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+    <span class="k">assert</span> <span class="n">term</span><span class="o">.</span><span class="n">history_length</span> <span class="o">==</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: import or assertion failure because the new task and runner do not exist yet.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add package markers and the env factory</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/__init__.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Latent velocity RL tasks.&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/__init__.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Latent velocity task configurations.&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/env_cfgs.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Unitree G1 latent velocity RL environment configurations.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.observation_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ObservationGroupCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.mdp.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_proprio_actor_terms</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.velocity.config.g1.env_cfgs</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitree_g1_flat_env_cfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnvCfg</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_flat_latent_rl_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ManagerBasedRlEnvCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create Unitree G1 flat velocity config for latent-space RL.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">unitree_g1_flat_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">)</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ObservationGroupCfg</span><span class="p">(</span>
+    <span class="n">terms</span><span class="o">=</span><span class="n">build_proprio_actor_terms</span><span class="p">(</span><span class="n">history_steps</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+    <span class="n">concatenate_terms</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">enable_corruption</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run the task test again</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: still fails because RL cfg and task registration are not added yet.</p>
+</section>
+<hr class="docutils" />
+<section id="task-2-add-latent-rl-config-and-task-registration">
+<h3>Task 2: Add Latent RL Config And Task Registration<a class="headerlink" href="#task-2-add-latent-rl-config-and-task-registration" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/rl_cfg.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/__init__.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/__init__.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/runner.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add latent runner config fields</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/rl_cfg.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;RL configuration for Unitree G1 latent velocity task.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.rl</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">RslRlModelCfg</span><span class="p">,</span>
+  <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">,</span>
+  <span class="n">RslRlPpoAlgorithmCfg</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LatentVelocityPpoRunnerCfg</span><span class="p">(</span><span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">):</span>
+  <span class="n">latent_decoder_checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+  <span class="n">latent_dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span>
+  <span class="n">latent_action_clip</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">6.0</span>
+  <span class="n">proprio_obs_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;proprio_actor&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_latent_velocity_ppo_runner_cfg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">LatentVelocityPpoRunnerCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create PPO runner configuration for Unitree G1 latent velocity RL.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">LatentVelocityPpoRunnerCfg</span><span class="p">(</span>
+    <span class="n">actor</span><span class="o">=</span><span class="n">RslRlModelCfg</span><span class="p">(</span>
+      <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+      <span class="n">distribution_cfg</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;GaussianDistribution&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;init_std&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;std_type&quot;</span><span class="p">:</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span>
+      <span class="p">},</span>
+    <span class="p">),</span>
+    <span class="n">critic</span><span class="o">=</span><span class="n">RslRlModelCfg</span><span class="p">(</span>
+      <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">algorithm</span><span class="o">=</span><span class="n">RslRlPpoAlgorithmCfg</span><span class="p">(</span>
+      <span class="n">value_loss_coef</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+      <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+      <span class="n">clip_param</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+      <span class="n">entropy_coef</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+      <span class="n">num_learning_epochs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+      <span class="n">num_mini_batches</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+      <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+      <span class="n">schedule</span><span class="o">=</span><span class="s2">&quot;adaptive&quot;</span><span class="p">,</span>
+      <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+      <span class="n">lam</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+      <span class="n">desired_kl</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+      <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">experiment_name</span><span class="o">=</span><span class="s2">&quot;g1_latent_velocity&quot;</span><span class="p">,</span>
+    <span class="n">run_name</span><span class="o">=</span><span class="s2">&quot;latent_rl_flat_g1&quot;</span><span class="p">,</span>
+    <span class="n">save_interval</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_steps_per_env</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">30_000</span><span class="p">,</span>
+    <span class="n">clip_actions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">clip_actions=None</span></code> is intentional. Latent clipping belongs in the latent decoder wrapper, not in the base joint-action wrapper.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Add a temporary runner stub</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/runner.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Runner for latent velocity RL tasks.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.velocity.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">VelocityOnPolicyRunner</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LatentVelocityOnPolicyRunner</span><span class="p">(</span><span class="n">VelocityOnPolicyRunner</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;PPO runner for direct latent velocity RL.&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/__init__.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl.runner</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">LatentVelocityOnPolicyRunner</span> <span class="k">as</span> <span class="n">LatentVelocityOnPolicyRunner</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Register the task</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/config/g1/__init__.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_mjlab_task</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">LatentVelocityOnPolicyRunner</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.env_cfgs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_flat_latent_rl_env_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.rl_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_latent_velocity_ppo_runner_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="n">register_mjlab_task</span><span class="p">(</span>
+  <span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span><span class="p">,</span>
+  <span class="n">env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_latent_rl_env_cfg</span><span class="p">(),</span>
+  <span class="n">play_env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_latent_rl_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+  <span class="n">rl_cfg</span><span class="o">=</span><span class="n">unitree_g1_latent_velocity_ppo_runner_cfg</span><span class="p">(),</span>
+  <span class="n">runner_cls</span><span class="o">=</span><span class="n">LatentVelocityOnPolicyRunner</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Verify registration tests pass</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+</section>
+<hr class="docutils" />
+<section id="task-3-implement-frozen-decoder-vecenv-wrapper">
+<h3>Task 3: Implement Frozen Decoder VecEnv Wrapper<a class="headerlink" href="#task-3-implement-frozen-decoder-vecenv-wrapper" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/latent_decoder_wrapper.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/__init__.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_wrapper.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing wrapper tests</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_wrapper.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Tests for latent decoder VecEnv wrapper.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensordict</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorDict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl.latent_decoder_wrapper</span><span class="w"> </span><span class="kn">import</span> <span class="n">LatentDecoderVecEnvWrapper</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_DummyBaseEnv</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_actions</span> <span class="o">=</span> <span class="mi">29</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">max_episode_length</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">episode_length_buf</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_actions</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">unwrapped</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_observations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">TensorDict</span><span class="p">(</span>
+      <span class="p">{</span>
+        <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+        <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+        <span class="s2">&quot;proprio_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="p">},</span>
+      <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">],</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actions</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_actions</span> <span class="o">=</span> <span class="n">actions</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">get_observations</span><span class="p">(),</span>
+      <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">),</span>
+      <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">),</span>
+      <span class="p">{},</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_observations</span><span class="p">(),</span> <span class="p">{}</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_DummyDecoder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+  <span class="n">decoder_obs_group</span> <span class="o">=</span> <span class="s2">&quot;proprio_actor&quot;</span>
+  <span class="n">latent_dim</span> <span class="o">=</span> <span class="mi">2</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+    <span class="n">proprio</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">proprio</span><span class="p">,</span> <span class="n">z</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_wrapper_exposes_latent_action_dim_and_steps_decoded_actions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">base_env</span> <span class="o">=</span> <span class="n">_DummyBaseEnv</span><span class="p">()</span>
+  <span class="n">wrapper</span> <span class="o">=</span> <span class="n">LatentDecoderVecEnvWrapper</span><span class="p">(</span>
+    <span class="n">base_env</span><span class="p">,</span>
+    <span class="n">decoder</span><span class="o">=</span><span class="n">_DummyDecoder</span><span class="p">(),</span>
+    <span class="n">latent_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">proprio_obs_group</span><span class="o">=</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">,</span>
+    <span class="n">latent_action_clip</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">wrapper</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
+  <span class="n">actions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">10.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">10.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">]])</span>
+  <span class="n">next_obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> <span class="n">wrapper</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">actions</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">wrapper</span><span class="o">.</span><span class="n">num_actions</span> <span class="o">==</span> <span class="mi">2</span>
+  <span class="k">assert</span> <span class="n">obs</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="mi">2</span><span class="p">])</span>
+  <span class="k">assert</span> <span class="n">next_obs</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="mi">2</span><span class="p">])</span>
+  <span class="k">assert</span> <span class="n">rewards</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span>
+  <span class="k">assert</span> <span class="n">dones</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_close</span><span class="p">(</span>
+    <span class="n">base_env</span><span class="o">.</span><span class="n">last_actions</span><span class="p">,</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">6.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">]]),</span>
+  <span class="p">)</span>
+  <span class="k">assert</span> <span class="n">extras</span><span class="p">[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;latent/norm_mean&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span>
+  <span class="k">assert</span> <span class="n">extras</span><span class="p">[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;latent/abs_max&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mf">6.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_wrapper_freezes_decoder_parameters</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">decoder</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+  <span class="n">base_env</span> <span class="o">=</span> <span class="n">_DummyBaseEnv</span><span class="p">()</span>
+
+  <span class="n">wrapper</span> <span class="o">=</span> <span class="n">LatentDecoderVecEnvWrapper</span><span class="p">(</span>
+    <span class="n">base_env</span><span class="p">,</span>
+    <span class="n">decoder</span><span class="o">=</span><span class="n">decoder</span><span class="p">,</span>
+    <span class="n">latent_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">proprio_obs_group</span><span class="o">=</span><span class="s2">&quot;proprio_actor&quot;</span><span class="p">,</span>
+    <span class="n">latent_action_clip</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="ow">not</span> <span class="n">wrapper</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">training</span>
+  <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">wrapper</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_wrapper.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: import failure because <code class="docutils literal notranslate"><span class="pre">latent_decoder_wrapper.py</span></code> does not exist.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement wrapper</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/latent_decoder_wrapper.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Latent-action VecEnv wrapper for frozen decoder policies.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.env</span><span class="w"> </span><span class="kn">import</span> <span class="n">VecEnv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensordict</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorDict</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LatentDecoderVecEnvWrapper</span><span class="p">(</span><span class="n">VecEnv</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Expose latent actions to RSL-RL and decode them to joint actions.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">env</span><span class="p">:</span> <span class="n">VecEnv</span><span class="p">,</span>
+    <span class="n">decoder</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">latent_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">proprio_obs_group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">latent_action_clip</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">6.0</span><span class="p">,</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">env</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">proprio_obs_group</span> <span class="o">=</span> <span class="n">proprio_obs_group</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">latent_action_clip</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">latent_action_clip</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+      <span class="n">param</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">num_envs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">num_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">device</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">max_episode_length</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">max_episode_length</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">cfg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">cfg</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">unwrapped</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">episode_length_buf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">episode_length_buf</span>
+
+  <span class="nd">@episode_length_buf</span><span class="o">.</span><span class="n">setter</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">episode_length_buf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">episode_length_buf</span> <span class="o">=</span> <span class="n">value</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">seed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_observations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorDict</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">obs</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span> <span class="o">=</span> <span class="n">obs</span>
+    <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">extras</span>
+
+  <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent_actions</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="n">latent_actions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span>
+      <span class="n">latent_actions</span><span class="p">,</span>
+      <span class="nb">min</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">latent_action_clip</span><span class="p">,</span>
+      <span class="nb">max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">latent_action_clip</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">decoder_obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+      <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proprio_obs_group</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">proprio_obs_group</span><span class="p">]},</span>
+      <span class="n">batch_size</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
+      <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">joint_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">decoder_obs</span><span class="p">,</span> <span class="n">latent_actions</span><span class="p">)</span>
+    <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">joint_actions</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_last_obs</span> <span class="o">=</span> <span class="n">obs</span>
+    <span class="n">extras</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">extras</span><span class="p">)</span>
+    <span class="n">log_extras</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">extras</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+    <span class="n">log_extras</span><span class="p">[</span><span class="s2">&quot;latent/norm_mean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">latent_actions</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">log_extras</span><span class="p">[</span><span class="s2">&quot;latent/abs_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">latent_actions</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">log_extras</span><span class="p">[</span><span class="s2">&quot;latent/decoded_action_norm_mean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">joint_actions</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">extras</span><span class="p">[</span><span class="s2">&quot;log&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">log_extras</span>
+    <span class="k">return</span> <span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="n">extras</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Export wrapper</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/__init__.py</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl.latent_decoder_wrapper</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">LatentDecoderVecEnvWrapper</span> <span class="k">as</span> <span class="n">LatentDecoderVecEnvWrapper</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run wrapper tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_wrapper.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+</section>
+<hr class="docutils" />
+<section id="task-4-load-frozen-decoder-checkpoint-in-runner">
+<h3>Task 4: Load Frozen Decoder Checkpoint In Runner<a class="headerlink" href="#task-4-load-frozen-decoder-checkpoint-in-runner" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/runner.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_wrapper.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add failing checkpoint validation tests</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_wrapper.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">LatentVelocityOnPolicyRunner</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_runner_requires_decoder_checkpoint</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">base_env</span> <span class="o">=</span> <span class="n">_DummyBaseEnv</span><span class="p">()</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;hidden_dims&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">16</span><span class="p">],</span>
+      <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;obs_normalization&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+      <span class="s2">&quot;distribution_cfg&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;GaussianDistribution&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;init_std&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;std_type&quot;</span><span class="p">:</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span>
+      <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;hidden_dims&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">16</span><span class="p">],</span> <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;elu&quot;</span><span class="p">,</span> <span class="s2">&quot;obs_normalization&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+    <span class="s2">&quot;algorithm&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;PPO&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;num_learning_epochs&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;num_mini_batches&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;learning_rate&quot;</span><span class="p">:</span> <span class="mf">1.0e-3</span><span class="p">,</span>
+      <span class="s2">&quot;schedule&quot;</span><span class="p">:</span> <span class="s2">&quot;fixed&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;gamma&quot;</span><span class="p">:</span> <span class="mf">0.99</span><span class="p">,</span>
+      <span class="s2">&quot;lam&quot;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
+      <span class="s2">&quot;entropy_coef&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+      <span class="s2">&quot;desired_kl&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+      <span class="s2">&quot;max_grad_norm&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+      <span class="s2">&quot;value_loss_coef&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+      <span class="s2">&quot;use_clipped_value_loss&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+      <span class="s2">&quot;clip_param&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;obs_groups&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;actor&quot;</span><span class="p">,),</span> <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;critic&quot;</span><span class="p">,)},</span>
+    <span class="s2">&quot;num_steps_per_env&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;save_interval&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s2">&quot;experiment_name&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;logger&quot;</span><span class="p">:</span> <span class="s2">&quot;tensorboard&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;upload_model&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;clip_actions&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;latent_decoder_checkpoint_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;latent_dim&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;latent_action_clip&quot;</span><span class="p">:</span> <span class="mf">6.0</span><span class="p">,</span>
+    <span class="s2">&quot;proprio_obs_group&quot;</span><span class="p">:</span> <span class="s2">&quot;proprio_actor&quot;</span><span class="p">,</span>
+  <span class="p">}</span>
+
+  <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;latent_decoder_checkpoint_path&quot;</span><span class="p">):</span>
+    <span class="n">LatentVelocityOnPolicyRunner</span><span class="p">(</span><span class="n">base_env</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails for the current stub</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_wrapper.py::test_latent_runner_requires_decoder_checkpoint<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: FAIL because the stub does not validate the checkpoint path.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement runner checkpoint loading</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/latentvelocity/rl/runner.py</span></code>, add imports:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensordict</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorDict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.rl.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_latent_student_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.latentvelocity.rl.latent_decoder_wrapper</span><span class="w"> </span><span class="kn">import</span> <span class="n">LatentDecoderVecEnvWrapper</span>
+</pre></div>
+</div>
+<p>Replace the stub with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">LatentVelocityOnPolicyRunner</span><span class="p">(</span><span class="n">VelocityOnPolicyRunner</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;PPO runner that trains latent actions through a frozen decoder.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">decoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_decoder</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    <span class="n">latent_env</span> <span class="o">=</span> <span class="n">LatentDecoderVecEnvWrapper</span><span class="p">(</span>
+      <span class="n">env</span><span class="p">,</span>
+      <span class="n">decoder</span><span class="o">=</span><span class="n">decoder</span><span class="p">,</span>
+      <span class="n">latent_dim</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">train_cfg</span><span class="p">[</span><span class="s2">&quot;latent_dim&quot;</span><span class="p">]),</span>
+      <span class="n">proprio_obs_group</span><span class="o">=</span><span class="n">train_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;proprio_obs_group&quot;</span><span class="p">,</span> <span class="s2">&quot;proprio_actor&quot;</span><span class="p">),</span>
+      <span class="n">latent_action_clip</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">train_cfg</span><span class="p">[</span><span class="s2">&quot;latent_action_clip&quot;</span><span class="p">]),</span>
+    <span class="p">)</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">latent_env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_load_decoder</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+    <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="n">train_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;latent_decoder_checkpoint_path&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint_path</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;latent_decoder_checkpoint_path must be provided for latent velocity RL.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+      <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;latent decoder checkpoint not found: </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_type&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;latent&quot;</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;latent decoder checkpoint must be a latent distillation checkpoint.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;policy_state_dict&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;latent decoder checkpoint is missing policy_state_dict.&quot;</span><span class="p">)</span>
+
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">get_observations</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">proprio_obs_group</span> <span class="o">=</span> <span class="n">train_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;proprio_obs_group&quot;</span><span class="p">,</span> <span class="s2">&quot;proprio_actor&quot;</span><span class="p">)</span>
+    <span class="n">model_obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+      <span class="p">{</span>
+        <span class="s2">&quot;teacher_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+          <span class="n">obs</span><span class="o">.</span><span class="n">batch_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+          <span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;policy_state_dict&quot;</span><span class="p">][</span><span class="s2">&quot;encoder.obs_normalizer._mean&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+          <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">proprio_obs_group</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="n">proprio_obs_group</span><span class="p">],</span>
+      <span class="p">},</span>
+      <span class="n">batch_size</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
+      <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">build_latent_student_model</span><span class="p">(</span>
+      <span class="n">obs</span><span class="o">=</span><span class="n">model_obs</span><span class="p">,</span>
+      <span class="n">encoder_obs_group</span><span class="o">=</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">,</span>
+      <span class="n">decoder_obs_group</span><span class="o">=</span><span class="n">proprio_obs_group</span><span class="p">,</span>
+      <span class="n">action_dim</span><span class="o">=</span><span class="n">env</span><span class="o">.</span><span class="n">num_actions</span><span class="p">,</span>
+      <span class="n">latent_dim</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">train_cfg</span><span class="p">[</span><span class="s2">&quot;latent_dim&quot;</span><span class="p">]),</span>
+      <span class="n">encoder_hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">decoder_hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">[</span><span class="s2">&quot;policy_state_dict&quot;</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">model</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run checkpoint validation test</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_wrapper.py::test_latent_runner_requires_decoder_checkpoint<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run wrapper test file</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_wrapper.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+</section>
+<hr class="docutils" />
+<section id="task-5-add-training-script">
+<h3>Task 5: Add Training Script<a class="headerlink" href="#task-5-add-training-script" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">scripts/train_latent_velocity_rl.sh</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_train_latent_velocity_rl_script.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing script test</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/test_train_latent_velocity_rl_script.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Tests for latent velocity RL training script.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_train_latent_velocity_rl_script_defaults</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">script</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;scripts/train_latent_velocity_rl.sh&quot;</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">script</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+  <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+  <span class="n">env</span><span class="p">[</span><span class="s2">&quot;LATENT_DECODER_CKPT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;/tmp/latent_decoder.pt&quot;</span>
+  <span class="n">env</span><span class="p">[</span><span class="s2">&quot;NUM_ENVS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;16&quot;</span>
+  <span class="n">env</span><span class="p">[</span><span class="s2">&quot;MAX_ITERATIONS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;3&quot;</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;-n&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">)],</span>
+    <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">,</span>
+    <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span>
+  <span class="n">text</span> <span class="o">=</span> <span class="n">script</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span> <span class="ow">in</span> <span class="n">text</span>
+  <span class="k">assert</span> <span class="s2">&quot;--agent.latent_decoder_checkpoint_path&quot;</span> <span class="ow">in</span> <span class="n">text</span>
+  <span class="k">assert</span> <span class="s2">&quot;--agent.latent_action_clip 6.0&quot;</span> <span class="ow">in</span> <span class="n">text</span>
+  <span class="k">assert</span> <span class="s2">&quot;--agent.clip_actions None&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_train_latent_velocity_rl_script.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: FAIL because the script does not exist.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Create script</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">scripts/train_latent_velocity_rl.sh</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+
+<span class="nv">TASK</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">TASK</span><span class="k">:-</span><span class="nv">Mjlab</span><span class="p">-LatentRL-Flat-Unitree-G1</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="nv">LATENT_DECODER_CKPT</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">LATENT_DECODER_CKPT</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="nv">NUM_ENVS</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">NUM_ENVS</span><span class="k">:-</span><span class="nv">4096</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="nv">MAX_ITERATIONS</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">MAX_ITERATIONS</span><span class="k">:-</span><span class="nv">30000</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="nv">RUN_NAME</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">RUN_NAME</span><span class="k">:-</span><span class="nv">latent_rl_flat_g1</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATENT_DECODER_CKPT</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;LATENT_DECODER_CKPT must point to a latent distillation checkpoint.&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">  </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TASK</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.scene.num-envs<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$NUM_ENVS</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.latent_decoder_checkpoint_path<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATENT_DECODER_CKPT</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.latent_dim<span class="w"> </span><span class="m">64</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.latent_action_clip<span class="w"> </span><span class="m">6</span>.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.experiment_name<span class="w"> </span>g1_latent_velocity<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.run_name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RUN_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.max_iterations<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$MAX_ITERATIONS</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.num_steps_per_env<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.upload-model<span class="w"> </span>False<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--debug<span class="w"> </span>False
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run script tests and shell syntax check</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_train_latent_velocity_rl_script.py<span class="w"> </span>-q
+bash<span class="w"> </span>-n<span class="w"> </span>scripts/train_latent_velocity_rl.sh
+</pre></div>
+</div>
+<p>Expected: PASS and exit 0.</p>
+</section>
+<hr class="docutils" />
+<section id="task-6-add-smoke-tests-for-cli-and-registry">
+<h3>Task 6: Add Smoke Tests For CLI And Registry<a class="headerlink" href="#task-6-add-smoke-tests-for-cli-and-registry" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add CLI help smoke test</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_latent_velocity_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_latent_velocity_train_help_exposes_decoder_flags</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;uv&quot;</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;Mjlab-LatentRL-Flat-Unitree-G1&quot;</span><span class="p">,</span> <span class="s2">&quot;--help&quot;</span><span class="p">],</span>
+    <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;--agent.latent-decoder-checkpoint-path&quot;</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+  <span class="k">assert</span> <span class="s2">&quot;--agent.latent-action-clip&quot;</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run the smoke test</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_task.py::test_latent_velocity_train_help_exposes_decoder_flags<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Run all related tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_latent_velocity_task.py<span class="w"> </span>tests/test_latent_velocity_wrapper.py<span class="w"> </span>tests/test_train_latent_velocity_rl_script.py<span class="w"> </span>tests/test_velocity_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: PASS.</p>
+</section>
+<hr class="docutils" />
+<section id="task-7-manual-training-dry-run">
+<h3>Task 7: Manual Training Dry Run<a class="headerlink" href="#task-7-manual-training-dry-run" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>No code changes.</p></li>
+<li><p>[ ] <strong>Step 1: Run help command</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-LatentRL-Flat-Unitree-G1<span class="w"> </span>--help
+</pre></div>
+</div>
+<p>Expected: help includes:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>--agent.latent-decoder-checkpoint-path
+--agent.latent-action-clip
+--agent.latent-dim
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run a short debug train</strong></p></li>
+</ul>
+<p>Use a real latent distillation checkpoint:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">LATENT_DECODER_CKPT</span><span class="o">=</span>/absolute/path/to/model_XXXX.pt<span class="w"> </span><span class="se">\</span>
+<span class="nv">NUM_ENVS</span><span class="o">=</span><span class="m">64</span><span class="w"> </span><span class="se">\</span>
+<span class="nv">MAX_ITERATIONS</span><span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+bash<span class="w"> </span>scripts/train_latent_velocity_rl.sh
+</pre></div>
+</div>
+<p>Expected:</p>
+<ul class="simple">
+<li><p>Training starts without checkpoint shape mismatch.</p></li>
+<li><p>RSL-RL action std is reported for 64D latent policy.</p></li>
+<li><p>Logs contain latent diagnostics from <code class="docutils literal notranslate"><span class="pre">extras</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/norm_mean</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/abs_max</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/decoded_action_norm_mean</span></code></p></li>
+</ul>
+</li>
+<li><p>No decoder parameters are optimized.</p></li>
+<li><p>[ ] <strong>Step 3: Compare against scratch baseline</strong></p></li>
+</ul>
+<p>Run the scratch baseline with matching env count, steps, iterations, and seeds:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Velocity-Flat-Unitree-G1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.scene.num-envs<span class="w"> </span><span class="m">64</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.max_iterations<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.num_steps_per_env<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.experiment_name<span class="w"> </span>g1_velocity_baseline_debug<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.run_name<span class="w"> </span>scratch_debug<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.upload-model<span class="w"> </span>False<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--debug<span class="w"> </span>True
+</pre></div>
+</div>
+<p>Expected: Both tasks train in the same velocity env family and report comparable reward terms.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="evaluation-checklist">
+<h2>Evaluation Checklist<a class="headerlink" href="#evaluation-checklist" title="Link to this heading">#</a></h2>
+<p>Track these metrics for the real comparison:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Episode/reward</span></code> or equivalent total reward.</p></li>
+<li><p>Per-reward components from velocity task:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">track_linear_velocity</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">track_angular_velocity</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upright</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pose</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">foot_slip</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">foot_clearance</span></code></p></li>
+</ul>
+</li>
+<li><p>Termination rates:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">fell_over</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">time_out</span></code></p></li>
+</ul>
+</li>
+<li><p>Latent diagnostics:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/norm_mean</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/abs_max</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latent/decoded_action_norm_mean</span></code></p></li>
+</ul>
+</li>
+<li><p>Sample efficiency:</p>
+<ul>
+<li><p>environment steps to reach the same reward threshold.</p></li>
+</ul>
+</li>
+<li><p>Wall-clock efficiency:</p>
+<ul>
+<li><p>minutes to reach the same reward threshold.</p></li>
+</ul>
+</li>
+</ul>
+<p>The primary comparison is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Mjlab-Velocity-Flat-Unitree-G1
+vs.
+Mjlab-LatentRL-Flat-Unitree-G1
+</pre></div>
+</div>
+<p>Both use the same walking reward. The only intended difference is the policy action interface: direct joint action versus direct latent action through a frozen decoder.</p>
+</section>
+<section id="self-review">
+<h2>Self-Review<a class="headerlink" href="#self-review" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>No tracking task or tracking reward is part of this plan.</p></li>
+<li><p>The second-stage policy does not use the first-stage teacher encoder.</p></li>
+<li><p>The decoder is loaded from latent distillation and frozen.</p></li>
+<li><p>Latent action clipping is <code class="docutils literal notranslate"><span class="pre">[-6,</span> <span class="pre">6]</span></code> through <code class="docutils literal notranslate"><span class="pre">latent_action_clip</span></code>, not base <code class="docutils literal notranslate"><span class="pre">clip_actions</span></code>.</p></li>
+<li><p>Velocity reward, command, termination, randomization, and curriculum are preserved from the flat G1 velocity task.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope-and-boundaries">Scope And Boundaries</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-register-a-latent-velocity-env-variant">Task 1: Register A Latent Velocity Env Variant</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-add-latent-rl-config-and-task-registration">Task 2: Add Latent RL Config And Task Registration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-implement-frozen-decoder-vecenv-wrapper">Task 3: Implement Frozen Decoder VecEnv Wrapper</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-load-frozen-decoder-checkpoint-in-runner">Task 4: Load Frozen Decoder Checkpoint In Runner</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-training-script">Task 5: Add Training Script</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-add-smoke-tests-for-cli-and-registry">Task 6: Add Smoke Tests For CLI And Registry</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-manual-training-dry-run">Task 7: Manual Training Dry Run</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evaluation-checklist">Evaluation Checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on May 25, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
