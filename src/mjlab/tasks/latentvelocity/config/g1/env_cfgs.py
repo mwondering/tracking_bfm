@@ -1,0 +1,35 @@
+"""Unitree G1 latent velocity RL environment configurations."""
+
+from mjlab.envs import ManagerBasedRlEnvCfg
+from mjlab.managers.observation_manager import ObservationGroupCfg
+from mjlab.tasks.distillation.mdp.observations import build_proprio_actor_terms
+from mjlab.tasks.velocity.config.g1.env_cfgs import unitree_g1_flat_env_cfg
+
+
+_LATENT_REMOVED_REWARDS = (
+  "upright",
+  "pose",
+  "body_ang_vel",
+  "angular_momentum",
+  "air_time",
+  "foot_clearance",
+  "foot_swing_height",
+  "foot_slip",
+)
+
+
+def unitree_g1_flat_latent_rl_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
+  """Create Unitree G1 flat velocity config for latent-space RL."""
+  cfg = unitree_g1_flat_env_cfg(play=play)
+  for reward_name in _LATENT_REMOVED_REWARDS:
+    cfg.rewards.pop(reward_name, None)
+  cfg.rewards["track_linear_velocity"].weight = 3.0
+  cfg.rewards["track_angular_velocity"].weight = 3.0
+  # cfg.rewards["action_l2"].weight = -0.01
+  # cfg.rewards["track_angular_velocity"].weight = 3.0
+  cfg.observations["proprio_actor"] = ObservationGroupCfg(
+    terms=build_proprio_actor_terms(history_steps=0),
+    concatenate_terms=True,
+    enable_corruption=False,
+  )
+  return cfg

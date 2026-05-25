@@ -1,9 +1,9 @@
 """Script to play RL agent with RSL-RL."""
 
-from copy import deepcopy
 import os
 import sys
 import time as _time
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +13,7 @@ import torch
 import tyro
 
 from mjlab.envs import ManagerBasedRlEnv, ManagerBasedRlEnvCfg
-from mjlab.rl import MjlabOnPolicyRunner, RslRlVecEnvWrapper
+from mjlab.rl import MjlabOnPolicyRunner, RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 from mjlab.scripts._cli import maybe_print_top_level_help
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
@@ -37,6 +37,8 @@ def _parse_wandb_dt(value: str | datetime) -> datetime:
 @dataclass(frozen=True)
 class PlayConfig:
   agent: Literal["zero", "random", "trained"] = "trained"
+  stochastic_policy: bool = False
+  """Use stochastic action sampling for trained policies instead of deterministic inference."""
   registry_name: str | None = None
   wandb_run_path: str | None = None
   wandb_checkpoint_name: str | None = None
@@ -66,10 +68,11 @@ class PlayCliConfig(PlayConfig):
   """CLI-facing play config that also exposes env overrides."""
 
   env: ManagerBasedRlEnvCfg
+  rl: RslRlBaseRunnerCfg
 
   @staticmethod
   def from_task(task_id: str) -> "PlayCliConfig":
-    return PlayCliConfig(env=load_env_cfg(task_id, play=True))
+    return PlayCliConfig(env=load_env_cfg(task_id, play=True), rl=load_rl_cfg(task_id))
 
 
 def _configure_distillation_play_visualization(env_cfg, show_reference_motion: bool) -> None:
@@ -79,6 +82,22 @@ def _configure_distillation_play_visualization(env_cfg, show_reference_motion: b
     return
   motion_cfg.debug_vis = show_reference_motion
   student_sparse_vis_cfg.debug_vis = True
+
+
+def _get_trained_policy(runner, device: str, stochastic: bool):
+  if not stochastic:
+    return runner.get_inference_policy(device=device)
+
+  actor = runner.alg.get_policy()
+  if hasattr(actor, "eval"):
+    actor.eval()
+
+  class StochasticPolicy:
+    def __call__(self, obs) -> torch.Tensor:
+      with torch.no_grad():
+        return actor(obs, stochastic_output=True)
+
+  return StochasticPolicy()
 
 
 def run_play(task_id: str, cfg: PlayConfig):
@@ -91,7 +110,7 @@ def run_play(task_id: str, cfg: PlayConfig):
     if isinstance(cfg, PlayCliConfig)
     else load_env_cfg(task_id, play=True)
   )
-  agent_cfg = load_rl_cfg(task_id)
+  agent_cfg = deepcopy(cfg.rl) if isinstance(cfg, PlayCliConfig) else load_rl_cfg(task_id)
 
   DUMMY_MODE = cfg.agent in {"zero", "random"}
   TRAINED_MODE = not DUMMY_MODE
@@ -256,7 +275,8 @@ def run_play(task_id: str, cfg: PlayConfig):
     runner.load(
       str(resume_path), load_cfg={"actor": True}, strict=True, map_location=device
     )
-    policy = runner.get_inference_policy(device=device)
+    policy = _get_trained_policy(runner, device=device, stochastic=cfg.stochastic_policy)
+    env = runner.env
 
   # Build checkpoint manager for hot-swapping checkpoints in the viewer.
   ckpt_manager: CheckpointManager | None = None
@@ -270,7 +290,11 @@ def run_play(task_id: str, cfg: PlayConfig):
         strict=True,
         map_location=device,
       )
-      return _ckpt_runner.get_inference_policy(device=device)
+      return _get_trained_policy(
+        _ckpt_runner,
+        device=device,
+        stochastic=cfg.stochastic_policy,
+      )
 
     if cfg.wandb_run_path is None:
       ckpt_dir = resume_path.parent
