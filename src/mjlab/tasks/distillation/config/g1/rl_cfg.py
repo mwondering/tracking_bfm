@@ -54,7 +54,7 @@ def unitree_g1_distillation_runner_cfg() -> DistillationRunnerCfg:
 def unitree_g1_latent_distillation_runner_cfg() -> DistillationRunnerCfg:
   return DistillationRunnerCfg(
     experiment_name="g1_latent_distillation",
-    save_interval=5000,
+    save_interval=500,
     num_steps_per_env=24,
     max_iterations=30_000,
     student_model_type="latent",

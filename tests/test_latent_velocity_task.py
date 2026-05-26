@@ -6,6 +6,7 @@ from pathlib import Path
 
 from mjlab.rl import RslRlBaseRunnerCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
+from mjlab.tasks.velocity import mdp
 from mjlab.tasks.velocity.config.g1.env_cfgs import unitree_g1_flat_env_cfg
 
 
@@ -34,7 +35,9 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
     "foot_swing_height",
     "foot_slip",
   }
-  assert set(cfg.rewards.keys()) == set(baseline.rewards.keys()) - removed_rewards
+  assert set(cfg.rewards.keys()) == (
+    set(baseline.rewards.keys()) - removed_rewards | {"waist_joint_vel_l2"}
+  )
 
   for name, reward in baseline.rewards.items():
     if name in removed_rewards:
@@ -47,7 +50,32 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
       else reward.weight
     )
     assert latent_reward.weight == expected_weight
-    assert latent_reward.params == reward.params
+    expected_params = dict(reward.params)
+    if name == "track_linear_velocity":
+      expected_params["penalize_z_velocity"] = False
+    elif name == "track_angular_velocity":
+      expected_params["penalize_xy_angular_velocity"] = False
+    assert latent_reward.params == expected_params
+
+  assert "penalize_z_velocity" not in baseline.rewards["track_linear_velocity"].params
+  assert (
+    "penalize_xy_angular_velocity"
+    not in baseline.rewards["track_angular_velocity"].params
+  )
+  assert cfg.rewards["track_linear_velocity"].params["penalize_z_velocity"] is False
+  assert (
+    cfg.rewards["track_angular_velocity"].params["penalize_xy_angular_velocity"]
+    is False
+  )
+  waist_reward = cfg.rewards["waist_joint_vel_l2"]
+  assert waist_reward.func is mdp.joint_vel_l2
+  assert waist_reward.weight == -0.05
+  assert waist_reward.params["asset_cfg"].joint_names == (
+    "waist_yaw_joint",
+    "waist_roll_joint",
+    "waist_pitch_joint",
+  )
+  assert "waist_joint_vel_l2" not in baseline.rewards
 
   assert cfg.commands.keys() == baseline.commands.keys()
   assert cfg.terminations.keys() == baseline.terminations.keys()

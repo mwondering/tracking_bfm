@@ -29,6 +29,7 @@ def track_linear_velocity(
   std: float,
   command_name: str,
   asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+  penalize_z_velocity: bool = True,
 ) -> torch.Tensor:
   """Reward for tracking the commanded base linear velocity.
 
@@ -39,7 +40,9 @@ def track_linear_velocity(
   assert command is not None, f"Command '{command_name}' not found."
   actual = asset.data.root_link_lin_vel_b
   xy_error = torch.sum(torch.square(command[:, :2] - actual[:, :2]), dim=1)
-  z_error = torch.square(actual[:, 2])
+  z_error = (
+    torch.square(actual[:, 2]) if penalize_z_velocity else torch.zeros_like(xy_error)
+  )
   lin_vel_error = xy_error + z_error
   return torch.exp(-lin_vel_error / std**2)
 
@@ -49,6 +52,7 @@ def track_angular_velocity(
   std: float,
   command_name: str,
   asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+  penalize_xy_angular_velocity: bool = True,
 ) -> torch.Tensor:
   """Reward heading error for heading-controlled envs, angular velocity for others.
 
@@ -60,6 +64,8 @@ def track_angular_velocity(
   actual = asset.data.root_link_ang_vel_b
   z_error = torch.square(command[:, 2] - actual[:, 2])
   xy_error = torch.sum(torch.square(actual[:, :2]), dim=1)
+  if not penalize_xy_angular_velocity:
+    xy_error = torch.zeros_like(z_error)
   ang_vel_error = z_error + xy_error
   return torch.exp(-ang_vel_error / std**2)
 

@@ -210,7 +210,10 @@ def unitree_g1_flat_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
 
   # Disable terrain curriculum (not present in play mode since rough clears all).
   cfg.curriculum.pop("terrain_levels", None)
-
+  cfg.rewards["track_linear_velocity"].weight = 3.0
+  cfg.rewards["track_linear_velocity"].params["penalize_z_velocity"] = False
+  cfg.rewards["track_angular_velocity"].weight = 3.0
+  cfg.rewards["track_angular_velocity"].params["penalize_xy_angular_velocity"] = False
   if play:
     twist_cmd = cfg.commands["twist"]
     assert isinstance(twist_cmd, UniformVelocityCommandCfg)
