@@ -7,18 +7,23 @@ from pathlib import Path
 from mjlab.rl import RslRlBaseRunnerCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.velocity import mdp
-from mjlab.tasks.velocity.config.g1.env_cfgs import unitree_g1_flat_env_cfg
+from mjlab.tasks.velocity.config.g1.env_cfgs import (
+  unitree_g1_flat_env_cfg,
+  unitree_g1_rough_env_cfg,
+)
 
 
 def test_latent_velocity_task_is_registered() -> None:
   from mjlab.tasks.latentvelocity.rl import LatentVelocityOnPolicyRunner
 
-  task_id = "Mjlab-LatentRL-Flat-Unitree-G1"
-
-  assert task_id in list_tasks()
-  assert load_runner_cls(task_id) is LatentVelocityOnPolicyRunner
-  assert load_rl_cfg(task_id).latent_dim == 64
-  assert load_rl_cfg(task_id).latent_action_clip == 6.0
+  for task_id in (
+    "Mjlab-LatentRL-Flat-Unitree-G1",
+    "Mjlab-LatentRL-Rough-Unitree-G1",
+  ):
+    assert task_id in list_tasks()
+    assert load_runner_cls(task_id) is LatentVelocityOnPolicyRunner
+    assert load_rl_cfg(task_id).latent_dim == 64
+    assert load_rl_cfg(task_id).latent_action_clip == 6.0
 
 
 def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
@@ -26,7 +31,6 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
   cfg = load_env_cfg("Mjlab-LatentRL-Flat-Unitree-G1")
 
   removed_rewards = {
-    "upright",
     "pose",
     "body_ang_vel",
     "angular_momentum",
@@ -47,6 +51,8 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
     expected_weight = (
       3.0
       if name in {"track_linear_velocity", "track_angular_velocity"}
+      else -0.2
+      if name == "action_rate_l2"
       else reward.weight
     )
     assert latent_reward.weight == expected_weight
@@ -57,10 +63,12 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
       expected_params["penalize_xy_angular_velocity"] = False
     assert latent_reward.params == expected_params
 
-  assert "penalize_z_velocity" not in baseline.rewards["track_linear_velocity"].params
   assert (
-    "penalize_xy_angular_velocity"
-    not in baseline.rewards["track_angular_velocity"].params
+    baseline.rewards["track_linear_velocity"].params["penalize_z_velocity"] is False
+  )
+  assert (
+    baseline.rewards["track_angular_velocity"].params["penalize_xy_angular_velocity"]
+    is False
   )
   assert cfg.rewards["track_linear_velocity"].params["penalize_z_velocity"] is False
   assert (
@@ -69,7 +77,7 @@ def test_latent_velocity_env_removes_gait_specific_rewards() -> None:
   )
   waist_reward = cfg.rewards["waist_joint_vel_l2"]
   assert waist_reward.func is mdp.joint_vel_l2
-  assert waist_reward.weight == -0.05
+  assert waist_reward.weight == -0.1
   assert waist_reward.params["asset_cfg"].joint_names == (
     "waist_yaw_joint",
     "waist_roll_joint",
@@ -96,6 +104,20 @@ def test_latent_velocity_proprio_actor_matches_first_stage_proprio_terms() -> No
   )
   for term in terms.values():
     assert term.history_length == 0
+
+
+def test_latent_velocity_rough_env_keeps_terrain_scan_for_actor() -> None:
+  baseline = unitree_g1_rough_env_cfg()
+  cfg = load_env_cfg("Mjlab-LatentRL-Rough-Unitree-G1")
+
+  assert cfg.scene.terrain is not None
+  assert cfg.scene.terrain.terrain_type == "generator"
+  assert cfg.scene.terrain.terrain_generator is not None
+  assert cfg.scene.terrain.terrain_generator.curriculum is True
+  assert "height_scan" in cfg.observations["actor"].terms
+  assert "height_scan" in cfg.observations["critic"].terms
+  assert "height_scan" in baseline.observations["actor"].terms
+  assert "proprio_actor" in cfg.observations
 
 
 def test_latent_velocity_train_help_exposes_decoder_flags() -> None:
@@ -200,7 +222,9 @@ def test_play_uses_runner_wrapped_env_for_viewer(monkeypatch, tmp_path: Path) ->
     def run(self) -> None:
       captured["viewer_ran"] = True
 
-  monkeypatch.setattr(play_script, "load_env_cfg", lambda task_id, play=True: FakeEnvCfg())
+  monkeypatch.setattr(
+    play_script, "load_env_cfg", lambda task_id, play=True: FakeEnvCfg()
+  )
   monkeypatch.setattr(play_script, "load_rl_cfg", lambda task_id: TestRlCfg())
   monkeypatch.setattr(play_script, "ManagerBasedRlEnv", lambda **kwargs: FakeRawEnv())
   monkeypatch.setattr(play_script, "RslRlVecEnvWrapper", FakeRslEnv)
@@ -283,7 +307,9 @@ def test_play_can_use_stochastic_trained_policy(monkeypatch, tmp_path: Path) -> 
     def run(self) -> None:
       captured["viewer_ran"] = True
 
-  monkeypatch.setattr(play_script, "load_env_cfg", lambda task_id, play=True: FakeEnvCfg())
+  monkeypatch.setattr(
+    play_script, "load_env_cfg", lambda task_id, play=True: FakeEnvCfg()
+  )
   monkeypatch.setattr(play_script, "load_rl_cfg", lambda task_id: TestRlCfg())
   monkeypatch.setattr(play_script, "ManagerBasedRlEnv", lambda **kwargs: FakeRawEnv())
   monkeypatch.setattr(play_script, "RslRlVecEnvWrapper", FakeRslEnv)

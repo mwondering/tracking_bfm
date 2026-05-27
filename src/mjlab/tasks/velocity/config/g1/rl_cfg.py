@@ -11,7 +11,7 @@ def unitree_g1_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
   """Create RL runner configuration for Unitree G1 velocity task."""
   return RslRlOnPolicyRunnerCfg(
     actor=RslRlModelCfg(
-      hidden_dims=(1024,1024,5512, 256, 128),
+      hidden_dims=(1024,1024,512, 256, 128),
       activation="elu",
       obs_normalization=True,
       distribution_cfg={
@@ -21,7 +21,7 @@ def unitree_g1_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
       },
     ),
     critic=RslRlModelCfg(
-      hidden_dims=(512, 256, 128),
+      hidden_dims=(1024,1024,512, 256, 128),
       activation="elu",
       obs_normalization=True,
     ),

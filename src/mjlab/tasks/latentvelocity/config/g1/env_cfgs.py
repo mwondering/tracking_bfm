@@ -6,8 +6,10 @@ from mjlab.managers.reward_manager import RewardTermCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.tasks.distillation.mdp.observations import build_proprio_actor_terms
 from mjlab.tasks.velocity import mdp
-from mjlab.tasks.velocity.config.g1.env_cfgs import unitree_g1_flat_env_cfg
-
+from mjlab.tasks.velocity.config.g1.env_cfgs import (
+  unitree_g1_flat_env_cfg,
+  unitree_g1_rough_env_cfg,
+)
 
 _LATENT_REMOVED_REWARDS = (
   # "upright",
@@ -21,9 +23,10 @@ _LATENT_REMOVED_REWARDS = (
 )
 
 
-def unitree_g1_flat_latent_rl_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
-  """Create Unitree G1 flat velocity config for latent-space RL."""
-  cfg = unitree_g1_flat_env_cfg(play=play)
+def _make_unitree_g1_latent_rl_env_cfg(
+  cfg: ManagerBasedRlEnvCfg,
+) -> ManagerBasedRlEnvCfg:
+  """Adapt a Unitree G1 velocity config for latent-space RL."""
   for reward_name in _LATENT_REMOVED_REWARDS:
     cfg.rewards.pop(reward_name, None)
   cfg.rewards["track_linear_velocity"].weight = 3.0
@@ -53,3 +56,13 @@ def unitree_g1_flat_latent_rl_env_cfg(play: bool = False) -> ManagerBasedRlEnvCf
     enable_corruption=False,
   )
   return cfg
+
+
+def unitree_g1_flat_latent_rl_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
+  """Create Unitree G1 flat velocity config for latent-space RL."""
+  return _make_unitree_g1_latent_rl_env_cfg(unitree_g1_flat_env_cfg(play=play))
+
+
+def unitree_g1_rough_latent_rl_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
+  """Create Unitree G1 rough terrain velocity config for latent-space RL."""
+  return _make_unitree_g1_latent_rl_env_cfg(unitree_g1_rough_env_cfg(play=play))
