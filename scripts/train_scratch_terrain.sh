@@ -7,11 +7,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Velocity-Rough-Unitree-G1}"
-NUM_ENVS="${NUM_ENVS:-16}"
+NUM_ENVS="${NUM_ENVS:-8192}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-30000}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_scratch_terrain}"
 RUN_NAME="${RUN_NAME:-velocity_rough_g1}"
-GPU_IDS="${GPU_IDS:-[0]}"
+GPU_IDS="${GPU_IDS:-[3]}"
 
 uv run train "$TASK" \
   --env.scene.num-envs "$NUM_ENVS" \

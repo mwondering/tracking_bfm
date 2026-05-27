@@ -1,9 +1,9 @@
 TEACHER_CKPT=/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic_prior/2026-05-20_13-53-11_teacher_v2_decimation4_4gpu_16384_resume2/model_70000.pt
-MOTION_PATH=/data/zcy/motion_data/AMASS_LAFAN_Qingtong
+MOTION_PATH=/data/zcy/motion_data/
 
 uv run train Mjlab-LatentDistillation-Flat-Unitree-G1 \
     --env.commands.motion.motion-path "$MOTION_PATH" \
-    --env.scene.num-envs 8192 \
+    --env.scene.num-envs 16384 \
     --env.commands.motion.sampling-mode uniform \
     --env.commands.motion.history_steps 0 \
     --env.commands.motion.future_steps 1 \
@@ -17,11 +17,11 @@ uv run train Mjlab-LatentDistillation-Flat-Unitree-G1 \
     --agent.save_interval 500 \
     --agent.beta_decay_steps 1 \
     --agent.experiment_name g1_latent_distillation \
-    --agent.run_name latent_distill_g1 \
+    --agent.run_name latent_distill_g1_full_2gpu_16384 \
     --agent.wandb_project tracking_bfm_distillation \
     --agent.upload-model False \
     --debug False \
-    --gpu_ids "[3]" \
+    --gpu_ids "[2,3]" \
     --agent.latent_regularization wae_mmd \
     --agent.mmd_weight 3e-2 \
     --agent.mmd_kernel_scales "(0.25,0.5,1.0,2.0,4.0,8.0)" \

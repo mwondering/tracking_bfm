@@ -34,7 +34,7 @@ if [[ "$MODE" == "evaluate" ]]; then
     --failure-threshold "$FAILURE_THRESHOLD"
     --output-file "$OUTPUT_FILE"
     --checkpoint-file "$CHECKPOINT_FILE"
-    # --gpu_ids "[0,1,2]"
+    --gpu_ids "[2,3]"
   )
   "${CMD[@]}"
 elif [[ "$MODE" == "delete" ]]; then
