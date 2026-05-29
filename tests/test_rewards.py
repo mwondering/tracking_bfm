@@ -17,6 +17,7 @@ from mjlab.envs.mdp.rewards import (
 from mjlab.managers.reward_manager import RewardManager, RewardTermCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sim.sim import Simulation, SimulationCfg
+from mjlab.tasks.tracking.mdp.rewards import motion_global_body_height_error_exp
 
 PARTIALLY_ACTUATED_ROBOT_XML = """
 <mujoco>
@@ -288,6 +289,26 @@ def test_joint_action_rate_l2_uses_first_trunk_slice_only() -> None:
   result = joint_action_rate_l2(env, asset_cfg=asset_cfg)
 
   expected = torch.tensor([(4.0 - 1.0) ** 2 + (8.0 - 5.0) ** 2])
+  torch.testing.assert_close(result, expected)
+
+
+def test_motion_global_body_height_error_exp_uses_selected_body() -> None:
+  class FakeCommand:
+    cfg = Mock(body_names=("pelvis", "torso"))
+    body_pos_w = torch.tensor([[[0.0, 0.0, 1.2], [0.0, 0.0, 2.0]]])
+    robot_body_pos_w = torch.tensor([[[0.0, 0.0, 1.0], [0.0, 0.0, 5.0]]])
+
+  env = Mock()
+  env.command_manager.get_term.return_value = FakeCommand()
+
+  result = motion_global_body_height_error_exp(
+    env,
+    command_name="motion",
+    std=0.5,
+    body_name="pelvis",
+  )
+
+  expected = torch.exp(torch.tensor([-((1.2 - 1.0) ** 2) / (0.5**2)]))
   torch.testing.assert_close(result, expected)
 
 

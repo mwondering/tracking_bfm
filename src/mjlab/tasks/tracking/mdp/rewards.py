@@ -113,6 +113,20 @@ def motion_global_body_angular_velocity_error_exp(
   return torch.exp(-error.mean(-1) / std**2)
 
 
+def motion_global_body_height_error_exp(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  std: float,
+  body_name: str,
+) -> torch.Tensor:
+  command = cast(MotionCommand, env.command_manager.get_term(command_name))
+  body_index = tuple(command.cfg.body_names).index(body_name)
+  error = torch.square(
+    command.body_pos_w[:, body_index, 2] - command.robot_body_pos_w[:, body_index, 2]
+  )
+  return torch.exp(-error / std**2)
+
+
 def self_collision_cost(
   env: ManagerBasedRlEnv,
   sensor_name: str,

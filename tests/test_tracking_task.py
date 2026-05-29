@@ -143,6 +143,8 @@ def test_g1_tracking_penalizes_waist_action_rate(
 ) -> None:
   """G1 tracking tasks should include a waist-only action-rate penalty."""
   for task_id in g1_tracking_task_ids:
+    if "LatentTracking" in task_id:
+      continue
     cfg = load_env_cfg(task_id)
 
     assert "waist_action_rate_l2" in cfg.rewards

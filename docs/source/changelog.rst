@@ -13,6 +13,14 @@ Added
   and baseline velocity policies from local checkpoints.
 - Added a configurable joint-specific action-rate reward and enabled a
   waist-only action-rate penalty for Unitree G1 tracking tasks.
+- Added ``Mjlab-LatentTrackingbfm-Flat-Unitree-G1-1Stage`` for latent-action
+  one-stage Unitree G1 motion tracking with the existing tracking rewards.
+- Added ``scripts/train_latent_tracking_1stage.sh`` to launch latent-action
+  one-stage tracking training with optional resume support.
+- Changed the latent-action one-stage tracking task to optimize only sparse
+  command tracking rewards: end-effector pose, pelvis linear/angular velocity,
+  and pelvis height. The task keeps the one-stage tracking asymmetric critic
+  observations, while ``proprio_actor`` remains available for the latent decoder.
 - Added ``ContactSensor.primary_names`` property to expose the resolved
   primary names in the order they appear along the per-contact axis of the
   output tensors. This makes it possible to map a contact-data column back
