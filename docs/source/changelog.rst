@@ -17,6 +17,8 @@ Added
   one-stage Unitree G1 motion tracking with the existing tracking rewards.
 - Added ``scripts/train_latent_tracking_1stage.sh`` to launch latent-action
   one-stage tracking training with optional resume support.
+- Added ``scripts/play_latent_tracking_1stage.sh`` to visualize latent-action
+  sparse one-stage tracking policies on a replay motion file.
 - Changed the latent-action one-stage tracking task to optimize only sparse
   command tracking rewards: end-effector pose, pelvis linear/angular velocity,
   and pelvis height. The task keeps the one-stage tracking asymmetric critic

@@ -56,6 +56,10 @@ def test_latent_tracking_1stage_uses_sparse_tracking_rewards() -> None:
     "sparse_root_lin_vel",
     "sparse_root_ang_vel",
     "sparse_root_height",
+    "action_rate_l2",
+    "waist_action_rate_l2",
+    "joint_limit",
+    "self_collisions",
   )
   assert cfg.rewards["sparse_ee_pos"].func is mdp.motion_relative_body_position_error_exp
   assert cfg.rewards["sparse_ee_ori"].func is mdp.motion_relative_body_orientation_error_exp

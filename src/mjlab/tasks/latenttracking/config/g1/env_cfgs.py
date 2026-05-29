@@ -3,9 +3,9 @@
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg
 from mjlab.managers.reward_manager import RewardTermCfg
+from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.tasks.distillation.mdp.observations import build_proprio_actor_terms
 from mjlab.tasks.tracking import mdp
-from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.tasks.tracking.config.g1.env_cfgs import (
   unitree_g1_flat_tracking_bfm_1stage_env_cfg,
 )
