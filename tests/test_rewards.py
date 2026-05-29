@@ -9,7 +9,11 @@ from conftest import get_test_device
 
 from mjlab.actuator import BuiltinPositionActuatorCfg
 from mjlab.entity import Entity, EntityArticulationInfoCfg, EntityCfg
-from mjlab.envs.mdp.rewards import electrical_power_cost, joint_torques_l2
+from mjlab.envs.mdp.rewards import (
+  electrical_power_cost,
+  joint_action_rate_l2,
+  joint_torques_l2,
+)
 from mjlab.managers.reward_manager import RewardManager, RewardTermCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sim.sim import Simulation, SimulationCfg
@@ -228,6 +232,63 @@ def test_electrical_power_cost_partially_actuated(device):
   #           env1 = max(0,1.0*2.0) + max(0,-4.0*1.0) = 2.0 + 0 = 2.0.
   expected = torch.tensor([6.0, 2.0], device=device)
   assert torch.allclose(power_cost, expected)
+
+
+def test_joint_action_rate_l2_penalizes_selected_joint_actions() -> None:
+  """joint_action_rate_l2 should only use selected joints in the action term."""
+
+  class FakeTerm:
+    action_dim = 5
+    target_ids = torch.tensor([10, 11, 12, 13, 14])
+
+  class FakeOtherTerm:
+    action_dim = 2
+
+  class FakeActionManager:
+    action_trunk_len = 1
+    active_terms = ["arm", "joint_pos"]
+    action = torch.tensor([[100.0, 100.0, 0.0, 3.0, 5.0, 7.0, 11.0]])
+    prev_action = torch.tensor([[0.0, 0.0, 0.0, 1.0, 5.0, 2.0, 11.0]])
+
+    def get_term(self, name: str):
+      return FakeOtherTerm() if name == "arm" else FakeTerm()
+
+  env = Mock()
+  env.action_manager = FakeActionManager()
+  asset_cfg = SceneEntityCfg("robot", joint_ids=[11, 13])
+
+  result = joint_action_rate_l2(env, asset_cfg=asset_cfg)
+
+  expected = torch.tensor([(3.0 - 1.0) ** 2 + (7.0 - 2.0) ** 2])
+  torch.testing.assert_close(result, expected)
+
+
+def test_joint_action_rate_l2_uses_first_trunk_slice_only() -> None:
+  """Trunk action mode should match action_rate_l2's first-slice convention."""
+
+  class FakeTerm:
+    action_dim = 3
+    target_ids = torch.tensor([0, 1, 2])
+
+  class FakeActionManager:
+    action_trunk_len = 2
+    total_action_dim = 3
+    active_terms = ["joint_pos"]
+    action_sequence = torch.tensor([[[1.0, 4.0, 8.0], [10.0, 20.0, 30.0]]])
+    prev_action_sequence = torch.tensor([[[1.0, 1.0, 5.0], [0.0, 0.0, 0.0]]])
+
+    def get_term(self, name: str):
+      assert name == "joint_pos"
+      return FakeTerm()
+
+  env = Mock()
+  env.action_manager = FakeActionManager()
+  asset_cfg = SceneEntityCfg("robot", joint_ids=[1, 2])
+
+  result = joint_action_rate_l2(env, asset_cfg=asset_cfg)
+
+  expected = torch.tensor([(4.0 - 1.0) ** 2 + (8.0 - 5.0) ** 2])
+  torch.testing.assert_close(result, expected)
 
 
 def test_reward_manager_handles_nan_values(mock_env):

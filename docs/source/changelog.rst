@@ -11,6 +11,8 @@ Added
 - Added ``scripts/play_latent_terrain.sh`` and
   ``scripts/play_baseline_terrain.sh`` for visualizing rough-terrain latent
   and baseline velocity policies from local checkpoints.
+- Added a configurable joint-specific action-rate reward and enabled a
+  waist-only action-rate penalty for Unitree G1 tracking tasks.
 - Added ``ContactSensor.primary_names`` property to expose the resolved
   primary names in the order they appear along the per-contact axis of the
   output tensors. This makes it possible to map a contact-data column back

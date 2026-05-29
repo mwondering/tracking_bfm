@@ -75,6 +75,48 @@ def action_rate_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
   return torch.sum(torch.square(action_rate), dim=1)
 
 
+def joint_action_rate_l2(
+  env: ManagerBasedRlEnv,
+  asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+  action_name: str = "joint_pos",
+) -> torch.Tensor:
+  """Penalize raw action changes for selected joints in a joint action term."""
+  action_manager = env.action_manager
+  action_term = action_manager.get_term(action_name)
+  if not hasattr(action_term, "target_ids"):
+    raise ValueError(f"Action term '{action_name}' does not expose target_ids.")
+
+  term_start = 0
+  for term_name in action_manager.active_terms:
+    term = action_manager.get_term(term_name)
+    if term_name == action_name:
+      break
+    term_start += term.action_dim
+  else:
+    raise KeyError(f"Action term '{action_name}' not found.")
+
+  target_ids = action_term.target_ids
+  if isinstance(asset_cfg.joint_ids, slice):
+    term_action_ids = torch.arange(
+      action_term.action_dim, device=target_ids.device, dtype=torch.long
+    )
+  else:
+    joint_ids = torch.as_tensor(asset_cfg.joint_ids, device=target_ids.device)
+    term_action_ids = torch.nonzero(torch.isin(target_ids, joint_ids), as_tuple=False)
+    term_action_ids = term_action_ids.flatten()
+
+  if getattr(action_manager, "action_trunk_len", 1) == 1:
+    action_rate = action_manager.action - action_manager.prev_action
+  else:
+    action_rate = (
+      action_manager.action_sequence[:, 0, :]
+      - action_manager.prev_action_sequence[:, 0, :]
+    )
+
+  action_ids = term_action_ids + term_start
+  return torch.sum(torch.square(action_rate[:, action_ids]), dim=1)
+
+
 def action_acc_l2(env: ManagerBasedRlEnv) -> torch.Tensor:
   """Penalize the acceleration of the actions using L2 squared kernel.
 

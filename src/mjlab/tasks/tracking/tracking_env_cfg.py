@@ -275,6 +275,21 @@ def make_tracking_env_cfg(
       params={"command_name": "motion", "std": 3.14},
     ),
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-1e-1),
+    "waist_action_rate_l2": RewardTermCfg(
+      func=mdp.joint_action_rate_l2,
+      weight=-1e-1,
+      params={
+        "asset_cfg": SceneEntityCfg(
+          "robot",
+          joint_names=(
+            "waist_yaw_joint",
+            "waist_roll_joint",
+            "waist_pitch_joint",
+          ),
+        ),
+        "action_name": "joint_pos",
+      },
+    ),
     "joint_limit": RewardTermCfg(
       func=mdp.joint_pos_limits,
       weight=-10.0,

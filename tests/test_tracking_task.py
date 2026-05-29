@@ -5,6 +5,7 @@ import pytest
 from mjlab.asset_zoo.robots import G1_ACTION_SCALE
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
+from mjlab.tasks.tracking import mdp
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
@@ -134,6 +135,24 @@ def test_g1_tracking_has_correct_action_scale(g1_tracking_task_ids: list[str]) -
 
     assert joint_pos_action.scale == G1_ACTION_SCALE, (
       f"Task {task_id} action scale mismatch, expected G1_ACTION_SCALE"
+    )
+
+
+def test_g1_tracking_penalizes_waist_action_rate(
+  g1_tracking_task_ids: list[str],
+) -> None:
+  """G1 tracking tasks should include a waist-only action-rate penalty."""
+  for task_id in g1_tracking_task_ids:
+    cfg = load_env_cfg(task_id)
+
+    assert "waist_action_rate_l2" in cfg.rewards
+    reward = cfg.rewards["waist_action_rate_l2"]
+    assert reward.func is mdp.joint_action_rate_l2
+    assert reward.params["action_name"] == "joint_pos"
+    assert reward.params["asset_cfg"].joint_names == (
+      "waist_yaw_joint",
+      "waist_roll_joint",
+      "waist_pitch_joint",
     )
 
 
