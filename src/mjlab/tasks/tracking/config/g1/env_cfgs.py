@@ -1,12 +1,17 @@
 """Unitree G1 flat tracking environment configurations."""
 
+import math
+
 from mjlab.asset_zoo.robots import (
   G1_ACTION_SCALE,
   get_g1_robot_cfg,
 )
 from mjlab.envs import ManagerBasedRlEnvCfg
+from mjlab.envs.mdp import dr
 from mjlab.envs.mdp.actions import JointPositionActionCfg
+from mjlab.managers.event_manager import EventTermCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
+from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
 from mjlab.tasks.distillation.mdp import commands as distill_commands
 from mjlab.tasks.tracking import mdp
@@ -19,6 +24,8 @@ from mjlab.utils.noise import UniformNoiseCfg as Unoise
 
 _STUDENT_EE_BODY_NAMES = ("left_wrist_yaw_link", "right_wrist_yaw_link")
 _STUDENT_ANCHOR_BODY_NAME = "pelvis"
+_BASE_INERTIA_ALPHA_RANGE = (0.5 * math.log(0.92), 0.5 * math.log(1.08))
+_BODY_INERTIA_ALPHA_RANGE = (0.5 * math.log(0.95), 0.5 * math.log(1.05))
 
 
 def _robot_state_history_length(history_steps: int) -> int:
@@ -103,6 +110,32 @@ def _unitree_g1_sparse_actor_cfg(
     },
     concatenate_terms=True,
     enable_corruption=enable_corruption,
+  )
+
+
+def add_base_inertia_randomization(cfg: ManagerBasedRlEnvCfg) -> None:
+  """Add torso mass, inertia, and COM randomization to a G1 tracking config."""
+  cfg.events["base_inertia"] = EventTermCfg(
+    mode="startup",
+    func=dr.pseudo_inertia,
+    params={
+      "asset_cfg": SceneEntityCfg("robot", body_names=("torso_link",)),
+      "alpha_range": _BASE_INERTIA_ALPHA_RANGE,
+      "t_range": (-0.02, 0.02),
+    },
+  )
+
+
+def add_body_inertia_randomization(cfg: ManagerBasedRlEnvCfg) -> None:
+  """Add non-torso mass, inertia, and COM randomization to a G1 tracking config."""
+  cfg.events["body_inertia"] = EventTermCfg(
+    mode="startup",
+    func=dr.pseudo_inertia,
+    params={
+      "asset_cfg": SceneEntityCfg("robot", body_names=r"^(?!torso_link$).+"),
+      "alpha_range": _BODY_INERTIA_ALPHA_RANGE,
+      "t_range": (-0.01, 0.01),
+    },
   )
 
 
@@ -216,11 +249,15 @@ def unitree_g1_flat_tracking_bfm_env_cfg(
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
   """Create the multi-motion Unitree G1 flat terrain tracking configuration."""
-  return _unitree_g1_flat_tracking_env_cfg(
+  cfg = _unitree_g1_flat_tracking_env_cfg(
     MultiMotionCommandCfg,
     has_state_estimation=has_state_estimation,
     play=play,
   )
+  cfg.events.pop("base_com", None)
+  add_base_inertia_randomization(cfg)
+  add_body_inertia_randomization(cfg)
+  return cfg
 
 
 def unitree_g1_flat_tracking_bfm_action_trunk_env_cfg(

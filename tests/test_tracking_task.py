@@ -1,8 +1,11 @@
 """Tests specific to motion tracking tasks."""
 
+import math
+
 import pytest
 
 from mjlab.asset_zoo.robots import G1_ACTION_SCALE
+from mjlab.envs.mdp import dr
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
 from mjlab.tasks.tracking import mdp
@@ -156,6 +159,45 @@ def test_g1_tracking_penalizes_waist_action_rate(
       "waist_roll_joint",
       "waist_pitch_joint",
     )
+
+
+def test_tracking_bfm_defaults_to_inertia_randomization() -> None:
+  """BFM tracking should randomize torso and non-torso inertial parameters."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1")
+
+  assert "base_inertia" in cfg.events
+  assert "body_inertia" in cfg.events
+  assert "base_com" not in cfg.events
+
+  base_event = cfg.events["base_inertia"]
+  body_event = cfg.events["body_inertia"]
+
+  assert base_event.mode == "startup"
+  assert base_event.func is dr.pseudo_inertia
+  assert base_event.params["asset_cfg"].body_names == ("torso_link",)
+  assert base_event.params["alpha_range"] == (
+    0.5 * math.log(0.92),
+    0.5 * math.log(1.08),
+  )
+  assert base_event.params["t_range"] == (-0.01, 0.01)
+
+  assert body_event.mode == "startup"
+  assert body_event.func is dr.pseudo_inertia
+  assert body_event.params["asset_cfg"].body_names == r"^(?!torso_link$).+"
+  assert body_event.params["alpha_range"] == (
+    0.5 * math.log(0.95),
+    0.5 * math.log(1.05),
+  )
+  assert body_event.params["t_range"] == (-0.005, 0.005)
+
+
+def test_tracking_bfm_play_keeps_inertia_randomization() -> None:
+  """BFM play mode should keep startup inertial DR like other startup DR."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1", play=True)
+
+  assert "push_robot" not in cfg.events
+  assert "base_inertia" in cfg.events
+  assert "body_inertia" in cfg.events
 
 
 def test_tracking_1stage_task_uses_sparse_actor_obs() -> None:
