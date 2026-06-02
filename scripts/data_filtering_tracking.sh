@@ -18,7 +18,9 @@ MOTION_TYPE="${MOTION_TYPE:-isaaclab}"
 NUM_ENVS="${NUM_ENVS:-16384}"
 VIEWER="${VIEWER:-none}"
 FAILURE_THRESHOLD="${FAILURE_THRESHOLD:-0.95}"
+COMPLETION_THRESHOLD="${COMPLETION_THRESHOLD:-0.95}"
 OUTPUT_FILE="${OUTPUT_FILE:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic/2026-04-28_15-53-48_multi_gpu_adaptive_nocommandwindow_16384/filter_report.json}"
+OUTPUT_MOTION_PATH="${OUTPUT_MOTION_PATH:-/data/wxy/tracking_bfm/generated_motion_data}"
 REPORT_FILE="${REPORT_FILE:-$OUTPUT_FILE}"
 MISSING_OK="${MISSING_OK:-True}"
 
@@ -37,6 +39,21 @@ if [[ "$MODE" == "evaluate" ]]; then
     --gpu_ids "[2,3]"
   )
   "${CMD[@]}"
+elif [[ "$MODE" == "generate-dataset" ]]; then
+  CMD=(
+    uv run data-filtering generate-dataset "$TASK"
+    --history-steps 0
+    --future-steps 1
+    --motion-path "$MOTION_PATH"
+    --motion-type "$MOTION_TYPE"
+    --num-envs "$NUM_ENVS"
+    --completion-threshold "$COMPLETION_THRESHOLD"
+    --output-motion-path "$OUTPUT_MOTION_PATH"
+    --output-file "$OUTPUT_FILE"
+    --checkpoint-file "$CHECKPOINT_FILE"
+    --gpu_ids "[2,3]"
+  )
+  "${CMD[@]}"
 elif [[ "$MODE" == "delete" ]]; then
   CMD=(
     uv run data-filtering delete
@@ -46,6 +63,6 @@ elif [[ "$MODE" == "delete" ]]; then
   "${CMD[@]}"
 else
   echo "Unknown MODE: $MODE" >&2
-  echo "Use MODE=evaluate or MODE=delete" >&2
+  echo "Use MODE=evaluate, MODE=delete, or MODE=generate-dataset" >&2
   exit 1
 fi

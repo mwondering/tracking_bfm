@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
 
+import numpy as np
 import torch
 import tyro
 from tensordict import TensorDict
@@ -57,9 +58,35 @@ class DeleteConfig:
   missing_ok: bool = True
 
 
-def motion_sequence_complete(
-  env: ManagerBasedRlEnv, command_name: str
-) -> torch.Tensor:
+@dataclass(frozen=True)
+class GenerateDatasetConfig:
+  wandb_run_path: str | None = None
+  wandb_checkpoint_name: str | None = None
+  checkpoint_file: str | None = None
+  motion_path: str | None = None
+  motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
+  history_steps: int | None = None
+  future_steps: int | None = None
+  num_envs: int = 1024
+  device: str | None = None
+  completion_threshold: float = 0.95
+  output_motion_path: str = "generated_motions"
+  output_file: str = "generated_motions_report.json"
+  torchrunx_log_dir: str | None = None
+  gpu_ids: list[int] | Literal["all"] | None = None
+
+
+_MOTION_NPZ_FIELDS = (
+  "joint_pos",
+  "joint_vel",
+  "body_pos_w",
+  "body_quat_w",
+  "body_lin_vel_w",
+  "body_ang_vel_w",
+)
+
+
+def motion_sequence_complete(env: ManagerBasedRlEnv, command_name: str) -> torch.Tensor:
   """Terminate an evaluation episode exactly at the end of its assigned motion."""
   command = cast(Any, env.command_manager.get_term(command_name))
   return env.episode_length_buf >= command.motion_length
@@ -86,7 +113,14 @@ def _prepare_filtering_env_cfg(env_cfg):
   if "critic" in env_cfg.observations:
     env_cfg.observations["critic"].enable_corruption = False
 
-  for event_name in ("push_robot", "base_com", "encoder_bias", "foot_friction"):
+  for event_name in (
+    "push_robot",
+    "base_com",
+    "base_inertia",
+    "body_inertia",
+    "encoder_bias",
+    "foot_friction",
+  ):
     env_cfg.events.pop(event_name, None)
 
   env_cfg.episode_length_s = int(1e9)
@@ -125,14 +159,16 @@ def _collect_motion_files(motion_root: str) -> list[Path]:
     raise ValueError(f"motion_path must be a directory: {motion_root}")
 
   motion_files = sorted(
-    path for path in motion_root_path.rglob("*") if path.is_file() and path.suffix.lower() == ".npz"
+    path
+    for path in motion_root_path.rglob("*")
+    if path.is_file() and path.suffix.lower() == ".npz"
   )
   if not motion_files:
     raise ValueError(f"No .npz motion files found under: {motion_root}")
   return motion_files
 
 
-def _resolve_motion_root(cfg: EvaluateConfig) -> str:
+def _resolve_motion_root(cfg: EvaluateConfig | GenerateDatasetConfig) -> str:
   if cfg.motion_path is not None:
     return cfg.motion_path
   if cfg.wandb_run_path is None:
@@ -151,7 +187,9 @@ def _resolve_motion_root(cfg: EvaluateConfig) -> str:
   return str(Path(artifact.download()))
 
 
-def _resolve_checkpoint_path(task_id: str, cfg: EvaluateConfig) -> tuple[Path, str]:
+def _resolve_checkpoint_path(
+  task_id: str, cfg: EvaluateConfig | GenerateDatasetConfig
+) -> tuple[Path, str]:
   agent_cfg = load_rl_cfg(task_id)
   log_root_path = (Path("logs") / "rsl_rl" / agent_cfg.experiment_name).resolve()
 
@@ -281,6 +319,64 @@ def _build_filter_report(
   }
 
 
+def _output_motion_path_for(
+  source_motion_path: Path,
+  motion_root: Path | str,
+  output_motion_root: Path | str,
+) -> Path:
+  """Map a source motion path into the generated dataset while preserving layout."""
+  source_path = Path(source_motion_path).resolve()
+  root_path = Path(motion_root).resolve()
+  output_root_path = Path(output_motion_root)
+  relative_path = source_path.relative_to(root_path)
+  return output_root_path / relative_path
+
+
+def _save_rollout_motion(output_path: Path, rollout: dict[str, np.ndarray]) -> None:
+  """Save one teacher rollout clip in the standard motion ``.npz`` format."""
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  np.savez(output_path, **cast(dict[str, Any], rollout))
+
+
+def _build_generate_dataset_report(
+  *,
+  task_id: str,
+  motion_root: str,
+  output_motion_root: str,
+  checkpoint: str,
+  threshold: float,
+  saved_records: list[dict[str, Any]],
+  failed_records: list[dict[str, Any]],
+  rank: int,
+  world_size: int,
+) -> dict[str, Any]:
+  sorted_saved = sorted(saved_records, key=lambda item: item["motion_index"])
+  sorted_failed = sorted(failed_records, key=lambda item: item["motion_index"])
+  total_motion_count = len(sorted_saved) + len(sorted_failed)
+  saved_motion_count = len(sorted_saved)
+  failed_motion_count = len(sorted_failed)
+  saved_motion_ratio = (
+    saved_motion_count / total_motion_count if total_motion_count > 0 else 0.0
+  )
+
+  return {
+    "created_at": datetime.now(tz=timezone.utc).isoformat(),
+    "task_id": task_id,
+    "motion_root": motion_root,
+    "output_motion_root": output_motion_root,
+    "checkpoint": checkpoint,
+    "completion_threshold": threshold,
+    "rank": rank,
+    "world_size": world_size,
+    "total_motion_count": total_motion_count,
+    "saved_motion_count": saved_motion_count,
+    "failed_motion_count": failed_motion_count,
+    "saved_motion_ratio": saved_motion_ratio,
+    "saved_motions": sorted_saved,
+    "failed_motions": sorted_failed,
+  }
+
+
 def _extract_failed_motion_paths(report: dict[str, Any]) -> list[Path]:
   failed_paths = {
     Path(entry["path"]).resolve()
@@ -290,7 +386,9 @@ def _extract_failed_motion_paths(report: dict[str, Any]) -> list[Path]:
   return sorted(failed_paths)
 
 
-def _load_policy(task_id: str, env: RslRlVecEnvWrapper, device: str, checkpoint_path: Path):
+def _load_policy(
+  task_id: str, env: RslRlVecEnvWrapper, device: str, checkpoint_path: Path
+):
   agent_cfg = load_rl_cfg(task_id)
   runner_cls = load_runner_cls(task_id) or MjlabOnPolicyRunner
   runner = runner_cls(env, asdict(agent_cfg), device=device)
@@ -311,7 +409,9 @@ def _shard_motion_files(
   return motion_files[rank::world_size]
 
 
-def _runtime_rank_context(cfg: EvaluateConfig) -> tuple[str, int, int]:
+def _runtime_rank_context(
+  cfg: EvaluateConfig | GenerateDatasetConfig,
+) -> tuple[str, int, int]:
   cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", "")
   world_size = int(os.environ.get("WORLD_SIZE", "1"))
   rank = int(os.environ.get("RANK", "0"))
@@ -335,9 +435,15 @@ def _rank_output_path(output_file: str, rank: int, world_size: int) -> Path:
   )
 
 
-def _prepare_launch_cfg(cfg: EvaluateConfig) -> EvaluateConfig:
-  if cfg.gpu_ids is not None and cfg.viewer != "none":
-    print("[INFO] gpu_ids provided; forcing viewer=none to avoid multi-process viewer conflicts.")
+def _prepare_launch_cfg(
+  cfg: EvaluateConfig | GenerateDatasetConfig,
+) -> EvaluateConfig | GenerateDatasetConfig:
+  if (
+    isinstance(cfg, EvaluateConfig) and cfg.gpu_ids is not None and cfg.viewer != "none"
+  ):
+    print(
+      "[INFO] gpu_ids provided; forcing viewer=none to avoid multi-process viewer conflicts."
+    )
     return replace(cfg, viewer="none")
   return cfg
 
@@ -377,6 +483,59 @@ def _merge_filter_reports(
     "failed_motion_ratio": (
       failed_motion_count / total_motion_count if total_motion_count > 0 else 0.0
     ),
+    "failed_motions": merged_failed_motions,
+  }
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  with output_path.open("w", encoding="utf-8") as file:
+    json.dump(merged_report, file, indent=2)
+  return merged_report
+
+
+def _merge_generate_dataset_reports(
+  report_paths: list[Path], output_path: Path
+) -> dict[str, Any]:
+  reports = []
+  for report_path in sorted(report_paths):
+    with report_path.open("r", encoding="utf-8") as file:
+      reports.append(json.load(file))
+  if not reports:
+    raise ValueError("No partial reports found to merge.")
+
+  merged_saved_motions: list[dict[str, Any]] = []
+  merged_failed_motions: list[dict[str, Any]] = []
+  total_motion_count = 0
+  saved_motion_count = 0
+  failed_motion_count = 0
+
+  for report in reports:
+    total_motion_count += int(report["total_motion_count"])
+    saved_motion_count += int(report["saved_motion_count"])
+    failed_motion_count += int(report["failed_motion_count"])
+    merged_saved_motions.extend(report.get("saved_motions", []))
+    merged_failed_motions.extend(report.get("failed_motions", []))
+
+  merged_saved_motions.sort(
+    key=lambda item: (item.get("rank", -1), item.get("motion_index", -1))
+  )
+  merged_failed_motions.sort(
+    key=lambda item: (item.get("rank", -1), item.get("motion_index", -1))
+  )
+  merged_report = {
+    "created_at": datetime.now(tz=timezone.utc).isoformat(),
+    "task_id": reports[0]["task_id"],
+    "motion_root": reports[0]["motion_root"],
+    "output_motion_root": reports[0]["output_motion_root"],
+    "checkpoint": reports[0]["checkpoint"],
+    "completion_threshold": reports[0]["completion_threshold"],
+    "world_size": max(int(report.get("world_size", 1)) for report in reports),
+    "report_parts": len(reports),
+    "total_motion_count": total_motion_count,
+    "saved_motion_count": saved_motion_count,
+    "failed_motion_count": failed_motion_count,
+    "saved_motion_ratio": (
+      saved_motion_count / total_motion_count if total_motion_count > 0 else 0.0
+    ),
+    "saved_motions": merged_saved_motions,
     "failed_motions": merged_failed_motions,
   }
   output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -464,7 +623,8 @@ class FilteringEvalEnv:
     done_env_ids = torch.where(dones.bool() & pre_active_mask)[0]
     if done_env_ids.numel() == 0:
       self.finished = bool(
-        self._next_motion_index >= len(self._motion_files) and not self._active_mask.any()
+        self._next_motion_index >= len(self._motion_files)
+        and not self._active_mask.any()
       )
       return obs, rew, dones, extras
 
@@ -542,9 +702,7 @@ def _resolve_viewer_backend(
   if viewer == "none":
     return None
   if viewer == "auto":
-    has_display = bool(
-      os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")  # type: ignore[name-defined]
-    )
+    has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
     return "native" if has_display else "viser"
   return viewer
 
@@ -556,7 +714,11 @@ def _run_viewer_loop(viewer: NativeMujocoViewer | ViserPlayViewer) -> None:
   viewer._stats_last_time = now
   viewer._last_tick_time = now
   try:
-    while viewer.is_running() and not viewer.env.finished and not viewer._interrupted:
+    while (
+      viewer.is_running()
+      and not cast(Any, viewer.env).finished
+      and not viewer._interrupted
+    ):
       if not viewer.tick():
         time.sleep(0.001)
       viewer._update_stats()
@@ -627,7 +789,9 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
   configure_torch_backends()
   device, rank, world_size = _runtime_rank_context(cfg)
   motion_root = _resolve_motion_root(cfg)
-  motion_files = _shard_motion_files(_collect_motion_files(motion_root), world_size, rank)
+  motion_files = _shard_motion_files(
+    _collect_motion_files(motion_root), world_size, rank
+  )
   checkpoint_path, checkpoint_label = _resolve_checkpoint_path(task_id, cfg)
   if cfg.viewer != "none":
     return _run_viewer_evaluate(
@@ -689,7 +853,9 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
 
     active_mask[assign_env_ids] = True
     assigned_motion_ids[assign_env_ids] = motion_indices
-    assigned_motion_lengths[assign_env_ids] = command.motion.file_lengths[motion_indices]
+    assigned_motion_lengths[assign_env_ids] = command.motion.file_lengths[
+      motion_indices
+    ]
 
     if assign_count < target_env_ids.numel():
       idle_env_ids = target_env_ids[assign_count:]
@@ -773,7 +939,7 @@ def run_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
 
 
 def launch_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
-  cfg = _prepare_launch_cfg(cfg)
+  cfg = cast(EvaluateConfig, _prepare_launch_cfg(cfg))
 
   if cfg.gpu_ids is None:
     return run_evaluate(task_id, cfg)
@@ -820,6 +986,303 @@ def launch_evaluate(task_id: str, cfg: EvaluateConfig) -> dict[str, Any]:
   return merged_report
 
 
+def _empty_rollout_buffer() -> dict[str, list[np.ndarray]]:
+  return {field: [] for field in _MOTION_NPZ_FIELDS}
+
+
+def _capture_rollout_batch(
+  command: Any, env_ids: torch.Tensor
+) -> dict[str, np.ndarray]:
+  """Capture current robot state for a batch of envs as CPU numpy arrays."""
+  body_pos_w = command.robot_body_pos_w[env_ids]
+  body_pos_w = body_pos_w - command._env.scene.env_origins[env_ids, None, :]
+  return {
+    "joint_pos": command.robot_joint_pos[env_ids].detach().cpu().numpy().copy(),
+    "joint_vel": command.robot_joint_vel[env_ids].detach().cpu().numpy().copy(),
+    "body_pos_w": body_pos_w.detach().cpu().numpy().copy(),
+    "body_quat_w": command.robot_body_quat_w[env_ids].detach().cpu().numpy().copy(),
+    "body_lin_vel_w": command.robot_body_lin_vel_w[env_ids]
+    .detach()
+    .cpu()
+    .numpy()
+    .copy(),
+    "body_ang_vel_w": command.robot_body_ang_vel_w[env_ids]
+    .detach()
+    .cpu()
+    .numpy()
+    .copy(),
+  }
+
+
+def _append_rollout_batch(
+  rollout_buffers: dict[int, dict[str, list[np.ndarray]]],
+  command: Any,
+  env_ids: torch.Tensor,
+) -> None:
+  if env_ids.numel() == 0:
+    return
+
+  batch = _capture_rollout_batch(command, env_ids)
+  for batch_index, env_id in enumerate(env_ids.detach().cpu().tolist()):
+    buffer = rollout_buffers.setdefault(int(env_id), _empty_rollout_buffer())
+    for field in _MOTION_NPZ_FIELDS:
+      buffer[field].append(batch[field][batch_index])
+
+
+def _stack_rollout_buffer(
+  buffer: dict[str, list[np.ndarray]],
+  *,
+  fps: Any,
+  frame_count: int,
+) -> dict[str, np.ndarray]:
+  rollout = {"fps": np.asarray(fps)}
+  for field in _MOTION_NPZ_FIELDS:
+    if len(buffer[field]) < frame_count:
+      raise ValueError(
+        f"Rollout field '{field}' has {len(buffer[field])} frames, "
+        f"expected at least {frame_count}."
+      )
+    frames = buffer[field][:frame_count]
+    if not frames:
+      raise ValueError(f"Cannot save rollout with no frames for field '{field}'.")
+    rollout[field] = np.stack(frames, axis=0)
+  return rollout
+
+
+def run_generate_dataset(task_id: str, cfg: GenerateDatasetConfig) -> dict[str, Any]:
+  configure_torch_backends()
+  device, rank, world_size = _runtime_rank_context(cfg)
+  motion_root = _resolve_motion_root(cfg)
+  motion_files = _shard_motion_files(
+    _collect_motion_files(motion_root), world_size, rank
+  )
+  checkpoint_path, checkpoint_label = _resolve_checkpoint_path(task_id, cfg)
+
+  env_cfg = _prepare_filtering_env_cfg(load_env_cfg(task_id, play=False))
+  motion_cmd = env_cfg.commands["motion"]
+  assert isinstance(motion_cmd, MultiMotionCommandCfg)
+  _configure_motion_command(
+    motion_cmd,
+    motion_path=motion_root,
+    motion_type=cfg.motion_type,
+    history_steps=cfg.history_steps,
+    future_steps=cfg.future_steps,
+  )
+  env_cfg.scene.num_envs = min(cfg.num_envs, len(motion_files))
+
+  env = ManagerBasedRlEnv(cfg=env_cfg, device=device)
+  vec_env = RslRlVecEnvWrapper(env, clip_actions=load_rl_cfg(task_id).clip_actions)
+  policy = _load_policy(task_id, vec_env, device, checkpoint_path)
+
+  command = cast(Any, env.command_manager.get_term("motion"))
+  env_ids = torch.arange(env.num_envs, device=env.device, dtype=torch.long)
+
+  active_mask = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+  assigned_motion_ids = torch.full(
+    (env.num_envs,), -1, dtype=torch.long, device=env.device
+  )
+  assigned_motion_lengths = torch.zeros(
+    env.num_envs, dtype=torch.long, device=env.device
+  )
+  rollout_buffers: dict[int, dict[str, list[np.ndarray]]] = {}
+
+  next_motion_index = 0
+
+  def assign_available(target_env_ids: torch.Tensor) -> None:
+    nonlocal next_motion_index
+    if target_env_ids.numel() == 0:
+      return
+
+    remaining = len(motion_files) - next_motion_index
+    if remaining <= 0:
+      active_mask[target_env_ids] = False
+      assigned_motion_ids[target_env_ids] = -1
+      assigned_motion_lengths[target_env_ids] = 0
+      for env_id in target_env_ids.detach().cpu().tolist():
+        rollout_buffers.pop(int(env_id), None)
+      return
+
+    assign_count = min(target_env_ids.numel(), remaining)
+    assign_env_ids = target_env_ids[:assign_count]
+    motion_indices = torch.arange(
+      next_motion_index,
+      next_motion_index + assign_count,
+      device=env.device,
+      dtype=torch.long,
+    )
+    next_motion_index += assign_count
+
+    _assign_motion_indices(env, command, assign_env_ids, motion_indices)
+
+    active_mask[assign_env_ids] = True
+    assigned_motion_ids[assign_env_ids] = motion_indices
+    assigned_motion_lengths[assign_env_ids] = command.motion.file_lengths[
+      motion_indices
+    ]
+    for env_id in assign_env_ids.detach().cpu().tolist():
+      rollout_buffers[int(env_id)] = _empty_rollout_buffer()
+
+    if assign_count < target_env_ids.numel():
+      idle_env_ids = target_env_ids[assign_count:]
+      active_mask[idle_env_ids] = False
+      assigned_motion_ids[idle_env_ids] = -1
+      assigned_motion_lengths[idle_env_ids] = 0
+      for env_id in idle_env_ids.detach().cpu().tolist():
+        rollout_buffers.pop(int(env_id), None)
+
+  assign_available(env_ids)
+  obs = TensorDict(env.obs_buf, batch_size=[env.num_envs])
+
+  saved_records: list[dict[str, Any]] = []
+  failed_records: list[dict[str, Any]] = []
+  progress = tqdm(total=len(motion_files), desc="Generating motions", unit="motion")
+  completed_motion_count = 0
+  output_motion_root = Path(cfg.output_motion_path)
+
+  while completed_motion_count < len(motion_files):
+    active_env_ids = torch.where(active_mask)[0]
+    _append_rollout_batch(rollout_buffers, command, active_env_ids)
+
+    pre_episode_lengths = env.episode_length_buf.clone()
+    pre_motion_ids = assigned_motion_ids.clone()
+    pre_motion_lengths = assigned_motion_lengths.clone()
+    pre_active_mask = active_mask.clone()
+
+    with torch.no_grad():
+      actions = policy(obs)
+
+    obs, _, dones, _ = vec_env.step(actions)
+
+    done_env_ids = torch.where(dones.bool() & pre_active_mask)[0]
+    if done_env_ids.numel() == 0:
+      continue
+
+    terminated = env.reset_terminated[done_env_ids].detach().cpu()
+    truncated = env.reset_time_outs[done_env_ids].detach().cpu()
+
+    for idx, env_id in enumerate(done_env_ids.tolist()):
+      motion_index = int(pre_motion_ids[env_id].item())
+      total_steps = int(pre_motion_lengths[env_id].item())
+      completed_steps = min(int(pre_episode_lengths[env_id].item()) + 1, total_steps)
+      completion_ratio = completed_steps / float(max(total_steps, 1))
+      source_path = motion_files[motion_index]
+      base_record = {
+        "motion_index": motion_index,
+        "path": str(source_path.resolve()),
+        "rank": rank,
+        "completed_steps": completed_steps,
+        "total_steps": total_steps,
+        "completion_ratio": completion_ratio,
+        "terminated": bool(terminated[idx].item()),
+        "truncated": bool(truncated[idx].item()),
+      }
+
+      if completion_ratio >= cfg.completion_threshold:
+        output_path = _output_motion_path_for(
+          source_path, motion_root, output_motion_root
+        )
+        rollout = _stack_rollout_buffer(
+          rollout_buffers[int(env_id)],
+          fps=command.motion.fps_list[motion_index],
+          frame_count=completed_steps,
+        )
+        _save_rollout_motion(output_path, rollout)
+        saved_records.append(
+          {
+            **base_record,
+            "output_path": str(output_path.resolve()),
+          }
+        )
+      else:
+        failed_records.append(base_record)
+
+      rollout_buffers.pop(int(env_id), None)
+
+    completed_motion_count += int(done_env_ids.numel())
+    progress.update(int(done_env_ids.numel()))
+
+    assign_available(done_env_ids.to(device=env.device))
+    obs = TensorDict(env.obs_buf, batch_size=[env.num_envs])
+
+  progress.close()
+  env.close()
+
+  report = _build_generate_dataset_report(
+    task_id=task_id,
+    motion_root=motion_root,
+    output_motion_root=str(output_motion_root),
+    checkpoint=checkpoint_label,
+    threshold=cfg.completion_threshold,
+    saved_records=saved_records,
+    failed_records=failed_records,
+    rank=rank,
+    world_size=world_size,
+  )
+  output_path = _rank_output_path(cfg.output_file, rank, world_size)
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  with output_path.open("w", encoding="utf-8") as file:
+    json.dump(report, file, indent=2)
+
+  print(
+    f"[INFO] Evaluated {report['total_motion_count']} motions. "
+    f"Saved: {report['saved_motion_count']} "
+    f"({report['saved_motion_ratio']:.2%})."
+  )
+  print(f"[INFO] Generated dataset root: {output_motion_root.resolve()}")
+  print(f"[INFO] Report saved to {output_path.resolve()}")
+  return report
+
+
+def launch_generate_dataset(task_id: str, cfg: GenerateDatasetConfig) -> dict[str, Any]:
+  cfg = cast(GenerateDatasetConfig, _prepare_launch_cfg(cfg))
+
+  if cfg.gpu_ids is None:
+    return run_generate_dataset(task_id, cfg)
+
+  selected_gpus, num_gpus = select_gpus(cfg.gpu_ids)
+  if selected_gpus is None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+  else:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, selected_gpus))
+  os.environ["MUJOCO_GL"] = "egl"
+
+  if num_gpus <= 1:
+    return run_generate_dataset(task_id, cfg)
+
+  import torchrunx
+
+  logging.basicConfig(level=logging.INFO)
+  if "TORCHRUNX_LOG_DIR" not in os.environ:
+    if cfg.torchrunx_log_dir is not None:
+      os.environ["TORCHRUNX_LOG_DIR"] = cfg.torchrunx_log_dir
+    else:
+      output_path = Path(cfg.output_file)
+      os.environ["TORCHRUNX_LOG_DIR"] = str(
+        output_path.parent / f"{output_path.stem}_torchrunx"
+      )
+
+  print(f"[INFO] Launching dataset generation with {num_gpus} GPUs", flush=True)
+  torchrunx.Launcher(
+    hostnames=["localhost"],
+    workers_per_host=num_gpus,
+    backend=None,
+    copy_env_vars=torchrunx.DEFAULT_ENV_VARS_FOR_COPY + ("MUJOCO*",),
+  ).run(run_generate_dataset, task_id, cfg)
+
+  rank_report_paths = [
+    _rank_output_path(cfg.output_file, rank=rank, world_size=num_gpus)
+    for rank in range(num_gpus)
+  ]
+  merged_report = _merge_generate_dataset_reports(
+    rank_report_paths, Path(cfg.output_file)
+  )
+  print(
+    f"[INFO] Merged {len(rank_report_paths)} partial reports into "
+    f"{Path(cfg.output_file).resolve()}"
+  )
+  return merged_report
+
+
 def run_delete(cfg: DeleteConfig) -> None:
   report_path = Path(cfg.report_file)
   if not report_path.exists():
@@ -848,9 +1311,13 @@ def run_delete(cfg: DeleteConfig) -> None:
 
 def _print_usage() -> None:
   print("usage: data-filtering evaluate <TASK> [OPTIONS]")
+  print("       data-filtering generate-dataset <TASK> [OPTIONS]")
   print("       data-filtering delete [OPTIONS]")
   print()
   print("Run 'data-filtering evaluate <TASK> --help' for evaluation options.")
+  print(
+    "Run 'data-filtering generate-dataset <TASK> --help' for dataset generation options."
+  )
   print("Run 'data-filtering delete --help' for deletion options.")
   print("Run 'uv run list-envs' to list available tasks.")
 
@@ -885,6 +1352,31 @@ def main() -> None:
       config=mjlab.TYRO_FLAGS,
     )
     launch_evaluate(chosen_task, args)
+    return
+
+  if command == "generate-dataset":
+    if len(sys.argv) < 3 or sys.argv[2] in ("-h", "--help"):
+      print("usage: data-filtering generate-dataset <TASK> [OPTIONS]")
+      print("Run 'uv run list-envs' to list available tasks.")
+      sys.exit(0)
+
+    import mjlab.tasks as _mjlab_tasks  # noqa: F401
+
+    tracking_tasks = [task for task in list_tasks() if "Tracking" in task]
+    chosen_task, remaining_args = tyro.cli(
+      tyro.extras.literal_type_from_choices(tracking_tasks),
+      args=sys.argv[2:],
+      add_help=False,
+      return_unknown_args=True,
+      config=mjlab.TYRO_FLAGS,
+    )
+    args = tyro.cli(
+      GenerateDatasetConfig,
+      args=remaining_args,
+      prog=sys.argv[0] + f" generate-dataset {chosen_task}",
+      config=mjlab.TYRO_FLAGS,
+    )
+    launch_generate_dataset(chosen_task, args)
     return
 
   if command == "delete":
