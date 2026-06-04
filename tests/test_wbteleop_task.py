@@ -58,13 +58,19 @@ def test_wbteleop_actor_obs_excludes_privileged_terms() -> None:
 def test_wbteleop_teacher_actor_is_teacher_only() -> None:
   env_cfg = load_env_cfg(TASK_ID)
   rl_cfg = load_rl_cfg(TASK_ID)
+  rl_dict = asdict(rl_cfg)
 
   assert "teacher_actor" in env_cfg.observations
   assert env_cfg.observations["teacher_actor"].enable_corruption is False
-  assert asdict(rl_cfg)["obs_groups"] == {
+  assert rl_dict["obs_groups"] == {
     "actor": ("actor",),
     "critic": ("critic",),
   }
+  assert rl_dict["algorithm"]["pure_bc_enabled"] is False
+  assert rl_dict["algorithm"]["pure_bc_weight"] == 1.0
+  assert rl_dict["algorithm"]["pure_bc_rollout"] == "student"
+  assert rl_dict["algorithm"]["bc_actor_checkpoint_path"] == ""
+  assert rl_dict["algorithm"]["init_critic_from_teacher"] is True
 
 
 @pytest.mark.parametrize("play", [False, True])
@@ -183,6 +189,36 @@ def test_wbteleop_ppo_update_reports_bc_metrics() -> None:
   assert metrics["bc_loss"] >= 0.0
 
 
+def test_wbteleop_bc_only_update_updates_actor_not_critic() -> None:
+  alg, obs = _make_wbteleop_algorithm_for_test()
+  actor_before = {
+    key: value.detach().clone() for key, value in alg.actor.state_dict().items()
+  }
+  critic_before = {
+    key: value.detach().clone() for key, value in alg.critic.state_dict().items()
+  }
+
+  for _ in range(2):
+    actions = alg.act(obs)
+    rewards = torch.ones(4)
+    dones = torch.zeros(4, dtype=torch.long)
+    alg.process_env_step(obs, rewards, dones, {})
+
+  metrics = alg.update_bc_only()
+
+  assert "pure_bc_mse" in metrics
+  assert "pure_bc_loss" in metrics
+  assert metrics["pure_bc_weight"] == pytest.approx(1.0)
+  assert any(
+    not torch.equal(value, actor_before[key])
+    for key, value in alg.actor.state_dict().items()
+  )
+  assert all(
+    torch.equal(value, critic_before[key])
+    for key, value in alg.critic.state_dict().items()
+  )
+
+
 class _TeacherRunnerProbe:
   loaded_path = None
   last_cfg = None
@@ -243,6 +279,180 @@ def test_wbteleop_runner_rejects_missing_teacher_checkpoint() -> None:
 
   with pytest.raises(ValueError, match="teacher_checkpoint_path must be provided"):
     runner._build_teacher_adapter()
+
+
+class _PureBcAlgProbe:
+  def __init__(self):
+    self.learning_rate = 1.0e-3
+    self.rnd = None
+    self.update_calls = 0
+    self.processed_steps = 0
+    self.trained = False
+
+  def train_mode(self):
+    self.trained = True
+
+  def act(self, obs):
+    return torch.zeros(obs.batch_size[0], 3)
+
+  def process_env_step(self, obs, rewards, dones, extras):
+    self.processed_steps += 1
+
+  def update_bc_only(self):
+    self.update_calls += 1
+    return {"pure_bc_mse": 0.25, "pure_bc_loss": 0.25, "pure_bc_weight": 1.0}
+
+  def get_policy(self):
+    return SimpleNamespace(output_std=torch.ones(3))
+
+
+class _PureBcEnvProbe:
+  def __init__(self):
+    self.num_envs = 2
+    self.device = torch.device("cpu")
+    self.max_episode_length = 8
+    self.episode_length_buf = torch.zeros(self.num_envs, dtype=torch.long)
+    self.step_calls = 0
+
+  def get_observations(self):
+    return TensorDict(
+      {
+        "actor": torch.ones(self.num_envs, 4),
+        "critic": torch.ones(self.num_envs, 5),
+        "teacher_actor": torch.ones(self.num_envs, 6),
+      },
+      batch_size=[self.num_envs],
+    )
+
+  def step(self, actions):
+    self.step_calls += 1
+    rewards = torch.ones(self.num_envs)
+    dones = torch.zeros(self.num_envs, dtype=torch.long)
+    extras = {"episode": {"reward": rewards.mean()}}
+    return self.get_observations(), rewards, dones, extras
+
+
+class _LoggerProbe:
+  def __init__(self):
+    self.writer = None
+    self.log_dir = None
+    self.logged_losses = []
+    self.env_steps = 0
+    self.initialized = False
+
+  def init_logging_writer(self):
+    self.initialized = True
+
+  def process_env_step(self, rewards, dones, extras, intrinsic_rewards=None):
+    self.env_steps += 1
+
+  def log(
+    self,
+    *,
+    it,
+    start_it,
+    total_it,
+    collect_time,
+    learn_time,
+    loss_dict,
+    learning_rate,
+    action_std,
+    rnd_weight,
+  ):
+    self.logged_losses.append(loss_dict)
+
+
+def test_wbteleop_pure_bc_learn_uses_adaptive_iteration_and_bc_update() -> None:
+  runner = WbTeleopTrackingRunner.__new__(WbTeleopTrackingRunner)
+  runner.env = _PureBcEnvProbe()
+  runner.alg = _PureBcAlgProbe()
+  runner.logger = _LoggerProbe()
+  runner.device = torch.device("cpu")
+  runner.current_learning_iteration = 0
+  runner.is_distributed = False
+  runner.cfg = {
+    "num_steps_per_env": 2,
+    "save_interval": 100,
+    "algorithm": {"rnd_cfg": None},
+  }
+  adaptive_iterations = []
+  runner._begin_adaptive_sampling_iteration = adaptive_iterations.append
+
+  runner._learn_pure_bc(num_learning_iterations=1, init_at_random_ep_len=False)
+
+  assert adaptive_iterations == [0]
+  assert runner.env.step_calls == 2
+  assert runner.alg.processed_steps == 2
+  assert runner.alg.update_calls == 1
+  assert runner.logger.logged_losses == [
+    {"pure_bc_mse": 0.25, "pure_bc_loss": 0.25, "pure_bc_weight": 1.0}
+  ]
+
+
+def test_wbteleop_scratch_initializes_actor_and_critic(tmp_path) -> None:
+  alg, _ = _make_wbteleop_algorithm_for_test()
+  actor_source, _ = _make_wbteleop_algorithm_for_test()
+  critic_source, _ = _make_wbteleop_algorithm_for_test()
+
+  for param in actor_source.actor.parameters():
+    param.data.fill_(0.123)
+  for param in critic_source.critic.parameters():
+    param.data.fill_(0.456)
+
+  actor_ckpt = tmp_path / "bc_actor.pt"
+  teacher_ckpt = tmp_path / "teacher.pt"
+  torch.save({"actor_state_dict": actor_source.actor.state_dict()}, actor_ckpt)
+  torch.save({"critic_state_dict": critic_source.critic.state_dict()}, teacher_ckpt)
+
+  runner = WbTeleopTrackingRunner.__new__(WbTeleopTrackingRunner)
+  runner.alg = alg
+  runner.cfg = {
+    "resume": False,
+    "algorithm": {
+      "bc_actor_checkpoint_path": str(actor_ckpt),
+      "teacher_checkpoint_path": str(teacher_ckpt),
+      "init_critic_from_teacher": True,
+      "strict_init": True,
+    },
+  }
+  runner.device = torch.device("cpu")
+
+  runner._maybe_initialize_from_pretrained()
+
+  for key, value in alg.actor.state_dict().items():
+    assert torch.equal(value, actor_source.actor.state_dict()[key])
+  for key, value in alg.critic.state_dict().items():
+    assert torch.equal(value, critic_source.critic.state_dict()[key])
+
+
+def test_wbteleop_resume_skips_scratch_initialization(tmp_path) -> None:
+  alg, _ = _make_wbteleop_algorithm_for_test()
+  actor_before = {
+    key: value.detach().clone() for key, value in alg.actor.state_dict().items()
+  }
+  critic_before = {
+    key: value.detach().clone() for key, value in alg.critic.state_dict().items()
+  }
+
+  runner = WbTeleopTrackingRunner.__new__(WbTeleopTrackingRunner)
+  runner.alg = alg
+  runner.cfg = {
+    "resume": True,
+    "algorithm": {
+      "bc_actor_checkpoint_path": str(tmp_path / "missing_actor.pt"),
+      "teacher_checkpoint_path": str(tmp_path / "missing_teacher.pt"),
+      "init_critic_from_teacher": True,
+      "strict_init": True,
+    },
+  }
+  runner.device = torch.device("cpu")
+
+  runner._maybe_initialize_from_pretrained()
+
+  for key, value in alg.actor.state_dict().items():
+    assert torch.equal(value, actor_before[key])
+  for key, value in alg.critic.state_dict().items():
+    assert torch.equal(value, critic_before[key])
 
 
 def test_wbteleop_train_help_loads() -> None:

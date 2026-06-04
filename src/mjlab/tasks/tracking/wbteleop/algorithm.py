@@ -48,6 +48,12 @@ class WbTeleopPPO(PPO):
     bc_weight_start: float = 0.5,
     bc_weight_end: float = 0.1,
     bc_decay_steps: int = 10_000,
+    pure_bc_enabled: bool = False,
+    pure_bc_weight: float = 1.0,
+    pure_bc_rollout: str = "student",
+    bc_actor_checkpoint_path: str = "",
+    init_critic_from_teacher: bool = True,
+    strict_init: bool = True,
     **kwargs,
   ) -> None:
     super().__init__(actor, critic, storage, *args, **kwargs)
@@ -57,6 +63,14 @@ class WbTeleopPPO(PPO):
     self.bc_weight_start = float(bc_weight_start)
     self.bc_weight_end = float(bc_weight_end)
     self.bc_decay_steps = int(bc_decay_steps)
+    self.pure_bc_enabled = bool(pure_bc_enabled)
+    self.pure_bc_weight = float(pure_bc_weight)
+    if pure_bc_rollout not in {"student", "teacher"}:
+      raise ValueError("pure_bc_rollout must be one of {'student', 'teacher'}")
+    self.pure_bc_rollout = pure_bc_rollout
+    self.bc_actor_checkpoint_path = bc_actor_checkpoint_path
+    self.init_critic_from_teacher = bool(init_critic_from_teacher)
+    self.strict_init = bool(strict_init)
     self.teacher_adapter: TeacherPolicyAdapter | None = None
     self.current_learning_iteration = 0
 
@@ -281,6 +295,68 @@ class WbTeleopPPO(PPO):
     if self.symmetry:
       loss_dict["symmetry"] = mean_symmetry_loss
     return loss_dict
+
+  def update_bc_only(self) -> dict[str, float]:
+    """Update only the actor with teacher-action MSE from collected rollout obs."""
+    if self.teacher_adapter is None:
+      raise ValueError("teacher_adapter must be set before WbTeleopPPO.update_bc_only()")
+
+    observations = self.storage.observations.flatten(0, 1)
+    batch_size = observations.batch_size[0]
+    if batch_size == 0:
+      raise ValueError("rollout storage must contain at least one observation")
+
+    num_mini_batches = max(1, min(self.num_mini_batches, batch_size))
+    mini_batch_size = math.ceil(batch_size / num_mini_batches)
+    mse_total = 0.0
+    loss_total = 0.0
+    grad_norm_total = 0.0
+    updates = 0
+
+    self.actor.train()
+    for _ in range(self.num_learning_epochs):
+      permutation = torch.randperm(batch_size, device=self.device)
+      for start in range(0, batch_size, mini_batch_size):
+        batch_idx = permutation[start : start + mini_batch_size]
+        batch_obs = observations[batch_idx]
+
+        if hasattr(self.actor, "update_normalization"):
+          self.actor.update_normalization(batch_obs)
+
+        student_action_mean = self.actor(batch_obs)
+        with torch.no_grad():
+          teacher_action_mean = self.teacher_adapter.act_mean(batch_obs)
+        if student_action_mean.shape != teacher_action_mean.shape:
+          raise ValueError(
+            "Teacher and student action shapes must match: "
+            f"student={tuple(student_action_mean.shape)}, "
+            f"teacher={tuple(teacher_action_mean.shape)}"
+          )
+
+        mse_loss = F.mse_loss(student_action_mean, teacher_action_mean)
+        loss = self.pure_bc_weight * mse_loss
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        if self.is_multi_gpu:
+          self.reduce_parameters()
+        grad_norm = nn.utils.clip_grad_norm_(
+          self.actor.parameters(), self.max_grad_norm
+        )
+        self.optimizer.step()
+
+        mse_total += float(mse_loss.item())
+        loss_total += float(loss.item())
+        grad_norm_total += float(grad_norm.item())
+        updates += 1
+
+    self.storage.clear()
+    return {
+      "pure_bc_mse": mse_total / updates,
+      "pure_bc_loss": loss_total / updates,
+      "pure_bc_weight": float(self.pure_bc_weight),
+      "pure_bc_grad_norm": grad_norm_total / updates,
+    }
 
   @staticmethod
   def construct_algorithm(

@@ -5,6 +5,10 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import asdict
 import os
+import time
+
+import torch
+from rsl_rl.utils import check_nan
 
 from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.distillation.rl.teacher import TeacherPolicyAdapter
@@ -34,6 +38,9 @@ class WbTeleopTrackingRunner(MotionTrackingOnPolicyRunner):
     if self.teacher_adapter is None:
       self.teacher_adapter = self._build_teacher_adapter()
     self.alg.set_teacher_adapter(self.teacher_adapter)
+    self._maybe_initialize_from_pretrained()
+    if self.alg.pure_bc_enabled:
+      return self._learn_pure_bc(num_learning_iterations, init_at_random_ep_len)
     return super().learn(num_learning_iterations, init_at_random_ep_len)
 
   def _begin_adaptive_sampling_iteration(self, iteration: int) -> None:
@@ -75,6 +82,168 @@ class WbTeleopTrackingRunner(MotionTrackingOnPolicyRunner):
       obs_group=teacher_obs_group,
       policy_input_key=teacher_obs_group,
     )
+
+  def _learn_pure_bc(
+    self,
+    num_learning_iterations: int,
+    init_at_random_ep_len: bool = False,
+  ) -> None:
+    """Run adaptive-sampling rollouts and update only the student actor by BC."""
+    if init_at_random_ep_len:
+      self.env.episode_length_buf = torch.randint_like(
+        self.env.episode_length_buf, high=int(self.env.max_episode_length)
+      )
+
+    obs = self.env.get_observations().to(self.device)
+    self.alg.train_mode()
+
+    if self.is_distributed:
+      print(f"Synchronizing parameters for rank {self.gpu_global_rank}...")
+      self.alg.broadcast_parameters()
+
+    self.logger.init_logging_writer()
+
+    start_it = self.current_learning_iteration
+    total_it = start_it + num_learning_iterations
+    for it in range(start_it, total_it):
+      self._begin_adaptive_sampling_iteration(it)
+      start = time.time()
+      with torch.inference_mode():
+        for _ in range(self.cfg["num_steps_per_env"]):
+          student_actions = self.alg.act(obs)
+          actions = student_actions
+          if getattr(self.alg, "pure_bc_rollout", "student") == "teacher":
+            if self.teacher_adapter is None:
+              raise ValueError("teacher_adapter must be set for teacher pure_bc_rollout")
+            actions = self.teacher_adapter.act_mean(obs)
+
+          obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+          if self.cfg.get("check_for_nan", True):
+            check_nan(obs, rewards, dones)
+          obs, rewards, dones = (
+            obs.to(self.device),
+            rewards.to(self.device),
+            dones.to(self.device),
+          )
+          self.alg.process_env_step(obs, rewards, dones, extras)
+          intrinsic_rewards = (
+            self.alg.intrinsic_rewards if self.cfg["algorithm"].get("rnd_cfg") else None
+          )
+          self.logger.process_env_step(rewards, dones, extras, intrinsic_rewards)
+
+        stop = time.time()
+        collect_time = stop - start
+        start = stop
+
+      loss_dict = self.alg.update_bc_only()
+
+      stop = time.time()
+      learn_time = stop - start
+      self.current_learning_iteration = it
+
+      self.logger.log(
+        it=it,
+        start_it=start_it,
+        total_it=total_it,
+        collect_time=collect_time,
+        learn_time=learn_time,
+        loss_dict=loss_dict,
+        learning_rate=self.alg.learning_rate,
+        action_std=self.alg.get_policy().output_std,
+        rnd_weight=(self.alg.rnd.weight if self.cfg["algorithm"].get("rnd_cfg") else None),
+      )
+
+      if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
+        self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))
+
+    if self.logger.writer is not None:
+      self.save(
+        os.path.join(self.logger.log_dir, f"model_{self.current_learning_iteration}.pt")
+      )
+      self.logger.stop_logging_writer()
+
+  def _maybe_initialize_from_pretrained(self) -> None:
+    """Initialize scratch RL+BC from pure-BC actor and teacher critic checkpoints."""
+    if getattr(self, "_pretrained_initialized", False):
+      return
+    if self.cfg.get("resume", False):
+      self._pretrained_initialized = True
+      return
+    if getattr(self.alg, "pure_bc_enabled", False):
+      self._pretrained_initialized = True
+      return
+
+    algorithm_cfg = self.cfg.get("algorithm", {})
+    strict = bool(algorithm_cfg.get("strict_init", True))
+
+    actor_checkpoint_path = algorithm_cfg.get("bc_actor_checkpoint_path", "")
+    if actor_checkpoint_path:
+      actor_state_dict = self._load_component_state_dict(
+        actor_checkpoint_path, "actor_state_dict"
+      )
+      self.alg.actor.load_state_dict(actor_state_dict, strict=strict)
+
+    if algorithm_cfg.get("init_critic_from_teacher", True):
+      teacher_checkpoint_path = algorithm_cfg.get("teacher_checkpoint_path", "")
+      if not teacher_checkpoint_path:
+        raise ValueError(
+          "teacher_checkpoint_path must be provided when init_critic_from_teacher=True"
+        )
+      critic_state_dict = self._load_component_state_dict(
+        teacher_checkpoint_path, "critic_state_dict"
+      )
+      self.alg.critic.load_state_dict(critic_state_dict, strict=strict)
+
+    self._pretrained_initialized = True
+
+  def _load_component_state_dict(
+    self,
+    checkpoint_path: str,
+    component_key: str,
+  ) -> dict[str, torch.Tensor]:
+    checkpoint = torch.load(
+      checkpoint_path,
+      map_location=str(self.device),
+      weights_only=False,
+    )
+    if "model_state_dict" in checkpoint:
+      checkpoint = self._migrate_legacy_checkpoint(checkpoint["model_state_dict"])
+    state_dict = checkpoint.get(component_key)
+    if state_dict is None:
+      raise KeyError(f"{component_key} not found in checkpoint: {checkpoint_path}")
+    if component_key == "actor_state_dict":
+      self._migrate_actor_distribution_keys(state_dict)
+    return state_dict
+
+  @staticmethod
+  def _migrate_legacy_checkpoint(
+    model_state_dict: dict[str, torch.Tensor],
+  ) -> dict[str, dict[str, torch.Tensor]]:
+    actor_state_dict: dict[str, torch.Tensor] = {}
+    critic_state_dict: dict[str, torch.Tensor] = {}
+    for key, value in model_state_dict.items():
+      if key.startswith("actor."):
+        actor_state_dict[key.replace("actor.", "mlp.")] = value
+      elif key.startswith("actor_obs_normalizer."):
+        actor_state_dict[key.replace("actor_obs_normalizer.", "obs_normalizer.")] = value
+      elif key in ["std", "log_std"]:
+        actor_state_dict[key] = value
+
+      if key.startswith("critic."):
+        critic_state_dict[key.replace("critic.", "mlp.")] = value
+      elif key.startswith("critic_obs_normalizer."):
+        critic_state_dict[key.replace("critic_obs_normalizer.", "obs_normalizer.")] = value
+    return {
+      "actor_state_dict": actor_state_dict,
+      "critic_state_dict": critic_state_dict,
+    }
+
+  @staticmethod
+  def _migrate_actor_distribution_keys(state_dict: dict[str, torch.Tensor]) -> None:
+    if "std" in state_dict:
+      state_dict["distribution.std_param"] = state_dict.pop("std")
+    if "log_std" in state_dict:
+      state_dict["distribution.log_std_param"] = state_dict.pop("log_std")
 
   @contextmanager
   def _suppress_distributed_env_for_nested_runner(self):

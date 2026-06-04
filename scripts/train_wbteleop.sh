@@ -20,6 +20,15 @@ ROBOT_HISTORY_LENGTH="${ROBOT_HISTORY_LENGTH:-$((HISTORY_STEPS > 0 ? HISTORY_STE
 BC_WEIGHT_START="${BC_WEIGHT_START:-0.5}"
 BC_WEIGHT_END="${BC_WEIGHT_END:-0.1}"
 BC_DECAY_STEPS="${BC_DECAY_STEPS:-10000}"
+PURE_BC_ENABLED="${PURE_BC_ENABLED:-True}"
+PURE_BC_WEIGHT="${PURE_BC_WEIGHT:-1.0}"
+PURE_BC_ROLLOUT="${PURE_BC_ROLLOUT:-student}"
+BC_ACTOR_CKPT="${BC_ACTOR_CKPT:-}"
+INIT_CRITIC_FROM_TEACHER="${INIT_CRITIC_FROM_TEACHER:-True}"
+STRICT_INIT="${STRICT_INIT:-True}"
+RESUME="${RESUME:-False}"
+LOAD_RUN="${LOAD_RUN:-0604_ckpt}"
+LOAD_CHECKPOINT="${LOAD_CHECKPOINT:-model_14000.pt}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_tracking_wbteleop}"
 RUN_NAME="${RUN_NAME:-wbteleop_adaptive_bfm}"
 WANDB_PROJECT="${WANDB_PROJECT:-tracking_bfm}"
@@ -45,6 +54,12 @@ cmd=(
   --agent.algorithm.bc_weight_start "$BC_WEIGHT_START"
   --agent.algorithm.bc_weight_end "$BC_WEIGHT_END"
   --agent.algorithm.bc_decay_steps "$BC_DECAY_STEPS"
+  --agent.algorithm.pure_bc_enabled "$PURE_BC_ENABLED"
+  --agent.algorithm.pure_bc_weight "$PURE_BC_WEIGHT"
+  --agent.algorithm.pure_bc_rollout "$PURE_BC_ROLLOUT"
+  --agent.algorithm.bc_actor_checkpoint_path "$BC_ACTOR_CKPT"
+  --agent.algorithm.init_critic_from_teacher "$INIT_CRITIC_FROM_TEACHER"
+  --agent.algorithm.strict_init "$STRICT_INIT"
   --agent.max_iterations "$MAX_ITERATIONS"
   --agent.num_steps_per_env "$NUM_STEPS_PER_ENV"
   --agent.save_interval "$SAVE_INTERVAL"
@@ -54,7 +69,15 @@ cmd=(
   --debug False
   --agent.upload-model False
   --gpu_ids "$GPU_IDS"
+  --agent.resume "$RESUME"
 )
+
+if [[ "$RESUME" == "True" || "$RESUME" == "true" ]]; then
+  cmd+=(
+    --agent.load_run "$LOAD_RUN"
+    --agent.load_checkpoint "$LOAD_CHECKPOINT"
+  )
+fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
   printf '[DRY RUN] '

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from mjlab.rl import RslRlModelCfg, RslRlOnPolicyRunnerCfg, RslRlPpoAlgorithmCfg
 
@@ -16,6 +17,12 @@ class WbTeleopPpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
   bc_weight_start: float = 0.5
   bc_weight_end: float = 0.1
   bc_decay_steps: int = 10_000
+  pure_bc_enabled: bool = False
+  pure_bc_weight: float = 1.0
+  pure_bc_rollout: Literal["student", "teacher"] = "student"
+  bc_actor_checkpoint_path: str = ""
+  init_critic_from_teacher: bool = True
+  strict_init: bool = True
 
 
 def unitree_g1_trackingbfm_wbteleop_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
