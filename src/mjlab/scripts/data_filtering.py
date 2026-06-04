@@ -26,6 +26,10 @@ from mjlab.rl import MjlabOnPolicyRunner, RslRlVecEnvWrapper
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
 from mjlab.tasks.tracking.mdp.commands import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
+  _ISAACLAB_TO_MUJOCO_BODY_REINDEX,
+  _ISAACLAB_TO_MUJOCO_JOINT_REINDEX,
+)
+from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
 from mjlab.utils.gpu import select_gpus
@@ -83,6 +87,23 @@ _MOTION_NPZ_FIELDS = (
   "body_quat_w",
   "body_lin_vel_w",
   "body_ang_vel_w",
+)
+
+
+def _invert_reindex(reindex: list[int]) -> list[int]:
+  if sorted(reindex) != list(range(len(reindex))):
+    raise ValueError(f"Expected a permutation, got: {reindex}")
+  inverse = [0] * len(reindex)
+  for output_index, input_index in enumerate(reindex):
+    inverse[input_index] = output_index
+  return inverse
+
+
+_MUJOCO_TO_ISAACLAB_JOINT_REINDEX = _invert_reindex(
+  _ISAACLAB_TO_MUJOCO_JOINT_REINDEX
+)
+_MUJOCO_TO_ISAACLAB_BODY_REINDEX = _invert_reindex(
+  _ISAACLAB_TO_MUJOCO_BODY_REINDEX
 )
 
 
@@ -993,24 +1014,29 @@ def _empty_rollout_buffer() -> dict[str, list[np.ndarray]]:
 def _capture_rollout_batch(
   command: Any, env_ids: torch.Tensor
 ) -> dict[str, np.ndarray]:
-  """Capture current robot state for a batch of envs as CPU numpy arrays."""
-  body_pos_w = command.robot_body_pos_w[env_ids]
+  """Capture current robot state in the IsaacLab motion npz layout."""
+  robot_data = command.robot.data
+  joint_pos = robot_data.joint_pos[env_ids][:, _MUJOCO_TO_ISAACLAB_JOINT_REINDEX]
+  joint_vel = robot_data.joint_vel[env_ids][:, _MUJOCO_TO_ISAACLAB_JOINT_REINDEX]
+  body_pos_w = robot_data.body_link_pos_w[env_ids]
   body_pos_w = body_pos_w - command._env.scene.env_origins[env_ids, None, :]
+  body_pos_w = body_pos_w[:, _MUJOCO_TO_ISAACLAB_BODY_REINDEX, :]
+  body_quat_w = robot_data.body_link_quat_w[env_ids][
+    :, _MUJOCO_TO_ISAACLAB_BODY_REINDEX, :
+  ]
+  body_lin_vel_w = robot_data.body_link_lin_vel_w[env_ids][
+    :, _MUJOCO_TO_ISAACLAB_BODY_REINDEX, :
+  ]
+  body_ang_vel_w = robot_data.body_link_ang_vel_w[env_ids][
+    :, _MUJOCO_TO_ISAACLAB_BODY_REINDEX, :
+  ]
   return {
-    "joint_pos": command.robot_joint_pos[env_ids].detach().cpu().numpy().copy(),
-    "joint_vel": command.robot_joint_vel[env_ids].detach().cpu().numpy().copy(),
+    "joint_pos": joint_pos.detach().cpu().numpy().copy(),
+    "joint_vel": joint_vel.detach().cpu().numpy().copy(),
     "body_pos_w": body_pos_w.detach().cpu().numpy().copy(),
-    "body_quat_w": command.robot_body_quat_w[env_ids].detach().cpu().numpy().copy(),
-    "body_lin_vel_w": command.robot_body_lin_vel_w[env_ids]
-    .detach()
-    .cpu()
-    .numpy()
-    .copy(),
-    "body_ang_vel_w": command.robot_body_ang_vel_w[env_ids]
-    .detach()
-    .cpu()
-    .numpy()
-    .copy(),
+    "body_quat_w": body_quat_w.detach().cpu().numpy().copy(),
+    "body_lin_vel_w": body_lin_vel_w.detach().cpu().numpy().copy(),
+    "body_ang_vel_w": body_ang_vel_w.detach().cpu().numpy().copy(),
   }
 
 

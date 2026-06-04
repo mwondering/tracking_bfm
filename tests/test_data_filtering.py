@@ -29,6 +29,10 @@ from mjlab.scripts.data_filtering import (
 )
 from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
+  _ISAACLAB_TO_MUJOCO_BODY_REINDEX,
+  _ISAACLAB_TO_MUJOCO_JOINT_REINDEX,
+)
+from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
 
@@ -257,41 +261,62 @@ def test_save_rollout_motion_writes_motion_npz_fields(tmp_path: Path) -> None:
     np.testing.assert_array_equal(saved[key], expected)
 
 
-def test_capture_rollout_batch_removes_env_origin_from_body_positions() -> None:
-  """Saved rollout body positions should be motion-local, not env-grid offset."""
+def test_capture_rollout_batch_records_isaaclab_motion_format() -> None:
+  """Saved rollout clips should reload through the IsaacLab motion path."""
+  joint_pos = torch.arange(2 * 29, dtype=torch.float32).reshape(2, 29)
+  joint_vel = joint_pos + 100.0
+  body_pos_w = torch.arange(2 * 30 * 3, dtype=torch.float32).reshape(2, 30, 3)
+  body_quat_w = torch.arange(2 * 30 * 4, dtype=torch.float32).reshape(2, 30, 4)
+  body_lin_vel_w = body_pos_w + 1000.0
+  body_ang_vel_w = body_pos_w + 2000.0
+  env_origins = torch.tensor(
+    [[10.0, 0.0, 0.0], [20.0, 3.0, 0.0]], dtype=torch.float32
+  )
   command = SimpleNamespace(
-    robot_joint_pos=torch.zeros((2, 1)),
-    robot_joint_vel=torch.zeros((2, 1)),
-    robot_body_pos_w=torch.tensor(
-      [
-        [[10.0, 0.0, 1.0], [11.0, 0.0, 1.5]],
-        [[20.0, 3.0, 1.0], [21.0, 3.0, 1.5]],
-      ],
-      dtype=torch.float32,
-    ),
-    robot_body_quat_w=torch.zeros((2, 2, 4)),
-    robot_body_lin_vel_w=torch.zeros((2, 2, 3)),
-    robot_body_ang_vel_w=torch.zeros((2, 2, 3)),
-    _env=SimpleNamespace(
-      scene=SimpleNamespace(
-        env_origins=torch.tensor(
-          [[10.0, 0.0, 0.0], [20.0, 3.0, 0.0]], dtype=torch.float32
-        )
+    robot=SimpleNamespace(
+      data=SimpleNamespace(
+        joint_pos=joint_pos,
+        joint_vel=joint_vel,
+        body_link_pos_w=body_pos_w,
+        body_link_quat_w=body_quat_w,
+        body_link_lin_vel_w=body_lin_vel_w,
+        body_link_ang_vel_w=body_ang_vel_w,
       )
+    ),
+    _env=SimpleNamespace(
+      scene=SimpleNamespace(env_origins=env_origins)
     ),
   )
 
   batch = _capture_rollout_batch(command, torch.tensor([0, 1]))
 
+  assert batch["joint_pos"].shape == (2, 29)
+  assert batch["body_pos_w"].shape == (2, 30, 3)
+
+  expected_body_pos_mujoco = body_pos_w - env_origins[:, None, :]
   np.testing.assert_allclose(
-    batch["body_pos_w"],
-    np.array(
-      [
-        [[0.0, 0.0, 1.0], [1.0, 0.0, 1.5]],
-        [[0.0, 0.0, 1.0], [1.0, 0.0, 1.5]],
-      ],
-      dtype=np.float32,
-    ),
+    batch["joint_pos"][:, _ISAACLAB_TO_MUJOCO_JOINT_REINDEX],
+    joint_pos.numpy(),
+  )
+  np.testing.assert_allclose(
+    batch["joint_vel"][:, _ISAACLAB_TO_MUJOCO_JOINT_REINDEX],
+    joint_vel.numpy(),
+  )
+  np.testing.assert_allclose(
+    batch["body_pos_w"][:, _ISAACLAB_TO_MUJOCO_BODY_REINDEX],
+    expected_body_pos_mujoco.numpy(),
+  )
+  np.testing.assert_allclose(
+    batch["body_quat_w"][:, _ISAACLAB_TO_MUJOCO_BODY_REINDEX],
+    body_quat_w.numpy(),
+  )
+  np.testing.assert_allclose(
+    batch["body_lin_vel_w"][:, _ISAACLAB_TO_MUJOCO_BODY_REINDEX],
+    body_lin_vel_w.numpy(),
+  )
+  np.testing.assert_allclose(
+    batch["body_ang_vel_w"][:, _ISAACLAB_TO_MUJOCO_BODY_REINDEX],
+    body_ang_vel_w.numpy(),
   )
 
 
