@@ -17,6 +17,28 @@ def test_distillation_task_is_registered() -> None:
   assert "Mjlab-Distillation-Flat-Unitree-G1" in list_tasks()
 
 
+def test_distillation_wbteleop_obs_task_uses_wbteleop_student_obs() -> None:
+  task_id = "Mjlab-DistillationWbteleopObs-Flat-Unitree-G1"
+
+  assert task_id in list_tasks()
+
+  env_cfg = load_env_cfg(task_id)
+  wbteleop_cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop")
+  rl_cfg = load_rl_cfg(task_id)
+  runner_cls = load_runner_cls(task_id)
+
+  student_terms = env_cfg.observations["student_actor"].terms
+  wbteleop_terms = wbteleop_cfg.observations["actor"].terms
+  assert tuple(student_terms.keys()) == tuple(wbteleop_terms.keys())
+  assert "ee_pose" not in student_terms
+  assert "base_lin_vel_b" not in student_terms
+  assert "motion_ref_ang_vel" in student_terms
+  assert env_cfg.observations["student_actor"].enable_corruption is False
+  assert rl_cfg.class_name == "DistillationRunner"
+  assert rl_cfg.student_obs_group == "student_actor"
+  assert runner_cls is not None
+
+
 def test_latent_distillation_task_is_registered() -> None:
   task_id = "Mjlab-LatentDistillation-Flat-Unitree-G1"
 

@@ -30,7 +30,7 @@ def _history_kwargs(history_steps: int) -> dict[str, int]:
   return {"history_length": history_length}
 
 
-def _wbteleop_actor_cfg(
+def wbteleop_actor_cfg(
   *,
   history_steps: int,
   enable_corruption: bool,
@@ -96,7 +96,7 @@ def unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
   teacher_actor = deepcopy(cfg.observations["actor"])
   teacher_actor.enable_corruption = False
   cfg.observations["teacher_actor"] = teacher_actor
-  cfg.observations["actor"] = _wbteleop_actor_cfg(
+  cfg.observations["actor"] = wbteleop_actor_cfg(
     history_steps=motion_cmd.history_steps,
     enable_corruption=not play,
   )

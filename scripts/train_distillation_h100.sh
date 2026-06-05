@@ -8,7 +8,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 #/home/lenovo/DATASETS/test_motion
 #/home/lenovo/DATASETS/Data10k
-TASK="${TASK:-Mjlab-Distillation-Flat-Unitree-G1}"
+TASK="${TASK:-Mjlab-DistillationWbteleopObs-Flat-Unitree-G1}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
 TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic/2026-05-01_10-38-32_multi_gpu_adaptive_nocommandwindow_16384_resume/model_82000.pt}"
 NUM_ENVS="${NUM_ENVS:-16384}"
@@ -28,14 +28,6 @@ uv run train "$TASK" \
     --env.commands.motion.sampling-mode uniform \
     --env.commands.motion.history_steps "$STUDENT_HISTORY_STEPS" \
     --env.commands.motion.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.ee_pose.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.ee_pose.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_lin_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_b.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.base_ang_vel_b.params.future_steps "$STUDENT_FUTURE_STEPS" \
-    --env.observations.student_actor.terms.anchor_height_w.params.history_steps "$STUDENT_HISTORY_STEPS" \
-    --env.observations.student_actor.terms.anchor_height_w.params.future_steps "$STUDENT_FUTURE_STEPS" \
     --env.observations.student_actor.terms.projected_gravity.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.base_ang_vel.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \
     --env.observations.student_actor.terms.joint_pos.history_length "$STUDENT_ROBOT_HISTORY_STEPS" \

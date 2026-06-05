@@ -12,6 +12,7 @@ from mjlab.tasks.distillation.mdp.observations import (
   build_student_actor_terms,
 )
 from mjlab.tasks.tracking.config.g1.env_cfgs import unitree_g1_flat_tracking_bfm_env_cfg
+from mjlab.tasks.tracking.wbteleop.env_cfg import wbteleop_actor_cfg
 
 
 @dataclass(frozen=True)
@@ -60,4 +61,15 @@ def make_distillation_env_cfg(play: bool = False):
       ee_body_names=student_command_cfg.ee_body_names,
       anchor_body_name=student_command_cfg.anchor_body_name,
     )
+  return cfg
+
+
+def make_distillation_wbteleop_obs_env_cfg(play: bool = False):
+  """Build distillation env cfg with wbteleop actor observations for the student."""
+  cfg = make_distillation_env_cfg(play=play)
+  motion_cmd = cfg.commands["motion"]
+  cfg.observations["student_actor"] = wbteleop_actor_cfg(
+    history_steps=motion_cmd.history_steps,
+    enable_corruption=False,
+  )
   return cfg

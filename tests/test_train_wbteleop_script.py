@@ -136,6 +136,47 @@ def test_train_wbteleop_h100_script_defaults_to_scratch_with_bc_flags(
   assert "--agent.load_checkpoint" not in args
 
 
+def test_train_distillation_h100_script_uses_wbteleop_obs_task(
+  tmp_path: Path,
+) -> None:
+  script = Path("scripts/train_distillation_h100.sh")
+  uv_stub = tmp_path / "uv"
+  args_file = tmp_path / "uv-args.txt"
+
+  uv_stub.write_text(
+    "#!/usr/bin/env bash\n"
+    "printf '%s\\n' \"$@\" > \"$UV_ARGS_FILE\"\n"
+  )
+  uv_stub.chmod(0o755)
+
+  env = os.environ.copy()
+  env["PATH"] = f"{tmp_path}:{env['PATH']}"
+  env["UV_ARGS_FILE"] = str(args_file)
+
+  subprocess.run(
+    ["bash", str(script)],
+    check=True,
+    capture_output=True,
+    text=True,
+    env=env,
+  )
+
+  args = args_file.read_text().splitlines()
+  assert args[:3] == [
+    "run",
+    "train",
+    "Mjlab-DistillationWbteleopObs-Flat-Unitree-G1",
+  ]
+  assert "--env.observations.student_actor.terms.motion_ref_ang_vel.history_length" not in args
+  assert "--env.observations.student_actor.terms.projected_gravity.history_length" in args
+  assert "--env.observations.student_actor.terms.base_ang_vel.history_length" in args
+  assert "--env.observations.student_actor.terms.joint_pos.history_length" in args
+  assert "--env.observations.student_actor.terms.joint_vel.history_length" in args
+  assert "--env.observations.student_actor.terms.actions.history_length" in args
+  assert "--env.observations.student_actor.terms.ee_pose.params.history_steps" not in args
+  assert "--env.observations.student_actor.terms.base_lin_vel_b.params.history_steps" not in args
+
+
 def test_train_wbteleop_h100_script_can_resume(tmp_path: Path) -> None:
   script = Path("scripts/train_wbteleop_h100.sh")
   uv_stub = tmp_path / "uv"
