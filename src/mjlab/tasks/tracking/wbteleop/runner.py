@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from dataclasses import asdict
 import os
 import time
+from contextlib import contextmanager
+from dataclasses import asdict
 
 import torch
 from rsl_rl.utils import check_nan
@@ -169,12 +169,25 @@ class WbTeleopTrackingRunner(MotionTrackingOnPolicyRunner):
     if self.cfg.get("resume", False):
       self._pretrained_initialized = True
       return
-    if getattr(self.alg, "pure_bc_enabled", False):
-      self._pretrained_initialized = True
-      return
-
     algorithm_cfg = self.cfg.get("algorithm", {})
     strict = bool(algorithm_cfg.get("strict_init", True))
+
+    if getattr(self.alg, "pure_bc_enabled", False):
+      if algorithm_cfg.get("init_actor_std_from_teacher", False):
+        teacher_checkpoint_path = algorithm_cfg.get("teacher_checkpoint_path", "")
+        if not teacher_checkpoint_path:
+          raise ValueError(
+            "teacher_checkpoint_path must be provided when "
+            "init_actor_std_from_teacher=True"
+          )
+        teacher_actor_state_dict = self._load_component_state_dict(
+          teacher_checkpoint_path, "actor_state_dict"
+        )
+        self._copy_actor_distribution_state(
+          self.alg.actor.state_dict(), teacher_actor_state_dict
+        )
+      self._pretrained_initialized = True
+      return
 
     actor_checkpoint_path = algorithm_cfg.get("bc_actor_checkpoint_path", "")
     if actor_checkpoint_path:
@@ -244,6 +257,30 @@ class WbTeleopTrackingRunner(MotionTrackingOnPolicyRunner):
       state_dict["distribution.std_param"] = state_dict.pop("std")
     if "log_std" in state_dict:
       state_dict["distribution.log_std_param"] = state_dict.pop("log_std")
+
+  def _copy_actor_distribution_state(
+    self,
+    target_state_dict: dict[str, torch.Tensor],
+    source_state_dict: dict[str, torch.Tensor],
+  ) -> None:
+    copied = False
+    for key in ("distribution.std_param", "distribution.log_std_param"):
+      if key not in source_state_dict:
+        continue
+      if key not in target_state_dict:
+        raise KeyError(f"{key} not found in target actor state_dict")
+      source = source_state_dict[key]
+      target = target_state_dict[key]
+      if source.shape != target.shape:
+        raise ValueError(
+          f"Teacher actor distribution shape mismatch for {key}: "
+          f"teacher={tuple(source.shape)}, student={tuple(target.shape)}"
+        )
+      target.copy_(source.to(device=target.device, dtype=target.dtype))
+      copied = True
+
+    if not copied:
+      raise KeyError("teacher actor checkpoint does not contain distribution std state")
 
   @contextmanager
   def _suppress_distributed_env_for_nested_runner(self):

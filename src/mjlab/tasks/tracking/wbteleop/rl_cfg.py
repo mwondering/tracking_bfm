@@ -21,6 +21,7 @@ class WbTeleopPpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
   pure_bc_weight: float = 1.0
   pure_bc_rollout: Literal["student", "teacher"] = "student"
   bc_actor_checkpoint_path: str = ""
+  init_actor_std_from_teacher: bool = False
   init_critic_from_teacher: bool = True
   strict_init: bool = True
 

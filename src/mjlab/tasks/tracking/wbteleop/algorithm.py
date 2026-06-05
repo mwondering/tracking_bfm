@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from rsl_rl.algorithms import PPO
-from rsl_rl.extensions import resolve_rnd_config, resolve_symmetry_config
 from rsl_rl.env import VecEnv
+from rsl_rl.extensions import resolve_rnd_config, resolve_symmetry_config
 from rsl_rl.models import MLPModel
 from rsl_rl.storage import RolloutStorage
 from rsl_rl.utils import resolve_callable, resolve_obs_groups
@@ -52,6 +52,7 @@ class WbTeleopPPO(PPO):
     pure_bc_weight: float = 1.0,
     pure_bc_rollout: str = "student",
     bc_actor_checkpoint_path: str = "",
+    init_actor_std_from_teacher: bool = False,
     init_critic_from_teacher: bool = True,
     strict_init: bool = True,
     **kwargs,
@@ -69,6 +70,7 @@ class WbTeleopPPO(PPO):
       raise ValueError("pure_bc_rollout must be one of {'student', 'teacher'}")
     self.pure_bc_rollout = pure_bc_rollout
     self.bc_actor_checkpoint_path = bc_actor_checkpoint_path
+    self.init_actor_std_from_teacher = bool(init_actor_std_from_teacher)
     self.init_critic_from_teacher = bool(init_critic_from_teacher)
     self.strict_init = bool(strict_init)
     self.teacher_adapter: TeacherPolicyAdapter | None = None

@@ -128,8 +128,12 @@ def test_train_wbteleop_h100_script_defaults_to_scratch_with_bc_flags(
   assert "--agent.algorithm.pure_bc_weight" in args
   assert "--agent.algorithm.pure_bc_rollout" in args
   assert "--agent.algorithm.bc_actor_checkpoint_path" in args
+  assert "--agent.algorithm.init_actor_std_from_teacher" in args
   assert "--agent.algorithm.init_critic_from_teacher" in args
   assert "--agent.algorithm.strict_init" in args
+  assert (
+    args[args.index("--agent.algorithm.init_actor_std_from_teacher") + 1] == "True"
+  )
   assert "--agent.resume" in args
   assert args[args.index("--agent.resume") + 1] == "False"
   assert "--agent.load_run" not in args

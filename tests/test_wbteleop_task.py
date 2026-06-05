@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 import subprocess
+from dataclasses import asdict
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -21,7 +21,6 @@ from mjlab.tasks.tracking.wbteleop.env_cfg import (
   unitree_g1_flat_tracking_bfm_wbteleop_env_cfg,
 )
 from mjlab.tasks.tracking.wbteleop.runner import WbTeleopTrackingRunner
-
 
 TASK_ID = "Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop"
 
@@ -70,6 +69,7 @@ def test_wbteleop_teacher_actor_is_teacher_only() -> None:
   assert rl_dict["algorithm"]["pure_bc_weight"] == 1.0
   assert rl_dict["algorithm"]["pure_bc_rollout"] == "student"
   assert rl_dict["algorithm"]["bc_actor_checkpoint_path"] == ""
+  assert rl_dict["algorithm"]["init_actor_std_from_teacher"] is False
   assert rl_dict["algorithm"]["init_critic_from_teacher"] is True
 
 
@@ -173,7 +173,7 @@ def test_wbteleop_ppo_update_reports_bc_metrics() -> None:
   alg, obs = _make_wbteleop_algorithm_for_test()
 
   for _ in range(2):
-    actions = alg.act(obs)
+    alg.act(obs)
     rewards = torch.ones(4)
     dones = torch.zeros(4, dtype=torch.long)
     alg.process_env_step(obs, rewards, dones, {})
@@ -199,7 +199,7 @@ def test_wbteleop_bc_only_update_updates_actor_not_critic() -> None:
   }
 
   for _ in range(2):
-    actions = alg.act(obs)
+    alg.act(obs)
     rewards = torch.ones(4)
     dones = torch.zeros(4, dtype=torch.long)
     alg.process_env_step(obs, rewards, dones, {})
@@ -423,6 +423,45 @@ def test_wbteleop_scratch_initializes_actor_and_critic(tmp_path) -> None:
     assert torch.equal(value, actor_source.actor.state_dict()[key])
   for key, value in alg.critic.state_dict().items():
     assert torch.equal(value, critic_source.critic.state_dict()[key])
+
+
+def test_wbteleop_pure_bc_scratch_initializes_only_actor_std_from_teacher(
+  tmp_path,
+) -> None:
+  alg, _ = _make_wbteleop_algorithm_for_test()
+  teacher_source, _ = _make_wbteleop_algorithm_for_test()
+  alg.pure_bc_enabled = True
+
+  actor_before = {
+    key: value.detach().clone() for key, value in alg.actor.state_dict().items()
+  }
+  teacher_actor_state = teacher_source.actor.state_dict()
+  teacher_actor_state["distribution.std_param"].fill_(0.234)
+  for key, value in teacher_actor_state.items():
+    if key != "distribution.std_param":
+      value.fill_(0.789)
+
+  teacher_ckpt = tmp_path / "teacher.pt"
+  torch.save({"actor_state_dict": teacher_actor_state}, teacher_ckpt)
+
+  runner = WbTeleopTrackingRunner.__new__(WbTeleopTrackingRunner)
+  runner.alg = alg
+  runner.cfg = {
+    "resume": False,
+    "algorithm": {
+      "teacher_checkpoint_path": str(teacher_ckpt),
+      "init_actor_std_from_teacher": True,
+    },
+  }
+  runner.device = torch.device("cpu")
+
+  runner._maybe_initialize_from_pretrained()
+
+  for key, value in alg.actor.state_dict().items():
+    if key == "distribution.std_param":
+      assert torch.equal(value, teacher_actor_state[key])
+    else:
+      assert torch.equal(value, actor_before[key])
 
 
 def test_wbteleop_resume_skips_scratch_initialization(tmp_path) -> None:
