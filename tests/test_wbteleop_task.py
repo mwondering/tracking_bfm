@@ -16,6 +16,7 @@ from tensordict import TensorDict
 import mjlab.tasks  # noqa: F401
 from mjlab.tasks.distillation.rl.teacher import TeacherPolicyAdapter
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_runner_cls
+from mjlab.tasks.tracking.wbteleop import observations as wbteleop_observations
 from mjlab.tasks.tracking.wbteleop.algorithm import WbTeleopPPO, cosine_bc_weight
 from mjlab.tasks.tracking.wbteleop.env_cfg import (
   unitree_g1_flat_tracking_bfm_wbteleop_env_cfg,
@@ -34,6 +35,8 @@ def test_wbteleop_actor_obs_terms_are_exact() -> None:
   cfg = load_env_cfg(TASK_ID)
   assert set(cfg.observations["actor"].terms.keys()) == {
     "command",
+    "ref_limb_ee_pose_b",
+    "robot_limb_ee_pose_b",
     "motion_ref_ang_vel",
     "projected_gravity",
     "base_ang_vel",
@@ -90,16 +93,105 @@ def test_wbteleop_play_and_train_observation_structure_match(play: bool) -> None
 def test_wbteleop_history_support_sets_robot_history_only() -> None:
   cfg = unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
     history_steps=10,
-    future_steps=1,
+    future_steps=3,
   )
   terms = cfg.observations["actor"].terms
 
   assert cfg.commands["motion"].history_steps == 10
-  assert cfg.commands["motion"].future_steps == 1
+  assert cfg.commands["motion"].future_steps == 3
   assert getattr(terms["command"], "history_length", 0) in (0, None)
+  assert getattr(terms["ref_limb_ee_pose_b"], "history_length", 0) in (0, None)
+  assert terms["ref_limb_ee_pose_b"].params["history_steps"] == 10
+  assert terms["ref_limb_ee_pose_b"].params["future_steps"] == 3
+  assert terms["robot_limb_ee_pose_b"].history_length == 11
+  assert "history_steps" not in terms["robot_limb_ee_pose_b"].params
+  assert "future_steps" not in terms["robot_limb_ee_pose_b"].params
   assert getattr(terms["motion_ref_ang_vel"], "history_length", 0) in (0, None)
   for name in ("projected_gravity", "base_ang_vel", "joint_pos", "joint_vel", "actions"):
     assert terms[name].history_length == 11
+
+
+class _WbTeleopCommandManager:
+  def __init__(self, command):
+    self._command = command
+
+  def get_term(self, name: str):
+    assert name == "motion"
+    return self._command
+
+
+def _make_wbteleop_obs_env():
+  body_names = (
+    "pelvis",
+    "left_wrist_yaw_link",
+    "right_wrist_yaw_link",
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+  )
+  identity = torch.tensor([1.0, 0.0, 0.0, 0.0], dtype=torch.float32)
+  command = SimpleNamespace(
+    cfg=SimpleNamespace(body_names=body_names, history_steps=0, future_steps=1),
+    body_pos_w=torch.tensor(
+      [
+        [
+          [1.0, 2.0, 3.0],
+          [1.2, 2.1, 3.1],
+          [0.8, 2.1, 3.2],
+          [1.1, 1.9, 2.5],
+          [0.9, 1.9, 2.4],
+        ]
+      ],
+      dtype=torch.float32,
+    ),
+    body_quat_w=identity.repeat(1, len(body_names), 1),
+    robot_body_pos_w=torch.tensor(
+      [
+        [
+          [10.0, 20.0, 30.0],
+          [10.3, 20.1, 30.2],
+          [9.7, 20.1, 30.4],
+          [10.2, 19.8, 29.5],
+          [9.8, 19.8, 29.4],
+        ]
+      ],
+      dtype=torch.float32,
+    ),
+    robot_body_quat_w=identity.repeat(1, len(body_names), 1),
+  )
+  return SimpleNamespace(
+    num_envs=1,
+    command_manager=_WbTeleopCommandManager(command),
+  )
+
+
+def test_wbteleop_limb_ee_pose_terms_use_reference_and_robot_pelvis_frames() -> None:
+  env = _make_wbteleop_obs_env()
+  body_names = (
+    "left_wrist_yaw_link",
+    "right_wrist_yaw_link",
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+  )
+
+  ref = wbteleop_observations.ref_limb_ee_pose_b(
+    env,
+    command_name="motion",
+    body_names=body_names,
+    anchor_body_name="pelvis",
+    history_steps=0,
+    future_steps=1,
+  )
+  robot = wbteleop_observations.robot_limb_ee_pose_b(
+    env,
+    command_name="motion",
+    body_names=body_names,
+    anchor_body_name="pelvis",
+  )
+
+  assert ref.shape == (1, 36)
+  assert robot.shape == (1, 36)
+  torch.testing.assert_close(ref[0, :3], torch.tensor([0.2, 0.1, 0.1]))
+  torch.testing.assert_close(robot[0, :3], torch.tensor([0.3, 0.1, 0.2]))
 
 
 def test_wbteleop_bc_weight_schedule_values() -> None:

@@ -70,6 +70,7 @@ def make_distillation_wbteleop_obs_env_cfg(play: bool = False):
   motion_cmd = cfg.commands["motion"]
   cfg.observations["student_actor"] = wbteleop_actor_cfg(
     history_steps=motion_cmd.history_steps,
+    future_steps=motion_cmd.future_steps,
     enable_corruption=False,
   )
   return cfg

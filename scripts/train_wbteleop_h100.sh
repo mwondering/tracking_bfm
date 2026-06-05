@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export WANDB_API_KEY="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"
 
 set -euo pipefail
 
@@ -9,33 +10,39 @@ cd "$REPO_ROOT"
 
 TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop}"
 MOTION_PATH="${MOTION_PATH:-/data/zcy/motion_data/}"
-TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic_prior/model.pt}"
-NUM_ENVS="${NUM_ENVS:-8192}"
+TEACHER_CKPT="${TEACHER_CKPT:-/data/wxy/tracking_bfm/logs/rsl_rl/teacher_amass_lafan_noiton_sonic_prior/2026-06-01_12-56-46_teacher_v2_decimation4_4gpu_16384_resume3/model_88000.pt}"
+NUM_ENVS="${NUM_ENVS:-16384}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-300000}"
 NUM_STEPS_PER_ENV="${NUM_STEPS_PER_ENV:-24}"
-SAVE_INTERVAL="${SAVE_INTERVAL:-2000}"
+SAVE_INTERVAL="${SAVE_INTERVAL:-1000}"
 HISTORY_STEPS="${HISTORY_STEPS:-0}"
 FUTURE_STEPS="${FUTURE_STEPS:-1}"
-ROBOT_HISTORY_LENGTH="${ROBOT_HISTORY_LENGTH:-0}"
+ROBOT_HISTORY_LENGTH="${ROBOT_HISTORY_LENGTH:-10}"
+######bc settings
 BC_WEIGHT_START="${BC_WEIGHT_START:-0.5}"
 BC_WEIGHT_END="${BC_WEIGHT_END:-0.1}"
 BC_DECAY_STEPS="${BC_DECAY_STEPS:-10000}"
+
 PURE_BC_ENABLED="${PURE_BC_ENABLED:-True}"
 PURE_BC_WEIGHT="${PURE_BC_WEIGHT:-1.0}"
 PURE_BC_ROLLOUT="${PURE_BC_ROLLOUT:-student}"
+
 BC_ACTOR_CKPT="${BC_ACTOR_CKPT:-}"
+
 INIT_ACTOR_STD_FROM_TEACHER="${INIT_ACTOR_STD_FROM_TEACHER:-True}"
 INIT_CRITIC_FROM_TEACHER="${INIT_CRITIC_FROM_TEACHER:-True}"
 STRICT_INIT="${STRICT_INIT:-True}"
+#####resume settings
 RESUME="${RESUME:-False}"
 LOAD_RUN="${LOAD_RUN:-}"
 LOAD_CHECKPOINT="${LOAD_CHECKPOINT:-}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-g1_tracking_wbteleop}"
 RUN_NAME="${RUN_NAME:-wbteleop_adaptive_bfm}"
+#####
 WANDB_PROJECT="${WANDB_PROJECT:-tracking_bfm}"
 SAMPLING_MODE="${SAMPLING_MODE:-adaptive}"
 ADAPTIVE_WINDOW_STEPS="${ADAPTIVE_WINDOW_STEPS:-200}"
-GPU_IDS="${GPU_IDS:-[0,1]}"
+GPU_IDS="${GPU_IDS:-[0,1,2,3]}"
 DRY_RUN="${DRY_RUN:-false}"
 
 cmd=(

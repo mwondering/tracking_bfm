@@ -15,6 +15,14 @@ from mjlab.utils.noise import UniformNoiseCfg as Unoise
 
 from . import observations as wbteleop_observations
 
+_LIMB_EE_BODY_NAMES = (
+  "left_wrist_yaw_link",
+  "right_wrist_yaw_link",
+  "left_ankle_roll_link",
+  "right_ankle_roll_link",
+)
+_PELVIS_BODY_NAME = "pelvis"
+
 
 def _robot_history_length(history_steps: int) -> int:
   history_steps = int(history_steps)
@@ -33,6 +41,7 @@ def _history_kwargs(history_steps: int) -> dict[str, int]:
 def wbteleop_actor_cfg(
   *,
   history_steps: int,
+  future_steps: int,
   enable_corruption: bool,
 ) -> ObservationGroupCfg:
   robot_history = _history_kwargs(history_steps)
@@ -42,10 +51,29 @@ def wbteleop_actor_cfg(
         func=mdp.generated_commands,
         params={"command_name": "motion"},
       ),
+      "ref_limb_ee_pose_b": ObservationTermCfg(
+        func=wbteleop_observations.ref_limb_ee_pose_b,
+        params={
+          "command_name": "motion",
+          "body_names": _LIMB_EE_BODY_NAMES,
+          "anchor_body_name": _PELVIS_BODY_NAME,
+          "history_steps": history_steps,
+          "future_steps": future_steps,
+        },
+      ),
       "motion_ref_ang_vel": ObservationTermCfg(
         func=wbteleop_observations.motion_ref_ang_vel,
         params={"command_name": "motion"},
         noise=Unoise(n_min=-0.05, n_max=0.05),
+      ),
+      "robot_limb_ee_pose_b": ObservationTermCfg(
+        func=wbteleop_observations.robot_limb_ee_pose_b,
+        params={
+          "command_name": "motion",
+          "body_names": _LIMB_EE_BODY_NAMES,
+          "anchor_body_name": _PELVIS_BODY_NAME,
+        },
+        **robot_history,
       ),
       "projected_gravity": ObservationTermCfg(
         func=mdp.projected_gravity,
@@ -98,6 +126,7 @@ def unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
   cfg.observations["teacher_actor"] = teacher_actor
   cfg.observations["actor"] = wbteleop_actor_cfg(
     history_steps=motion_cmd.history_steps,
+    future_steps=motion_cmd.future_steps,
     enable_corruption=not play,
   )
   return cfg
