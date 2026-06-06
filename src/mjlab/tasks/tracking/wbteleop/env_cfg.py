@@ -132,7 +132,7 @@ def unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
   )
   cfg.rewards["pelvis_limb_ee_pos"] = RewardTermCfg(
     func=mdp.motion_pelvis_limb_ee_position_error_exp,
-    weight=1.0,
+    weight=0.5,
     params={
       "command_name": "motion",
       "std": 0.3,
@@ -142,7 +142,7 @@ def unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
   )
   cfg.rewards["pelvis_limb_ee_ori"] = RewardTermCfg(
     func=mdp.motion_pelvis_limb_ee_orientation_error_exp,
-    weight=1.0,
+    weight=0.5,
     params={
       "command_name": "motion",
       "std": 0.4,
