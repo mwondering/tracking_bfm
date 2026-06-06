@@ -172,6 +172,8 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
 
   def save(self, path: str, infos=None):
     super().save(path, infos)
+    if not self.cfg["upload_model"]:
+      return
     policy_dir, filename, onnx_path = self._get_export_paths(path)
     try:
       self.export_policy_to_onnx(str(policy_dir), filename)
