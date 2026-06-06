@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
+from mjlab.managers.reward_manager import RewardTermCfg
 from mjlab.tasks.tracking import mdp
 from mjlab.tasks.tracking.config.g1.env_cfgs import (
   unitree_g1_flat_tracking_bfm_env_cfg,
@@ -128,5 +129,25 @@ def unitree_g1_flat_tracking_bfm_wbteleop_env_cfg(
     history_steps=motion_cmd.history_steps,
     future_steps=motion_cmd.future_steps,
     enable_corruption=not play,
+  )
+  cfg.rewards["pelvis_limb_ee_pos"] = RewardTermCfg(
+    func=mdp.motion_pelvis_limb_ee_position_error_exp,
+    weight=1.0,
+    params={
+      "command_name": "motion",
+      "std": 0.3,
+      "body_names": _LIMB_EE_BODY_NAMES,
+      "anchor_body_name": _PELVIS_BODY_NAME,
+    },
+  )
+  cfg.rewards["pelvis_limb_ee_ori"] = RewardTermCfg(
+    func=mdp.motion_pelvis_limb_ee_orientation_error_exp,
+    weight=1.0,
+    params={
+      "command_name": "motion",
+      "std": 0.4,
+      "body_names": _LIMB_EE_BODY_NAMES,
+      "anchor_body_name": _PELVIS_BODY_NAME,
+    },
   )
   return cfg

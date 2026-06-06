@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 import torch
 
 from mjlab.sensor import ContactSensor
-from mjlab.utils.lab_api.math import quat_error_magnitude
+from mjlab.utils.lab_api.math import quat_error_magnitude, subtract_frame_transforms
 
 from .commands import MotionCommand
 
@@ -75,6 +75,79 @@ def motion_relative_body_orientation_error_exp(
     ** 2
   )
   return torch.exp(-error.mean(-1) / std**2)
+
+
+def _pelvis_limb_ee_pose_b(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  body_names: tuple[str, ...],
+  anchor_body_name: str = "pelvis",
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+  command = cast(MotionCommand, env.command_manager.get_term(command_name))
+  body_indexes = _get_body_indexes(command, body_names)
+  anchor_index = tuple(command.cfg.body_names).index(anchor_body_name)
+
+  num_bodies = len(body_indexes)
+  ref_anchor_pos_w = command.body_pos_w[:, anchor_index : anchor_index + 1, :].repeat(
+    1, num_bodies, 1
+  )
+  ref_anchor_quat_w = command.body_quat_w[:, anchor_index : anchor_index + 1, :].repeat(
+    1, num_bodies, 1
+  )
+  robot_anchor_pos_w = command.robot_body_pos_w[
+    :, anchor_index : anchor_index + 1, :
+  ].repeat(1, num_bodies, 1)
+  robot_anchor_quat_w = command.robot_body_quat_w[
+    :, anchor_index : anchor_index + 1, :
+  ].repeat(1, num_bodies, 1)
+
+  ref_pos_b, ref_quat_b = subtract_frame_transforms(
+    ref_anchor_pos_w,
+    ref_anchor_quat_w,
+    command.body_pos_w[:, body_indexes],
+    command.body_quat_w[:, body_indexes],
+  )
+  robot_pos_b, robot_quat_b = subtract_frame_transforms(
+    robot_anchor_pos_w,
+    robot_anchor_quat_w,
+    command.robot_body_pos_w[:, body_indexes],
+    command.robot_body_quat_w[:, body_indexes],
+  )
+  return ref_pos_b, ref_quat_b, robot_pos_b, robot_quat_b
+
+
+def motion_pelvis_limb_ee_position_error_exp(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  std: float,
+  body_names: tuple[str, ...],
+  anchor_body_name: str = "pelvis",
+) -> torch.Tensor:
+  ref_pos_b, _, robot_pos_b, _ = _pelvis_limb_ee_pose_b(
+    env,
+    command_name=command_name,
+    body_names=body_names,
+    anchor_body_name=anchor_body_name,
+  )
+  pos_error = torch.sum(torch.square(ref_pos_b - robot_pos_b), dim=-1).mean(-1)
+  return torch.exp(-pos_error / std**2)
+
+
+def motion_pelvis_limb_ee_orientation_error_exp(
+  env: ManagerBasedRlEnv,
+  command_name: str,
+  std: float,
+  body_names: tuple[str, ...],
+  anchor_body_name: str = "pelvis",
+) -> torch.Tensor:
+  _, ref_quat_b, _, robot_quat_b = _pelvis_limb_ee_pose_b(
+    env,
+    command_name=command_name,
+    body_names=body_names,
+    anchor_body_name=anchor_body_name,
+  )
+  ori_error = quat_error_magnitude(ref_quat_b, robot_quat_b).square().mean(-1)
+  return torch.exp(-ori_error / std**2)
 
 
 def motion_global_body_linear_velocity_error_exp(

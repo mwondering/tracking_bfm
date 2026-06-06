@@ -1,5 +1,6 @@
 """Tests for reward manager functionality."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import mujoco
@@ -17,7 +18,11 @@ from mjlab.envs.mdp.rewards import (
 from mjlab.managers.reward_manager import RewardManager, RewardTermCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sim.sim import Simulation, SimulationCfg
-from mjlab.tasks.tracking.mdp.rewards import motion_global_body_height_error_exp
+from mjlab.tasks.tracking.mdp.rewards import (
+  motion_global_body_height_error_exp,
+  motion_pelvis_limb_ee_orientation_error_exp,
+  motion_pelvis_limb_ee_position_error_exp,
+)
 
 PARTIALLY_ACTUATED_ROBOT_XML = """
 <mujoco>
@@ -310,6 +315,108 @@ def test_motion_global_body_height_error_exp_uses_selected_body() -> None:
 
   expected = torch.exp(torch.tensor([-((1.2 - 1.0) ** 2) / (0.5**2)]))
   torch.testing.assert_close(result, expected)
+
+
+def test_motion_pelvis_limb_ee_position_error_exp_uses_pelvis_frames() -> None:
+  body_names = (
+    "pelvis",
+    "left_wrist_yaw_link",
+    "right_wrist_yaw_link",
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+  )
+  limb_body_names = body_names[1:]
+  identity = torch.tensor([1.0, 0.0, 0.0, 0.0])
+  ref_body_pos_w = torch.tensor(
+    [
+      [
+        [1.0, 2.0, 3.0],
+        [1.2, 2.1, 3.1],
+        [0.8, 2.1, 3.2],
+        [1.1, 1.9, 2.5],
+        [0.9, 1.9, 2.4],
+      ]
+    ],
+    dtype=torch.float32,
+  )
+  global_robot_offset = torch.tensor([10.0, -5.0, 2.0])
+  command = SimpleNamespace(
+    cfg=SimpleNamespace(body_names=body_names),
+    body_pos_w=ref_body_pos_w,
+    body_quat_w=identity.repeat(1, len(body_names), 1),
+    robot_body_pos_w=ref_body_pos_w + global_robot_offset,
+    robot_body_quat_w=identity.repeat(1, len(body_names), 1),
+  )
+  env = Mock()
+  env.command_manager.get_term.return_value = command
+
+  perfect = motion_pelvis_limb_ee_position_error_exp(
+    env,
+    command_name="motion",
+    std=0.3,
+    body_names=limb_body_names,
+    anchor_body_name="pelvis",
+  )
+
+  torch.testing.assert_close(perfect, torch.ones(1))
+
+  command.robot_body_pos_w = command.robot_body_pos_w.clone()
+  command.robot_body_pos_w[:, 1, 0] += 0.3
+
+  offset_limb = motion_pelvis_limb_ee_position_error_exp(
+    env,
+    command_name="motion",
+    std=0.3,
+    body_names=limb_body_names,
+    anchor_body_name="pelvis",
+  )
+
+  assert torch.all(offset_limb < perfect)
+
+
+def test_motion_pelvis_limb_ee_orientation_error_exp_uses_pelvis_frames() -> None:
+  body_names = (
+    "pelvis",
+    "left_wrist_yaw_link",
+    "right_wrist_yaw_link",
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+  )
+  limb_body_names = body_names[1:]
+  identity = torch.tensor([1.0, 0.0, 0.0, 0.0])
+  quarter_turn_z = torch.tensor([0.70710678, 0.0, 0.0, 0.70710678])
+  command = SimpleNamespace(
+    cfg=SimpleNamespace(body_names=body_names),
+    body_pos_w=torch.zeros((1, len(body_names), 3)),
+    robot_body_pos_w=torch.zeros((1, len(body_names), 3)),
+    body_quat_w=identity.repeat(1, len(body_names), 1),
+    robot_body_quat_w=identity.repeat(1, len(body_names), 1),
+  )
+  env = Mock()
+  env.command_manager.get_term.return_value = command
+
+  perfect = motion_pelvis_limb_ee_orientation_error_exp(
+    env,
+    command_name="motion",
+    std=0.4,
+    body_names=limb_body_names,
+    anchor_body_name="pelvis",
+  )
+
+  torch.testing.assert_close(perfect, torch.ones(1))
+
+  command.robot_body_quat_w = command.robot_body_quat_w.clone()
+  command.robot_body_quat_w[:, 1] = quarter_turn_z
+
+  offset_limb = motion_pelvis_limb_ee_orientation_error_exp(
+    env,
+    command_name="motion",
+    std=0.4,
+    body_names=limb_body_names,
+    anchor_body_name="pelvis",
+  )
+
+  assert torch.all(offset_limb < perfect)
 
 
 def test_reward_manager_handles_nan_values(mock_env):

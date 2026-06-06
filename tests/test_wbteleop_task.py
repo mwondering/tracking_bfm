@@ -46,6 +46,26 @@ def test_wbteleop_actor_obs_terms_are_exact() -> None:
   }
 
 
+def test_wbteleop_adds_pelvis_limb_ee_pose_rewards() -> None:
+  cfg = load_env_cfg(TASK_ID)
+  pos_reward = cfg.rewards["pelvis_limb_ee_pos"]
+  ori_reward = cfg.rewards["pelvis_limb_ee_ori"]
+
+  assert pos_reward.weight == 1.0
+  assert ori_reward.weight == 1.0
+  assert pos_reward.params["std"] == 0.3
+  assert ori_reward.params["std"] == 0.4
+  for reward in (pos_reward, ori_reward):
+    assert reward.params["command_name"] == "motion"
+    assert reward.params["anchor_body_name"] == "pelvis"
+    assert reward.params["body_names"] == (
+      "left_wrist_yaw_link",
+      "right_wrist_yaw_link",
+      "left_ankle_roll_link",
+      "right_ankle_roll_link",
+    )
+
+
 def test_wbteleop_actor_obs_excludes_privileged_terms() -> None:
   cfg = load_env_cfg(TASK_ID)
   terms = set(cfg.observations["actor"].terms.keys())
