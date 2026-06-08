@@ -237,3 +237,41 @@ def test_train_wbteleop_script_dry_run_quotes_paths(tmp_path: Path) -> None:
   assert "[DRY RUN]" in stdout
   assert "motion\\ clips" in stdout
   assert "teacher\\ model.pt" in stdout
+
+
+def test_export_onnx_script_passes_wbteleop_history_overrides(tmp_path: Path) -> None:
+  script = Path("scripts/export_onnx.sh")
+  uv_stub = tmp_path / "uv"
+  args_file = tmp_path / "uv-args.txt"
+
+  uv_stub.write_text(
+    "#!/usr/bin/env bash\n"
+    "printf '%s\\n' \"$@\" > \"$UV_ARGS_FILE\"\n"
+  )
+  uv_stub.chmod(0o755)
+
+  env = os.environ.copy()
+  env["PATH"] = f"{tmp_path}:{env['PATH']}"
+  env["UV_ARGS_FILE"] = str(args_file)
+  env["CHECKPOINT"] = str(tmp_path / "model.pt")
+  env["MOTION_PATH"] = str(tmp_path / "motions")
+  env["WBTELEOP_REF_HISTORY_STEPS"] = "4"
+  env["WBTELEOP_REF_FUTURE_STEPS"] = "2"
+  env["WBTELEOP_ROBOT_HISTORY_LENGTH"] = "5"
+
+  subprocess.run(
+    ["bash", str(script)],
+    check=True,
+    capture_output=True,
+    text=True,
+    env=env,
+  )
+
+  args = args_file.read_text().splitlines()
+  assert args[:2] == ["run", "export-tracking-bfm-onnx"]
+  assert args[args.index("--task-id") + 1] == (
+    "Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop"
+  )
+  assert args[args.index("--student-history-steps") + 1] == "4"
+  assert args[args.index("--student-future-steps") + 1] == "2"
+  assert args[args.index("--student-robot-history-steps") + 1] == "5"

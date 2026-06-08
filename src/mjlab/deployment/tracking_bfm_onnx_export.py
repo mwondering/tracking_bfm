@@ -184,6 +184,52 @@ def _apply_distillation_student_obs_overrides(
       term.history_length = int(student_robot_history_steps)
 
 
+def _apply_tracking_actor_obs_overrides(
+  env_cfg: Any,
+  *,
+  obs_group: str = "actor",
+  student_history_steps: int | None = None,
+  student_future_steps: int | None = None,
+  student_robot_history_steps: int | None = None,
+) -> None:
+  """Apply tracking actor observation overrides used by wbteleop checkpoints."""
+  if (
+    student_history_steps is None
+    and student_future_steps is None
+    and student_robot_history_steps is None
+  ):
+    return
+
+  observations = getattr(env_cfg, "observations", {})
+  actor = observations.get(obs_group)
+  if actor is None:
+    return
+
+  terms = getattr(actor, "terms", {})
+  ref_limb_ee_pose = terms.get("ref_limb_ee_pose_b")
+  if ref_limb_ee_pose is not None:
+    if student_history_steps is not None:
+      ref_limb_ee_pose.params["history_steps"] = int(student_history_steps)
+    if student_future_steps is not None:
+      ref_limb_ee_pose.params["future_steps"] = int(student_future_steps)
+
+  if student_robot_history_steps is None:
+    return
+
+  robot_state_terms = (
+    "robot_limb_ee_pose_b",
+    "projected_gravity",
+    "base_ang_vel",
+    "joint_pos",
+    "joint_vel",
+    "actions",
+  )
+  for term_name in robot_state_terms:
+    term = terms.get(term_name)
+    if term is not None:
+      term.history_length = int(student_robot_history_steps)
+
+
 def _build_actor_from_checkpoint(
   *,
   checkpoint_path: str | Path,
@@ -209,6 +255,14 @@ def _build_actor_from_checkpoint(
     if checkpoint_family == "distillation":
       _apply_distillation_student_obs_overrides(
         env_cfg,
+        student_history_steps=student_history_steps,
+        student_future_steps=student_future_steps,
+        student_robot_history_steps=student_robot_history_steps,
+      )
+    else:
+      _apply_tracking_actor_obs_overrides(
+        env_cfg,
+        obs_group=obs_group or "actor",
         student_history_steps=student_history_steps,
         student_future_steps=student_future_steps,
         student_robot_history_steps=student_robot_history_steps,

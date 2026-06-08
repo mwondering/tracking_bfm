@@ -14,6 +14,7 @@ from tensordict import TensorDict
 from mjlab.deployment.tracking_bfm_onnx_export import (
   _apply_distillation_student_obs_overrides,
   _apply_motion_source,
+  _apply_tracking_actor_obs_overrides,
   detect_checkpoint_family,
   export_actor_model_to_onnx,
   resolve_deploy_onnx_path,
@@ -142,6 +143,65 @@ def test_apply_distillation_student_obs_overrides_sets_command_and_robot_history
     assert terms[name].params["future_steps"] == 4
   for name in ("projected_gravity", "base_ang_vel", "joint_pos", "joint_vel", "actions"):
     assert terms[name].history_length == 20
+
+
+def test_apply_tracking_actor_obs_overrides_keeps_ref_command_history_separate() -> None:
+  class Term:
+    def __init__(self) -> None:
+      self.params = {}
+      self.history_length = 0
+
+  class Motion:
+    history_steps = 0
+    future_steps = 1
+
+  terms = {
+    "command": Term(),
+    "ref_limb_ee_pose_b": Term(),
+    "motion_ref_ang_vel": Term(),
+    "robot_limb_ee_pose_b": Term(),
+    "projected_gravity": Term(),
+    "base_ang_vel": Term(),
+    "joint_pos": Term(),
+    "joint_vel": Term(),
+    "actions": Term(),
+  }
+  env_cfg = type(
+    "EnvCfg",
+    (),
+    {
+      "commands": {"motion": Motion()},
+      "observations": {
+        "actor": type("Group", (), {"terms": terms})(),
+      },
+    },
+  )()
+
+  _apply_tracking_actor_obs_overrides(
+    env_cfg,
+    obs_group="actor",
+    student_history_steps=4,
+    student_future_steps=2,
+    student_robot_history_steps=5,
+  )
+
+  assert env_cfg.commands["motion"].history_steps == 0
+  assert env_cfg.commands["motion"].future_steps == 1
+  assert terms["ref_limb_ee_pose_b"].params["history_steps"] == 4
+  assert terms["ref_limb_ee_pose_b"].params["future_steps"] == 2
+  assert terms["command"].history_length == 0
+  assert terms["motion_ref_ang_vel"].history_length == 0
+  assert "history_steps" not in terms["command"].params
+  assert "history_steps" not in terms["motion_ref_ang_vel"].params
+  for name in (
+    "robot_limb_ee_pose_b",
+    "projected_gravity",
+    "base_ang_vel",
+    "joint_pos",
+    "joint_vel",
+    "actions",
+  ):
+    assert terms[name].history_length == 5
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")

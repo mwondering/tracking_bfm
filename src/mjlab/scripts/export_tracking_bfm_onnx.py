@@ -38,19 +38,28 @@ def parse_args() -> argparse.Namespace:
     "--student-history-steps",
     type=int,
     default=None,
-    help="Distillation student sparse-command history_steps override.",
+    help=(
+      "Sparse reference history_steps override. For wbteleop tracking, this "
+      "applies only to ref_limb_ee_pose_b params, not to command history_length."
+    ),
   )
   parser.add_argument(
     "--student-future-steps",
     type=int,
     default=None,
-    help="Distillation student sparse-command future_steps override.",
+    help=(
+      "Sparse reference future_steps override. For wbteleop tracking, this "
+      "applies only to ref_limb_ee_pose_b params."
+    ),
   )
   parser.add_argument(
     "--student-robot-history-steps",
     type=int,
     default=None,
-    help="Distillation student robot-state observation history_length override.",
+    help=(
+      "Robot-state observation history_length override. For wbteleop tracking, "
+      "this applies to robot_limb_ee_pose_b and proprioceptive terms."
+    ),
   )
   parser.add_argument(
     "--output-name",
