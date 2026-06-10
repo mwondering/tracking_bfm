@@ -1,0 +1,866 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mjlab Tracking BFM Wbteleop Design &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-06-03-mjlab-trackingbfm-wbteleop-design';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Jun 10, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-06-03-mjlab-trackingbfm-wbteleop-design.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-06-03-mjlab-trackingbfm-wbteleop-design.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-06-03-mjlab-trackingbfm-wbteleop-design.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/specs/2026-06-03-mjlab-trackingbfm-wbteleop-design.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Mjlab Tracking BFM Wbteleop Design</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#environment">Environment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-observations">Actor Observations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#history-support">History Support</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-reference-angular-velocity">Motion Reference Angular Velocity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rl-configuration">RL Configuration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-action-bc-loss">Teacher Action BC Loss</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bc-weight-schedule">BC Weight Schedule</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-implementation">Algorithm Implementation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runner-implementation">Runner Implementation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#training-command">Training Command</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#risks">Risks</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="mjlab-tracking-bfm-wbteleop-design">
+<h1>Mjlab Tracking BFM Wbteleop Design<a class="headerlink" href="#mjlab-tracking-bfm-wbteleop-design" title="Link to this heading">#</a></h1>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
+<p>Implement <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop</span></code> as a full-body teleoperation tracking task that trains a non-sparse, non-privileged actor with PPO plus a teacher-action behavior cloning loss.</p>
+<p>Only training code is in scope. Play behavior and ONNX export behavior are not part of the first implementation, except that the task should still register a play config with matching observation structure so existing task integrity tests keep passing.</p>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
+<p>Implementation should live in:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>src/mjlab/tasks/tracking/wbteleop/
+</pre></div>
+</div>
+<p>The directory name is <code class="docutils literal notranslate"><span class="pre">wbteleop</span></code>, matching the task id suffix.</p>
+<p>The task registration should be:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop
+</pre></div>
+</div>
+</section>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading">#</a></h2>
+<p>The task composes the existing G1 BFM tracking environment and replaces only the actor observation with a non-privileged whole-body teleoperation observation group.</p>
+<p>Recommended files:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>src/mjlab/tasks/tracking/wbteleop/__init__.py
+src/mjlab/tasks/tracking/wbteleop/env_cfg.py
+src/mjlab/tasks/tracking/wbteleop/rl_cfg.py
+src/mjlab/tasks/tracking/wbteleop/observations.py
+src/mjlab/tasks/tracking/wbteleop/algorithm.py
+src/mjlab/tasks/tracking/wbteleop/runner.py
+</pre></div>
+</div>
+<p>Responsibilities:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> registers the task.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">env_cfg.py</span></code> builds the environment config from <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_env_cfg()</span></code> and installs wbteleop observations.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rl_cfg.py</span></code> defines runner and algorithm config defaults.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">observations.py</span></code> defines wbteleop-specific observation terms, including <code class="docutils literal notranslate"><span class="pre">motion_ref_ang_vel</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">algorithm.py</span></code> defines <code class="docutils literal notranslate"><span class="pre">WbTeleopPPO</span></code>, a PPO variant with teacher-action MSE.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">runner.py</span></code> defines <code class="docutils literal notranslate"><span class="pre">WbTeleopTrackingRunner</span></code>, a tracking runner that loads the teacher and injects it into the algorithm.</p></li>
+</ul>
+<p>The runner should preserve the existing <code class="docutils literal notranslate"><span class="pre">MotionTrackingOnPolicyRunner</span></code> behavior for rollout collection, adaptive sampling, logging, checkpointing, and training loop structure.</p>
+</section>
+<section id="environment">
+<h2>Environment<a class="headerlink" href="#environment" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg()</span></code> should:</p>
+<ol class="arabic simple">
+<li><p>Start from <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_env_cfg(play=play)</span></code>.</p></li>
+<li><p>Preserve the BFM motion command, rewards, terminations, randomization, actions, and privileged critic observation.</p></li>
+<li><p>Replace <code class="docutils literal notranslate"><span class="pre">cfg.observations[&quot;actor&quot;]</span></code> with the wbteleop actor observation group.</p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">cfg.observations[&quot;teacher_actor&quot;]</span></code> as a corruption-free copy of the original tracking actor observation.</p></li>
+<li><p>Keep <code class="docutils literal notranslate"><span class="pre">cfg.observations[&quot;critic&quot;]</span></code> unchanged.</p></li>
+<li><p>In play mode, disable actor corruption and teacher actor corruption.</p></li>
+</ol>
+<p>The <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> group is only used to compute teacher target actions for BC. It must not be included in student actor or critic observation groups.</p>
+</section>
+<section id="actor-observations">
+<h2>Actor Observations<a class="headerlink" href="#actor-observations" title="Link to this heading">#</a></h2>
+<p>The student actor uses exactly seven terms:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>command
+motion_ref_ang_vel
+projected_gravity
+base_ang_vel
+joint_pos
+joint_vel
+actions
+</pre></div>
+</div>
+<p>Term definitions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">generated_commands</span><span class="p">,</span>
+  <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;command_name&quot;</span><span class="p">:</span> <span class="s2">&quot;motion&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="s2">&quot;motion_ref_ang_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">wbteleop_observations</span><span class="o">.</span><span class="n">motion_ref_ang_vel</span><span class="p">,</span>
+  <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;command_name&quot;</span><span class="p">:</span> <span class="s2">&quot;motion&quot;</span><span class="p">},</span>
+  <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="s2">&quot;projected_gravity&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">projected_gravity</span><span class="p">,</span>
+  <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="s2">&quot;base_ang_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">builtin_sensor</span><span class="p">,</span>
+  <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;sensor_name&quot;</span><span class="p">:</span> <span class="s2">&quot;robot/imu_ang_vel&quot;</span><span class="p">},</span>
+  <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="s2">&quot;joint_pos&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">joint_pos_rel</span><span class="p">,</span>
+  <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;biased&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+  <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.01</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="s2">&quot;joint_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+  <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">joint_vel_rel</span><span class="p">,</span>
+  <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="s2">&quot;actions&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">last_action</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The actor must not include privileged tracking terms such as:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>motion_anchor_pos_b
+motion_anchor_ori_b
+body_pos
+body_ori
+base_lin_vel
+</pre></div>
+</div>
+</section>
+<section id="history-support">
+<h2>History Support<a class="headerlink" href="#history-support" title="Link to this heading">#</a></h2>
+<p>The wbteleop task keeps history support.</p>
+<p>Default values:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>history_steps = 0
+future_steps = 1
+</pre></div>
+</div>
+<p>The config factory should allow programmatic overrides:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">(</span><span class="n">history_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">future_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If history is changed through CLI after the registered task config has already been built, command history and proprio observation history must both be overridden. Observation <code class="docutils literal notranslate"><span class="pre">history_length</span></code> fields are not automatically recomputed from <code class="docutils literal notranslate"><span class="pre">commands.motion.history_steps</span></code>.</p>
+<p>History semantics:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">command</span></code> uses the motion command tensor and should not add <code class="docutils literal notranslate"><span class="pre">ObservationTermCfg.history_length</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_ref_ang_vel</span></code> returns the command term’s <code class="docutils literal notranslate"><span class="pre">anchor_ang_vel_w</span></code>, which already supports the command reference window.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">projected_gravity</span></code>, <code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code>, <code class="docutils literal notranslate"><span class="pre">joint_pos</span></code>, <code class="docutils literal notranslate"><span class="pre">joint_vel</span></code>, and <code class="docutils literal notranslate"><span class="pre">actions</span></code> should use <code class="docutils literal notranslate"><span class="pre">history_length</span> <span class="pre">=</span> <span class="pre">history_steps</span> <span class="pre">+</span> <span class="pre">1</span></code> when <code class="docutils literal notranslate"><span class="pre">history_steps</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>.</p></li>
+<li><p>When <code class="docutils literal notranslate"><span class="pre">history_steps</span> <span class="pre">==</span> <span class="pre">0</span></code>, those proprioceptive terms should not set additional history.</p></li>
+</ul>
+<p>This avoids double-stacking reference history while still supporting proprioceptive history.</p>
+</section>
+<section id="motion-reference-angular-velocity">
+<h2>Motion Reference Angular Velocity<a class="headerlink" href="#motion-reference-angular-velocity" title="Link to this heading">#</a></h2>
+<p>The current repository does not provide <code class="docutils literal notranslate"><span class="pre">mdp.motion_ref_ang_vel</span></code>. Add the wbteleop-specific function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">motion_ref_ang_vel</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">ManagerBasedRlEnv</span><span class="p">,</span> <span class="n">command_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">command_manager</span><span class="o">.</span><span class="n">get_term</span><span class="p">(</span><span class="n">command_name</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="n">anchor_ang_vel_w</span>
+</pre></div>
+</div>
+<p>The implementation should type-check or cast against the tracking motion command interface as needed.</p>
+</section>
+<section id="rl-configuration">
+<h2>RL Configuration<a class="headerlink" href="#rl-configuration" title="Link to this heading">#</a></h2>
+<p>Use the existing BFM tracking network shape initially:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>hidden_dims = (2048, 2048, 1024, 1024, 512, 256, 128)
+activation = &quot;elu&quot;
+obs_normalization = True
+distribution = GaussianDistribution(init_std=1.0, std_type=&quot;scalar&quot;)
+</pre></div>
+</div>
+<p>Runner defaults:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>experiment_name = &quot;g1_tracking_wbteleop&quot;
+save_interval = 1000
+num_steps_per_env = 24
+max_iterations = 300_000
+</pre></div>
+</div>
+<p>Observation groups:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">obs_groups</span><span class="o">=</span><span class="p">{</span>
+  <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;actor&quot;</span><span class="p">,),</span>
+  <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;critic&quot;</span><span class="p">,),</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> group is intentionally omitted from <code class="docutils literal notranslate"><span class="pre">obs_groups</span></code>.</p>
+</section>
+<section id="teacher-action-bc-loss">
+<h2>Teacher Action BC Loss<a class="headerlink" href="#teacher-action-bc-loss" title="Link to this heading">#</a></h2>
+<p>Training uses PPO tracking plus teacher-action MSE:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>student_action_mean = current actor mean action
+teacher_action_mean = teacher policy mean action
+bc_mse = mse(student_action_mean, teacher_action_mean)
+loss = ppo_loss + bc_weight * bc_mse
+</pre></div>
+</div>
+<p>The student target is the actor mean, not the sampled rollout action. The teacher target is computed without gradients.</p>
+<p>Teacher action dimensionality should match the environment action dimension, expected to be 29 DOF for Unitree G1.</p>
+<p>The teacher should be loaded from a checkpoint for:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>teacher_task_id = &quot;Mjlab-Trackingbfm-Flat-Unitree-G1&quot;
+teacher_checkpoint_path = &quot;&quot;
+teacher_obs_group = &quot;teacher_actor&quot;
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">teacher_checkpoint_path</span></code> must be provided for actual training.</p>
+</section>
+<section id="bc-weight-schedule">
+<h2>BC Weight Schedule<a class="headerlink" href="#bc-weight-schedule" title="Link to this heading">#</a></h2>
+<p>Use strict cosine decay from 0.5 to 0.1 over 10000 PPO iterations:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>bc_weight_start = 0.5
+bc_weight_end = 0.1
+bc_decay_steps = 10_000
+</pre></div>
+</div>
+<p>Schedule:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>progress = min(iteration, bc_decay_steps) / bc_decay_steps
+bc_weight = bc_weight_end + (bc_weight_start - bc_weight_end) * 0.5 * (1 + cos(pi * progress))
+</pre></div>
+</div>
+<p>Expected values:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>iteration 0: 0.5
+iteration 10000: 0.1
+iteration &gt; 10000: 0.1
+</pre></div>
+</div>
+<p>Log metrics:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>bc_mse
+bc_weight
+bc_loss
+</pre></div>
+</div>
+</section>
+<section id="algorithm-implementation">
+<h2>Algorithm Implementation<a class="headerlink" href="#algorithm-implementation" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">WbTeleopPPO</span></code> should be a local subclass or local variant of the installed <code class="docutils literal notranslate"><span class="pre">rsl_rl.algorithms.PPO</span></code>.</p>
+<p>Because upstream PPO does not expose a loss hook, the implementation may copy the current <code class="docutils literal notranslate"><span class="pre">PPO.update()</span></code> body into <code class="docutils literal notranslate"><span class="pre">wbteleop/algorithm.py</span></code> and insert the teacher-action MSE term before the backward pass. Keep the copy local to the wbteleop directory and avoid modifying site-packages or common PPO code.</p>
+<p>The algorithm class should be referenced by fully qualified class name:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>mjlab.tasks.tracking.wbteleop.algorithm:WbTeleopPPO
+</pre></div>
+</div>
+<p>This is supported by rsl_rl’s callable resolver.</p>
+</section>
+<section id="runner-implementation">
+<h2>Runner Implementation<a class="headerlink" href="#runner-implementation" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">WbTeleopTrackingRunner</span></code> should inherit from <code class="docutils literal notranslate"><span class="pre">MotionTrackingOnPolicyRunner</span></code>.</p>
+<p>It should:</p>
+<ol class="arabic simple">
+<li><p>Load the teacher task config and teacher checkpoint.</p></li>
+<li><p>Build a teacher runner or teacher policy adapter following the existing distillation teacher loading pattern.</p></li>
+<li><p>Override the nested teacher runner actor obs group to <code class="docutils literal notranslate"><span class="pre">(&quot;teacher_actor&quot;,)</span></code> before constructing the teacher, so the checkpoint model is built with teacher observation dimensions rather than wbteleop student actor dimensions.</p></li>
+<li><p>Provide teacher inference on the <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> observation group.</p></li>
+<li><p>Attach the teacher adapter to <code class="docutils literal notranslate"><span class="pre">WbTeleopPPO</span></code> before training.</p></li>
+</ol>
+<p>Teacher loading should fail clearly if <code class="docutils literal notranslate"><span class="pre">teacher_checkpoint_path</span></code> is empty during training.</p>
+</section>
+<section id="training-command">
+<h2>Training Command<a class="headerlink" href="#training-command" title="Link to this heading">#</a></h2>
+<p>Default training command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.algorithm.teacher_checkpoint_path<span class="w"> </span>/path/to/teacher/model.pt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.scene.num-envs<span class="w"> </span><span class="m">4096</span>
+</pre></div>
+</div>
+<p>With history:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--agent.algorithm.teacher_checkpoint_path<span class="w"> </span>/path/to/teacher/model.pt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.commands.motion.history_steps<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.commands.motion.future_steps<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.observations.actor.terms.projected_gravity.history_length<span class="w"> </span><span class="m">11</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.observations.actor.terms.base_ang_vel.history_length<span class="w"> </span><span class="m">11</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.observations.actor.terms.joint_pos.history_length<span class="w"> </span><span class="m">11</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.observations.actor.terms.joint_vel.history_length<span class="w"> </span><span class="m">11</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.observations.actor.terms.actions.history_length<span class="w"> </span><span class="m">11</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--env.scene.num-envs<span class="w"> </span><span class="m">4096</span>
+</pre></div>
+</div>
+</section>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
+<p>Add focused tests for:</p>
+<ol class="arabic simple">
+<li><p>Task registration includes <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop</span></code>.</p></li>
+<li><p>Actor observation terms are exactly the seven wbteleop terms.</p></li>
+<li><p>Actor observation excludes privileged tracking terms.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> exists and is corruption-free.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rl_cfg.obs_groups[&quot;actor&quot;]</span> <span class="pre">==</span> <span class="pre">(&quot;actor&quot;,)</span></code> and <code class="docutils literal notranslate"><span class="pre">rl_cfg.obs_groups[&quot;critic&quot;]</span> <span class="pre">==</span> <span class="pre">(&quot;critic&quot;,)</span></code>.</p></li>
+<li><p>History config sets proprioceptive <code class="docutils literal notranslate"><span class="pre">history_length</span></code> to <code class="docutils literal notranslate"><span class="pre">history_steps</span> <span class="pre">+</span> <span class="pre">1</span></code> while leaving <code class="docutils literal notranslate"><span class="pre">command</span></code> and <code class="docutils literal notranslate"><span class="pre">motion_ref_ang_vel</span></code> without extra observation history.</p></li>
+<li><p>BC weight schedule returns 0.5 at iteration 0, 0.1 at iteration 10000, and clamps to 0.1 afterwards.</p></li>
+<li><p>A small algorithm smoke test reports <code class="docutils literal notranslate"><span class="pre">bc_mse</span></code>, <code class="docutils literal notranslate"><span class="pre">bc_weight</span></code>, and <code class="docutils literal notranslate"><span class="pre">bc_loss</span></code>.</p></li>
+</ol>
+</section>
+<section id="risks">
+<h2>Risks<a class="headerlink" href="#risks" title="Link to this heading">#</a></h2>
+<p>The main maintenance risk is copying <code class="docutils literal notranslate"><span class="pre">PPO.update()</span></code> locally. This is acceptable for the first implementation because it keeps the behavior isolated to the wbteleop task and avoids changing global PPO behavior.</p>
+<p>The main behavior risk is teacher observation leakage. The design avoids this by keeping <code class="docutils literal notranslate"><span class="pre">teacher_actor</span></code> outside <code class="docutils literal notranslate"><span class="pre">obs_groups</span></code> and using it only inside the teacher adapter path.</p>
+<p>The main configuration risk is ambiguity around history dimensions. The design separates command reference history from observation history to avoid double-stacking reference signals.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#environment">Environment</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-observations">Actor Observations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#history-support">History Support</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motion-reference-angular-velocity">Motion Reference Angular Velocity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rl-configuration">RL Configuration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#teacher-action-bc-loss">Teacher Action BC Loss</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bc-weight-schedule">BC Weight Schedule</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algorithm-implementation">Algorithm Implementation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runner-implementation">Runner Implementation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#training-command">Training Command</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#risks">Risks</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jun 10, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

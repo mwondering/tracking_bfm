@@ -1,0 +1,1614 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mjlab Tracking BFM Wbteleop Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-06-03-mjlab-trackingbfm-wbteleop';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Jun 10, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-06-03-mjlab-trackingbfm-wbteleop.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-06-03-mjlab-trackingbfm-wbteleop.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-06-03-mjlab-trackingbfm-wbteleop.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-06-03-mjlab-trackingbfm-wbteleop.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Mjlab Tracking BFM Wbteleop Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-failing-wbteleop-task-config-tests">Task 1: Add Failing Wbteleop Task Config Tests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-implement-wbteleop-observations-env-config-rl-config-and-registration">Task 2: Implement Wbteleop Observations, Env Config, RL Config, and Registration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-bc-weight-schedule-tests-and-implementation">Task 3: Add BC Weight Schedule Tests and Implementation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-implement-wbteleopppo-update-with-teacher-mse">Task 4: Implement WbTeleopPPO Update With Teacher MSE</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-implement-teacher-loading-in-wbteleop-runner">Task 5: Implement Teacher Loading in WbTeleop Runner</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-add-end-to-end-cli-and-regression-verification">Task 6: Add End-to-End CLI and Regression Verification</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-final-verification">Task 7: Final Verification</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="mjlab-tracking-bfm-wbteleop-implementation-plan">
+<h1>Mjlab Tracking BFM Wbteleop Implementation Plan<a class="headerlink" href="#mjlab-tracking-bfm-wbteleop-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Build <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop</span></code>, a G1 BFM tracking task whose actor uses non-sparse non-privileged observations and trains with PPO plus teacher-action MSE.</p>
+<p><strong>Architecture:</strong> Add a self-contained <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/</span></code> package. Compose the existing G1 BFM tracking env, replace the actor observation, keep privileged critic and teacher-only observations, and use a local PPO variant that adds a scheduled teacher-action MSE term.</p>
+<p><strong>Tech Stack:</strong> Python, dataclasses, PyTorch, TensorDict, rsl_rl PPO, MJLab task registry, pytest.</p>
+<hr class="docutils" />
+<section id="file-structure">
+<h2>File Structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
+<p>Create:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/__init__.py</span></code>: registers <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/env_cfg.py</span></code>: builds wbteleop environment config.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/rl_cfg.py</span></code>: defines PPO runner and BC config defaults.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/observations.py</span></code>: defines <code class="docutils literal notranslate"><span class="pre">motion_ref_ang_vel</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/algorithm.py</span></code>: defines <code class="docutils literal notranslate"><span class="pre">cosine_bc_weight</span></code> and <code class="docutils literal notranslate"><span class="pre">WbTeleopPPO</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code>: defines <code class="docutils literal notranslate"><span class="pre">WbTeleopTrackingRunner</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code>: verifies task registration, observation structure, history support, schedule, and algorithm smoke behavior.</p></li>
+</ul>
+<p>Do not modify the installed rsl_rl package. Do not change existing tracking or distillation task behavior.</p>
+<hr class="docutils" />
+<section id="task-1-add-failing-wbteleop-task-config-tests">
+<h3>Task 1: Add Failing Wbteleop Task Config Tests<a class="headerlink" href="#task-1-add-failing-wbteleop-task-config-tests" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing tests for registration, observations, and history</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Tests for the G1 BFM wbteleop tracking task.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">mjlab.tasks</span>  <span class="c1"># noqa: F401</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_tasks</span><span class="p">,</span> <span class="n">load_env_cfg</span><span class="p">,</span> <span class="n">load_rl_cfg</span><span class="p">,</span> <span class="n">load_runner_cls</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.wbteleop.env_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.wbteleop.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">WbTeleopTrackingRunner</span>
+
+
+<span class="n">TASK_ID</span> <span class="o">=</span> <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_task_is_registered</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">assert</span> <span class="n">TASK_ID</span> <span class="ow">in</span> <span class="n">list_tasks</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">load_runner_cls</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">)</span> <span class="ow">is</span> <span class="n">WbTeleopTrackingRunner</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_actor_obs_terms_are_exact</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">terms</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s2">&quot;command&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;motion_ref_ang_vel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;projected_gravity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;base_ang_vel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;joint_pos&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;joint_vel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;actions&quot;</span><span class="p">,</span>
+  <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_actor_obs_excludes_privileged_terms</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">)</span>
+  <span class="n">terms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">terms</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;motion_anchor_pos_b&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;motion_anchor_ori_b&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;body_pos&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;body_ori&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+  <span class="k">assert</span> <span class="s2">&quot;base_lin_vel&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">terms</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_teacher_actor_is_teacher_only</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">env_cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">)</span>
+  <span class="n">rl_cfg</span> <span class="o">=</span> <span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;teacher_actor&quot;</span> <span class="ow">in</span> <span class="n">env_cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="n">env_cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">enable_corruption</span> <span class="ow">is</span> <span class="kc">False</span>
+  <span class="k">assert</span> <span class="n">asdict</span><span class="p">(</span><span class="n">rl_cfg</span><span class="p">)[</span><span class="s2">&quot;obs_groups&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;actor&quot;</span><span class="p">,),</span>
+    <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;critic&quot;</span><span class="p">,),</span>
+  <span class="p">}</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span><span class="s2">&quot;play&quot;</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_play_and_train_observation_structure_match</span><span class="p">(</span><span class="n">play</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_env_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">,</span> <span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;actor&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="s2">&quot;critic&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="s2">&quot;teacher_actor&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">enable_corruption</span> <span class="ow">is</span> <span class="kc">False</span>
+  <span class="k">if</span> <span class="n">play</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">enable_corruption</span> <span class="ow">is</span> <span class="kc">False</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">enable_corruption</span> <span class="ow">is</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_history_support_sets_robot_history_only</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">(</span>
+    <span class="n">history_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">future_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">terms</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">terms</span>
+
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="s2">&quot;motion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">history_steps</span> <span class="o">==</span> <span class="mi">10</span>
+  <span class="k">assert</span> <span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="s2">&quot;motion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">future_steps</span> <span class="o">==</span> <span class="mi">1</span>
+  <span class="k">assert</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;command&quot;</span><span class="p">],</span> <span class="s2">&quot;history_length&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">terms</span><span class="p">[</span><span class="s2">&quot;motion_ref_ang_vel&quot;</span><span class="p">],</span> <span class="s2">&quot;history_length&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;projected_gravity&quot;</span><span class="p">,</span> <span class="s2">&quot;base_ang_vel&quot;</span><span class="p">,</span> <span class="s2">&quot;joint_pos&quot;</span><span class="p">,</span> <span class="s2">&quot;joint_vel&quot;</span><span class="p">,</span> <span class="s2">&quot;actions&quot;</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">terms</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">history_length</span> <span class="o">==</span> <span class="mi">11</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests and verify they fail because wbteleop does not exist</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail during import with <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError:</span> <span class="pre">No</span> <span class="pre">module</span> <span class="pre">named</span> <span class="pre">'mjlab.tasks.tracking.wbteleop'</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Commit failing tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;test: add wbteleop task config expectations&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-2-implement-wbteleop-observations-env-config-rl-config-and-registration">
+<h3>Task 2: Implement Wbteleop Observations, Env Config, RL Config, and Registration<a class="headerlink" href="#task-2-implement-wbteleop-observations-env-config-rl-config-and-registration" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/__init__.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/env_cfg.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/rl_cfg.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/observations.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Implement <code class="docutils literal notranslate"><span class="pre">observations.py</span></code></strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/observations.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Observation terms for the G1 BFM wbteleop tracking task.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.mdp.multi_commands</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionCommand</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnv</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">motion_ref_ang_vel</span><span class="p">(</span><span class="n">env</span><span class="p">:</span> <span class="n">ManagerBasedRlEnv</span><span class="p">,</span> <span class="n">command_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Return reference anchor angular velocity from the motion command window.&quot;&quot;&quot;</span>
+  <span class="n">command</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MotionCommand</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">command_manager</span><span class="o">.</span><span class="n">get_term</span><span class="p">(</span><span class="n">command_name</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="n">anchor_ang_vel_w</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Implement <code class="docutils literal notranslate"><span class="pre">env_cfg.py</span></code></strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/env_cfg.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Environment config for G1 BFM wbteleop tracking.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnvCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.observation_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ObservationGroupCfg</span><span class="p">,</span> <span class="n">ObservationTermCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking</span><span class="w"> </span><span class="kn">import</span> <span class="n">mdp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.config.g1.env_cfgs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">unitree_g1_flat_tracking_bfm_env_cfg</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.mdp.multi_commands</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionCommandCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.noise</span><span class="w"> </span><span class="kn">import</span> <span class="n">UniformNoiseCfg</span> <span class="k">as</span> <span class="n">Unoise</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">observations</span> <span class="k">as</span> <span class="n">wbteleop_observations</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_robot_history_length</span><span class="p">(</span><span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+  <span class="n">history_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">history_steps</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">history_steps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">0</span>
+  <span class="k">return</span> <span class="n">history_steps</span> <span class="o">+</span> <span class="mi">1</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_history_kwargs</span><span class="p">(</span><span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+  <span class="n">history_length</span> <span class="o">=</span> <span class="n">_robot_history_length</span><span class="p">(</span><span class="n">history_steps</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">history_length</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">{}</span>
+  <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;history_length&quot;</span><span class="p">:</span> <span class="n">history_length</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_wbteleop_actor_cfg</span><span class="p">(</span>
+  <span class="o">*</span><span class="p">,</span>
+  <span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="n">enable_corruption</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ObservationGroupCfg</span><span class="p">:</span>
+  <span class="n">robot_history</span> <span class="o">=</span> <span class="n">_history_kwargs</span><span class="p">(</span><span class="n">history_steps</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">ObservationGroupCfg</span><span class="p">(</span>
+    <span class="n">terms</span><span class="o">=</span><span class="p">{</span>
+      <span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">generated_commands</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;command_name&quot;</span><span class="p">:</span> <span class="s2">&quot;motion&quot;</span><span class="p">},</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;motion_ref_ang_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">wbteleop_observations</span><span class="o">.</span><span class="n">motion_ref_ang_vel</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;command_name&quot;</span><span class="p">:</span> <span class="s2">&quot;motion&quot;</span><span class="p">},</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;projected_gravity&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">projected_gravity</span><span class="p">,</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">robot_history</span><span class="p">,</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;base_ang_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">builtin_sensor</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;sensor_name&quot;</span><span class="p">:</span> <span class="s2">&quot;robot/imu_ang_vel&quot;</span><span class="p">},</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">robot_history</span><span class="p">,</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;joint_pos&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">joint_pos_rel</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;biased&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.01</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">robot_history</span><span class="p">,</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;joint_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">joint_vel_rel</span><span class="p">,</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">Unoise</span><span class="p">(</span><span class="n">n_min</span><span class="o">=-</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n_max</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">robot_history</span><span class="p">,</span>
+      <span class="p">),</span>
+      <span class="s2">&quot;actions&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+        <span class="n">func</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">last_action</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">robot_history</span><span class="p">,</span>
+      <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">concatenate_terms</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">enable_corruption</span><span class="o">=</span><span class="n">enable_corruption</span><span class="p">,</span>
+  <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">(</span>
+  <span class="o">*</span><span class="p">,</span>
+  <span class="n">history_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="n">future_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+  <span class="n">play</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ManagerBasedRlEnvCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create the G1 BFM wbteleop tracking environment config.&quot;&quot;&quot;</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">unitree_g1_flat_tracking_bfm_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="n">play</span><span class="p">)</span>
+
+  <span class="n">motion_cmd</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="s2">&quot;motion&quot;</span><span class="p">]</span>
+  <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">motion_cmd</span><span class="p">,</span> <span class="n">MotionCommandCfg</span><span class="p">)</span>
+  <span class="n">motion_cmd</span><span class="o">.</span><span class="n">history_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">history_steps</span><span class="p">)</span>
+  <span class="n">motion_cmd</span><span class="o">.</span><span class="n">future_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">future_steps</span><span class="p">)</span>
+
+  <span class="n">teacher_actor</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">])</span>
+  <span class="n">teacher_actor</span><span class="o">.</span><span class="n">enable_corruption</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">teacher_actor</span>
+  <span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_wbteleop_actor_cfg</span><span class="p">(</span>
+    <span class="n">history_steps</span><span class="o">=</span><span class="n">motion_cmd</span><span class="o">.</span><span class="n">history_steps</span><span class="p">,</span>
+    <span class="n">enable_corruption</span><span class="o">=</span><span class="ow">not</span> <span class="n">play</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement <code class="docutils literal notranslate"><span class="pre">rl_cfg.py</span></code></strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/rl_cfg.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;RL config for G1 BFM wbteleop tracking.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">RslRlModelCfg</span><span class="p">,</span> <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">,</span> <span class="n">RslRlPpoAlgorithmCfg</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">WbTeleopPpoAlgorithmCfg</span><span class="p">(</span><span class="n">RslRlPpoAlgorithmCfg</span><span class="p">):</span>
+  <span class="n">class_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mjlab.tasks.tracking.wbteleop.algorithm:WbTeleopPPO&quot;</span>
+  <span class="n">teacher_task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1&quot;</span>
+  <span class="n">teacher_checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+  <span class="n">teacher_obs_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;teacher_actor&quot;</span>
+  <span class="n">bc_weight_start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span>
+  <span class="n">bc_weight_end</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+  <span class="n">bc_decay_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">unitree_g1_trackingbfm_wbteleop_ppo_runner_cfg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Create the runner config for the G1 BFM wbteleop task.&quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">(</span>
+    <span class="n">actor</span><span class="o">=</span><span class="n">RslRlModelCfg</span><span class="p">(</span>
+      <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+      <span class="n">distribution_cfg</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;GaussianDistribution&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;init_std&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;std_type&quot;</span><span class="p">:</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span>
+      <span class="p">},</span>
+    <span class="p">),</span>
+    <span class="n">critic</span><span class="o">=</span><span class="n">RslRlModelCfg</span><span class="p">(</span>
+      <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+      <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+      <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">algorithm</span><span class="o">=</span><span class="n">WbTeleopPpoAlgorithmCfg</span><span class="p">(</span>
+      <span class="n">value_loss_coef</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+      <span class="n">use_clipped_value_loss</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+      <span class="n">clip_param</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+      <span class="n">entropy_coef</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span>
+      <span class="n">num_learning_epochs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+      <span class="n">num_mini_batches</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+      <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+      <span class="n">schedule</span><span class="o">=</span><span class="s2">&quot;adaptive&quot;</span><span class="p">,</span>
+      <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+      <span class="n">lam</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+      <span class="n">desired_kl</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+      <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">obs_groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;actor&quot;</span><span class="p">,),</span> <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;critic&quot;</span><span class="p">,)},</span>
+    <span class="n">experiment_name</span><span class="o">=</span><span class="s2">&quot;g1_tracking_wbteleop&quot;</span><span class="p">,</span>
+    <span class="n">save_interval</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">num_steps_per_env</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">300_000</span><span class="p">,</span>
+  <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Add a temporary runner shell</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Runner for G1 BFM wbteleop tracking.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionTrackingOnPolicyRunner</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">WbTeleopTrackingRunner</span><span class="p">(</span><span class="n">MotionTrackingOnPolicyRunner</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Tracking runner for wbteleop PPO plus teacher-action BC.&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Register the task</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/__init__.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;G1 BFM wbteleop tracking task.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_mjlab_task</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.env_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.rl_cfg</span><span class="w"> </span><span class="kn">import</span> <span class="n">unitree_g1_trackingbfm_wbteleop_ppo_runner_cfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">WbTeleopTrackingRunner</span>
+
+
+<span class="n">register_mjlab_task</span><span class="p">(</span>
+  <span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop&quot;</span><span class="p">,</span>
+  <span class="n">env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">(),</span>
+  <span class="n">play_env_cfg</span><span class="o">=</span><span class="n">unitree_g1_flat_tracking_bfm_wbteleop_env_cfg</span><span class="p">(</span><span class="n">play</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+  <span class="n">rl_cfg</span><span class="o">=</span><span class="n">unitree_g1_trackingbfm_wbteleop_ppo_runner_cfg</span><span class="p">(),</span>
+  <span class="n">runner_cls</span><span class="o">=</span><span class="n">WbTeleopTrackingRunner</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Run config tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: config tests pass, except tests that later import <code class="docutils literal notranslate"><span class="pre">algorithm.py</span></code> may still fail if added in later tasks.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 7: Run generic task integrity tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_task_configs.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 8: Commit env and config implementation</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/tracking/wbteleop<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: register wbteleop tracking task&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-3-add-bc-weight-schedule-tests-and-implementation">
+<h3>Task 3: Add BC Weight Schedule Tests and Implementation<a class="headerlink" href="#task-3-add-bc-weight-schedule-tests-and-implementation" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/algorithm.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add failing schedule tests</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.wbteleop.algorithm</span><span class="w"> </span><span class="kn">import</span> <span class="n">cosine_bc_weight</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_bc_weight_schedule_values</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">assert</span> <span class="n">cosine_bc_weight</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">decay_steps</span><span class="o">=</span><span class="mi">10_000</span><span class="p">)</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">cosine_bc_weight</span><span class="p">(</span><span class="mi">10_000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">decay_steps</span><span class="o">=</span><span class="mi">10_000</span><span class="p">)</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">cosine_bc_weight</span><span class="p">(</span><span class="mi">20_000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">decay_steps</span><span class="o">=</span><span class="mi">10_000</span><span class="p">)</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+  <span class="n">midpoint</span> <span class="o">=</span> <span class="n">cosine_bc_weight</span><span class="p">(</span><span class="mi">5_000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">decay_steps</span><span class="o">=</span><span class="mi">10_000</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="mf">0.1</span> <span class="o">&lt;</span> <span class="n">midpoint</span> <span class="o">&lt;</span> <span class="mf">0.5</span>
+  <span class="k">assert</span> <span class="n">midpoint</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_bc_weight_schedule_rejects_invalid_decay</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;bc_decay_steps must be positive&quot;</span><span class="p">):</span>
+    <span class="n">cosine_bc_weight</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">decay_steps</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run schedule tests and verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_bc_weight_schedule_values<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_bc_weight_schedule_rejects_invalid_decay<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail with <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> or missing <code class="docutils literal notranslate"><span class="pre">cosine_bc_weight</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement schedule and algorithm class constructor</strong></p></li>
+</ul>
+<p>Create <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/algorithm.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;PPO variant for wbteleop tracking with teacher-action MSE.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.algorithms</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">MLPModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.storage</span><span class="w"> </span><span class="kn">import</span> <span class="n">RolloutStorage</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.rl.teacher</span><span class="w"> </span><span class="kn">import</span> <span class="n">TeacherPolicyAdapter</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cosine_bc_weight</span><span class="p">(</span>
+  <span class="n">iteration</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+  <span class="o">*</span><span class="p">,</span>
+  <span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+  <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+  <span class="n">decay_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Cosine decay from start to end, clamped at end after decay_steps.&quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">decay_steps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bc_decay_steps must be positive&quot;</span><span class="p">)</span>
+  <span class="n">progress</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">iteration</span><span class="p">),</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">decay_steps</span><span class="p">))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">decay_steps</span><span class="p">)</span>
+  <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">end</span> <span class="o">+</span> <span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">end</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">progress</span><span class="p">)))</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">WbTeleopPPO</span><span class="p">(</span><span class="n">PPO</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;PPO with an additional scheduled teacher-action MSE loss.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">actor</span><span class="p">:</span> <span class="n">MLPModel</span><span class="p">,</span>
+    <span class="n">critic</span><span class="p">:</span> <span class="n">MLPModel</span><span class="p">,</span>
+    <span class="n">storage</span><span class="p">:</span> <span class="n">RolloutStorage</span><span class="p">,</span>
+    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+    <span class="n">teacher_task_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1&quot;</span><span class="p">,</span>
+    <span class="n">teacher_checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">teacher_obs_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;teacher_actor&quot;</span><span class="p">,</span>
+    <span class="n">bc_weight_start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">bc_weight_end</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">bc_decay_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">,</span> <span class="n">critic</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_task_id</span> <span class="o">=</span> <span class="n">teacher_task_id</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_checkpoint_path</span> <span class="o">=</span> <span class="n">teacher_checkpoint_path</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_obs_group</span> <span class="o">=</span> <span class="n">teacher_obs_group</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">bc_weight_start</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">bc_weight_start</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">bc_weight_end</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">bc_weight_end</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">bc_decay_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">bc_decay_steps</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span><span class="p">:</span> <span class="n">TeacherPolicyAdapter</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_learning_iteration</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">set_teacher_adapter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">teacher_adapter</span><span class="p">:</span> <span class="n">TeacherPolicyAdapter</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span> <span class="o">=</span> <span class="n">teacher_adapter</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">set_learning_iteration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_learning_iteration</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">iteration</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_current_bc_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">cosine_bc_weight</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">current_learning_iteration</span><span class="p">,</span>
+      <span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc_weight_start</span><span class="p">,</span>
+      <span class="n">end</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc_weight_end</span><span class="p">,</span>
+      <span class="n">decay_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc_decay_steps</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run schedule tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_bc_weight_schedule_values<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_bc_weight_schedule_rejects_invalid_decay<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit schedule implementation</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/tracking/wbteleop/algorithm.py<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add wbteleop bc weight schedule&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-4-implement-wbteleopppo-update-with-teacher-mse">
+<h3>Task 4: Implement WbTeleopPPO Update With Teacher MSE<a class="headerlink" href="#task-4-implement-wbteleopppo-update-with-teacher-mse" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/algorithm.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add a small algorithm smoke test</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.algorithms</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">MLPModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rsl_rl.storage</span><span class="w"> </span><span class="kn">import</span> <span class="n">RolloutStorage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tensordict</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorDict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.rl.teacher</span><span class="w"> </span><span class="kn">import</span> <span class="n">TeacherPolicyAdapter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.wbteleop.algorithm</span><span class="w"> </span><span class="kn">import</span> <span class="n">WbTeleopPPO</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_wbteleop_algorithm_for_test</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">WbTeleopPPO</span><span class="p">,</span> <span class="n">TensorDict</span><span class="p">]:</span>
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+      <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+      <span class="s2">&quot;teacher_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+  <span class="p">)</span>
+  <span class="n">obs_groups</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">],</span> <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;critic&quot;</span><span class="p">]}</span>
+  <span class="n">actor</span> <span class="o">=</span> <span class="n">MLPModel</span><span class="p">(</span>
+    <span class="n">obs</span><span class="p">,</span>
+    <span class="n">obs_groups</span><span class="p">,</span>
+    <span class="s2">&quot;actor&quot;</span><span class="p">,</span>
+    <span class="n">output_dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+    <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+    <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">distribution_cfg</span><span class="o">=</span><span class="p">{</span>
+      <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;GaussianDistribution&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;init_std&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+      <span class="s2">&quot;std_type&quot;</span><span class="p">:</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+  <span class="p">)</span>
+  <span class="n">critic</span> <span class="o">=</span> <span class="n">MLPModel</span><span class="p">(</span>
+    <span class="n">obs</span><span class="p">,</span>
+    <span class="n">obs_groups</span><span class="p">,</span>
+    <span class="s2">&quot;critic&quot;</span><span class="p">,</span>
+    <span class="n">output_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span>
+    <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+    <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">storage</span> <span class="o">=</span> <span class="n">RolloutStorage</span><span class="p">(</span><span class="s2">&quot;rl&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+  <span class="n">alg</span> <span class="o">=</span> <span class="n">WbTeleopPPO</span><span class="p">(</span>
+    <span class="n">actor</span><span class="p">,</span>
+    <span class="n">critic</span><span class="p">,</span>
+    <span class="n">storage</span><span class="p">,</span>
+    <span class="n">num_learning_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_mini_batches</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+    <span class="n">bc_weight_start</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">bc_weight_end</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">bc_decay_steps</span><span class="o">=</span><span class="mi">10_000</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">alg</span><span class="o">.</span><span class="n">set_teacher_adapter</span><span class="p">(</span>
+    <span class="n">TeacherPolicyAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">teacher_obs</span><span class="p">:</span> <span class="n">teacher_obs</span><span class="p">[</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">)</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">alg</span><span class="p">,</span> <span class="n">obs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_ppo_update_reports_bc_metrics</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">alg</span><span class="p">,</span> <span class="n">obs</span> <span class="o">=</span> <span class="n">_make_wbteleop_algorithm_for_test</span><span class="p">()</span>
+
+  <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+    <span class="n">actions</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+    <span class="n">rewards</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">dones</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+    <span class="n">alg</span><span class="o">.</span><span class="n">process_env_step</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span><span class="p">,</span> <span class="p">{})</span>
+  <span class="n">alg</span><span class="o">.</span><span class="n">compute_returns</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+
+  <span class="n">metrics</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+  <span class="k">assert</span> <span class="s2">&quot;bc_mse&quot;</span> <span class="ow">in</span> <span class="n">metrics</span>
+  <span class="k">assert</span> <span class="s2">&quot;bc_weight&quot;</span> <span class="ow">in</span> <span class="n">metrics</span>
+  <span class="k">assert</span> <span class="s2">&quot;bc_loss&quot;</span> <span class="ow">in</span> <span class="n">metrics</span>
+  <span class="k">assert</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;bc_weight&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;bc_mse&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+  <span class="k">assert</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;bc_loss&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run smoke test and verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_ppo_update_reports_bc_metrics<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because <code class="docutils literal notranslate"><span class="pre">WbTeleopPPO.update()</span></code> still uses base PPO and does not report BC metrics.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement <code class="docutils literal notranslate"><span class="pre">WbTeleopPPO.update()</span></code></strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/algorithm.py</span></code>, copy the installed rsl_rl <code class="docutils literal notranslate"><span class="pre">PPO.update()</span></code> body from:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>.venv/lib/python3.13/site-packages/rsl_rl/algorithms/ppo.py
+</pre></div>
+</div>
+<p>Then apply these exact semantic changes in the local copy:</p>
+<ol class="arabic simple">
+<li><p>Initialize BC accumulators near the existing loss accumulators:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mean_bc_mse</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">mean_bc_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">bc_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_bc_weight</span><span class="p">()</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>After the base PPO loss is computed and after optional symmetry/RND loss blocks are prepared, compute teacher MSE:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;teacher_adapter must be set before WbTeleopPPO.update()&quot;</span><span class="p">)</span>
+
+<span class="n">student_action_mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">observations</span><span class="p">[:</span><span class="n">original_batch_size</span><span class="p">])</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+  <span class="n">teacher_action_mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span><span class="o">.</span><span class="n">act_mean</span><span class="p">(</span>
+    <span class="n">batch</span><span class="o">.</span><span class="n">observations</span><span class="p">[:</span><span class="n">original_batch_size</span><span class="p">]</span>
+  <span class="p">)</span>
+<span class="k">if</span> <span class="n">student_action_mean</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">teacher_action_mean</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+  <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+    <span class="s2">&quot;Teacher and student action shapes must match: &quot;</span>
+    <span class="sa">f</span><span class="s2">&quot;student=</span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">student_action_mean</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+    <span class="sa">f</span><span class="s2">&quot;teacher=</span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">teacher_action_mean</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="p">)</span>
+<span class="n">bc_mse</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">student_action_mean</span><span class="p">,</span> <span class="n">teacher_action_mean</span><span class="p">)</span>
+<span class="n">bc_loss</span> <span class="o">=</span> <span class="n">bc_weight</span> <span class="o">*</span> <span class="n">bc_mse</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span> <span class="o">+</span> <span class="n">bc_loss</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Accumulate BC metrics after the optimizer step:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mean_bc_mse</span> <span class="o">+=</span> <span class="n">bc_mse</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+<span class="n">mean_bc_loss</span> <span class="o">+=</span> <span class="n">bc_loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>Divide BC metrics by <code class="docutils literal notranslate"><span class="pre">num_updates</span></code> with the other losses:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mean_bc_mse</span> <span class="o">/=</span> <span class="n">num_updates</span>
+<span class="n">mean_bc_loss</span> <span class="o">/=</span> <span class="n">num_updates</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li><p>Add metrics to <code class="docutils literal notranslate"><span class="pre">loss_dict</span></code>:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">loss_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;bc_mse&quot;</span><span class="p">:</span> <span class="n">mean_bc_mse</span><span class="p">,</span>
+    <span class="s2">&quot;bc_weight&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">bc_weight</span><span class="p">),</span>
+    <span class="s2">&quot;bc_loss&quot;</span><span class="p">:</span> <span class="n">mean_bc_loss</span><span class="p">,</span>
+  <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="6">
+<li><p>Keep <code class="docutils literal notranslate"><span class="pre">self.storage.clear()</span></code> behavior identical to base PPO.</p></li>
+<li><p>Keep RND, symmetry, multi-GPU gradient reduction, adaptive KL schedule, recurrent batch handling, and normalization behavior from the base PPO copy unchanged.</p></li>
+</ol>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run smoke test</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_ppo_update_reports_bc_metrics<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run existing PPO-adjacent tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_runner.py<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>tests/test_wbteleop_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Commit algorithm update</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/tracking/wbteleop/algorithm.py<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add teacher mse to wbteleop ppo&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-5-implement-teacher-loading-in-wbteleop-runner">
+<h3>Task 5: Implement Teacher Loading in WbTeleop Runner<a class="headerlink" href="#task-5-implement-teacher-loading-in-wbteleop-runner" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add runner teacher loading tests</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleNamespace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_TeacherRunnerProbe</span><span class="p">:</span>
+  <span class="n">loaded_path</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">last_cfg</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">,</span> <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">env</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">train_cfg</span> <span class="o">=</span> <span class="n">train_cfg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+    <span class="n">_TeacherRunnerProbe</span><span class="o">.</span><span class="n">last_cfg</span> <span class="o">=</span> <span class="n">train_cfg</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">_TeacherRunnerProbe</span><span class="o">.</span><span class="n">loaded_path</span> <span class="o">=</span> <span class="n">path</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_inference_policy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">obs</span><span class="p">:</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">][</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_RunnerEnvProbe</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">unwrapped</span> <span class="o">=</span> <span class="n">SimpleNamespace</span><span class="p">(</span><span class="n">common_step_counter</span><span class="o">=</span><span class="mi">123</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_runner_builds_teacher_adapter</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">asdict</span><span class="p">(</span><span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">))</span>
+  <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;algorithm&quot;</span><span class="p">][</span><span class="s2">&quot;teacher_checkpoint_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;/tmp/teacher.pt&quot;</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="n">_RunnerEnvProbe</span><span class="p">()</span>
+
+  <span class="n">runner</span> <span class="o">=</span> <span class="n">WbTeleopTrackingRunner</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">WbTeleopTrackingRunner</span><span class="p">)</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">env</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">cfg</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="p">(</span>
+    <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mjlab.tasks.tracking.wbteleop.runner.load_runner_cls&quot;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="n">_TeacherRunnerProbe</span><span class="p">),</span>
+    <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mjlab.tasks.tracking.wbteleop.runner.load_rl_cfg&quot;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="n">load_rl_cfg</span><span class="p">(</span><span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1&quot;</span><span class="p">)),</span>
+  <span class="p">):</span>
+    <span class="n">adapter</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">_build_teacher_adapter</span><span class="p">()</span>
+
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)},</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+  <span class="p">)</span>
+  <span class="k">assert</span> <span class="n">_TeacherRunnerProbe</span><span class="o">.</span><span class="n">loaded_path</span> <span class="o">==</span> <span class="s2">&quot;/tmp/teacher.pt&quot;</span>
+  <span class="k">assert</span> <span class="n">adapter</span><span class="o">.</span><span class="n">act_mean</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">common_step_counter</span> <span class="o">==</span> <span class="mi">123</span>
+  <span class="k">assert</span> <span class="n">_TeacherRunnerProbe</span><span class="o">.</span><span class="n">last_cfg</span><span class="p">[</span><span class="s2">&quot;obs_groups&quot;</span><span class="p">][</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;teacher_actor&quot;</span><span class="p">,)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_runner_rejects_missing_teacher_checkpoint</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">cfg</span> <span class="o">=</span> <span class="n">asdict</span><span class="p">(</span><span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">TASK_ID</span><span class="p">))</span>
+  <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;algorithm&quot;</span><span class="p">][</span><span class="s2">&quot;teacher_checkpoint_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+  <span class="n">runner</span> <span class="o">=</span> <span class="n">WbTeleopTrackingRunner</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">WbTeleopTrackingRunner</span><span class="p">)</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">cfg</span>
+  <span class="n">runner</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+  <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;teacher_checkpoint_path must be provided&quot;</span><span class="p">):</span>
+    <span class="n">runner</span><span class="o">.</span><span class="n">_build_teacher_adapter</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run teacher loading tests and verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_runner_builds_teacher_adapter<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_runner_rejects_missing_teacher_checkpoint<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because runner methods are not implemented.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Implement runner teacher loading</strong></p></li>
+</ul>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code> with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;Runner for G1 BFM wbteleop tracking.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.rl.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">MjlabOnPolicyRunner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.distillation.rl.teacher</span><span class="w"> </span><span class="kn">import</span> <span class="n">TeacherPolicyAdapter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_rl_cfg</span><span class="p">,</span> <span class="n">load_runner_cls</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.tasks.tracking.rl</span><span class="w"> </span><span class="kn">import</span> <span class="n">MotionTrackingOnPolicyRunner</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">WbTeleopTrackingRunner</span><span class="p">(</span><span class="n">MotionTrackingOnPolicyRunner</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Tracking runner for wbteleop PPO plus teacher-action BC.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">env</span><span class="p">,</span>
+    <span class="n">train_cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">registry_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="p">):</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">train_cfg</span><span class="p">,</span> <span class="n">log_dir</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">registry_name</span><span class="o">=</span><span class="n">registry_name</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span><span class="p">:</span> <span class="n">TeacherPolicyAdapter</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">learn</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">num_learning_iterations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">init_at_random_ep_len</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_teacher_adapter</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">alg</span><span class="o">.</span><span class="n">set_teacher_adapter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">teacher_adapter</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">learn</span><span class="p">(</span><span class="n">num_learning_iterations</span><span class="p">,</span> <span class="n">init_at_random_ep_len</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_begin_adaptive_sampling_iteration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alg</span><span class="p">,</span> <span class="s2">&quot;set_learning_iteration&quot;</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">alg</span><span class="o">.</span><span class="n">set_learning_iteration</span><span class="p">(</span><span class="n">iteration</span><span class="p">)</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_begin_adaptive_sampling_iteration</span><span class="p">(</span><span class="n">iteration</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_build_teacher_adapter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TeacherPolicyAdapter</span><span class="p">:</span>
+    <span class="n">algorithm_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;algorithm&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="n">algorithm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;teacher_checkpoint_path&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">checkpoint_path</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s2">&quot;teacher_checkpoint_path must be provided for wbteleop training&quot;</span>
+      <span class="p">)</span>
+
+    <span class="n">teacher_task_id</span> <span class="o">=</span> <span class="n">algorithm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+      <span class="s2">&quot;teacher_task_id&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">teacher_obs_group</span> <span class="o">=</span> <span class="n">algorithm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;teacher_obs_group&quot;</span><span class="p">,</span> <span class="s2">&quot;teacher_actor&quot;</span><span class="p">)</span>
+    <span class="n">teacher_runner_cls</span> <span class="o">=</span> <span class="n">load_runner_cls</span><span class="p">(</span><span class="n">teacher_task_id</span><span class="p">)</span> <span class="ow">or</span> <span class="n">MjlabOnPolicyRunner</span>
+    <span class="n">teacher_cfg</span> <span class="o">=</span> <span class="n">asdict</span><span class="p">(</span><span class="n">load_rl_cfg</span><span class="p">(</span><span class="n">teacher_task_id</span><span class="p">))</span>
+    <span class="n">teacher_cfg</span><span class="p">[</span><span class="s2">&quot;obs_groups&quot;</span><span class="p">][</span><span class="s2">&quot;actor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">teacher_obs_group</span><span class="p">,)</span>
+
+    <span class="n">common_step_counter</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="p">,</span> <span class="s2">&quot;common_step_counter&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suppress_distributed_env_for_nested_runner</span><span class="p">():</span>
+      <span class="n">teacher_runner</span> <span class="o">=</span> <span class="n">teacher_runner_cls</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="p">,</span>
+        <span class="n">teacher_cfg</span><span class="p">,</span>
+        <span class="n">log_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">device</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
+      <span class="p">)</span>
+    <span class="n">teacher_runner</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">common_step_counter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">common_step_counter</span> <span class="o">=</span> <span class="n">common_step_counter</span>
+
+    <span class="k">return</span> <span class="n">TeacherPolicyAdapter</span><span class="p">(</span>
+      <span class="n">teacher_runner</span><span class="o">.</span><span class="n">get_inference_policy</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
+      <span class="n">obs_group</span><span class="o">=</span><span class="n">teacher_obs_group</span><span class="p">,</span>
+      <span class="n">policy_input_key</span><span class="o">=</span><span class="n">teacher_obs_group</span><span class="p">,</span>
+    <span class="p">)</span>
+
+  <span class="nd">@contextmanager</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_suppress_distributed_env_for_nested_runner</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;WORLD_SIZE&quot;</span><span class="p">)</span>
+    <span class="n">old_values</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">old_values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+          <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run teacher loading tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_runner_builds_teacher_adapter<span class="w"> </span>tests/test_wbteleop_task.py::test_wbteleop_runner_rejects_missing_teacher_checkpoint<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit runner implementation</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>src/mjlab/tasks/tracking/wbteleop/runner.py<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: load wbteleop teacher policy&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-6-add-end-to-end-cli-and-regression-verification">
+<h3>Task 6: Add End-to-End CLI and Regression Verification<a class="headerlink" href="#task-6-add-end-to-end-cli-and-regression-verification" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Add CLI help smoke test</strong></p></li>
+</ul>
+<p>Append to <code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_wbteleop_train_help_loads</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;uv&quot;</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">TASK_ID</span><span class="p">,</span> <span class="s2">&quot;--help&quot;</span><span class="p">],</span>
+    <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span>
+  <span class="k">assert</span> <span class="n">TASK_ID</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+  <span class="k">assert</span> <span class="s2">&quot;teacher-checkpoint-path&quot;</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run wbteleop tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_wbteleop_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Run task config regression tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_task_configs.py<span class="w"> </span>tests/test_tracking_task.py<span class="w"> </span>tests/test_distillation_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run a broader targeted regression set</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_runner.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_distillation_runner_smoke.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_distillation_teacher_adapter.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_wbteleop_task.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Commit final tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>tests/test_wbteleop_task.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;test: verify wbteleop train cli&quot;</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="task-7-final-verification">
+<h3>Task 7: Final Verification<a class="headerlink" href="#task-7-final-verification" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>No file edits.</p></li>
+<li><p>[ ] <strong>Step 1: Check worktree</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>status<span class="w"> </span>--short
+</pre></div>
+</div>
+<p>Expected: no uncommitted implementation changes.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run final targeted suite</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_wbteleop_task.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_task_configs.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_runner.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_distillation_runner_smoke.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_distillation_teacher_adapter.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Confirm training command help</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop<span class="w"> </span>--help
+</pre></div>
+</div>
+<p>Expected: exits 0 and displays <code class="docutils literal notranslate"><span class="pre">teacher-checkpoint-path</span></code>, <code class="docutils literal notranslate"><span class="pre">bc-weight-start</span></code>, <code class="docutils literal notranslate"><span class="pre">bc-weight-end</span></code>, and <code class="docutils literal notranslate"><span class="pre">bc-decay-steps</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Report result</strong></p></li>
+</ul>
+<p>Report:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Implemented Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop under src/mjlab/tasks/tracking/wbteleop.
+Actor observations are the seven non-privileged wbteleop terms.
+PPO update now logs bc_mse, bc_weight, and bc_loss.
+History support is preserved through motion command reference windows and proprio observation history.
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-add-failing-wbteleop-task-config-tests">Task 1: Add Failing Wbteleop Task Config Tests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-implement-wbteleop-observations-env-config-rl-config-and-registration">Task 2: Implement Wbteleop Observations, Env Config, RL Config, and Registration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-add-bc-weight-schedule-tests-and-implementation">Task 3: Add BC Weight Schedule Tests and Implementation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-implement-wbteleopppo-update-with-teacher-mse">Task 4: Implement WbTeleopPPO Update With Teacher MSE</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-implement-teacher-loading-in-wbteleop-runner">Task 5: Implement Teacher Loading in WbTeleop Runner</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-add-end-to-end-cli-and-regression-verification">Task 6: Add End-to-End CLI and Regression Verification</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-7-final-verification">Task 7: Final Verification</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jun 10, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

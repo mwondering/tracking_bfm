@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 29, 2026"/>
+    <meta name="docbuild:last-update" content="Jun 10, 2026"/>
   </head>
   
   
@@ -856,7 +856,7 @@ document.write(`
     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="o">.</span><span class="n">is_cuda</span><span class="p">:</span>
       <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="n">driver_ver</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">driver_version</span>
+    <span class="n">driver_ver</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">get_cuda_driver_version</span><span class="p">()</span>
     <span class="n">has_mempool</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">is_mempool_enabled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">driver_ver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -921,7 +921,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 29, 2026.
+  Last updated on Jun 10, 2026.
   <br/>
 </p>
   </div>
