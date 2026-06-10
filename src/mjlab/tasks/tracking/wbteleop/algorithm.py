@@ -222,14 +222,11 @@ class WbTeleopPPO(PPO):
         else:
           symmetry_loss = symmetry_loss.detach()
 
-      if self.rnd:
-        with torch.no_grad():
-          rnd_state = self.rnd.get_rnd_state(batch.observations[:original_batch_size])  # type: ignore
-          rnd_state = self.rnd.state_normalizer(rnd_state)
-        predicted_embedding = self.rnd.predictor(rnd_state)
-        target_embedding = self.rnd.target(rnd_state).detach()
-        mseloss = torch.nn.MSELoss()
-        rnd_loss = mseloss(predicted_embedding, target_embedding)
+      rnd_loss = (
+        self.rnd.compute_loss(batch.observations[:original_batch_size])
+        if self.rnd
+        else None
+      )
 
       student_action_mean = self.actor(batch.observations[:original_batch_size])
       with torch.no_grad():
@@ -249,7 +246,8 @@ class WbTeleopPPO(PPO):
       self.optimizer.zero_grad()
       loss.backward()
       if self.rnd:
-        self.rnd_optimizer.zero_grad()
+        self.rnd.optimizer.zero_grad()
+        assert rnd_loss is not None
         rnd_loss.backward()
 
       if self.is_multi_gpu:
@@ -258,8 +256,8 @@ class WbTeleopPPO(PPO):
       nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
       nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
       self.optimizer.step()
-      if self.rnd_optimizer:
-        self.rnd_optimizer.step()
+      if self.rnd:
+        self.rnd.optimizer.step()
 
       mean_value_loss += value_loss.item()
       mean_surrogate_loss += surrogate_loss.item()
@@ -267,6 +265,7 @@ class WbTeleopPPO(PPO):
       mean_bc_mse += bc_mse.item()
       mean_bc_loss += bc_loss.item()
       if mean_rnd_loss is not None:
+        assert rnd_loss is not None
         mean_rnd_loss += rnd_loss.item()
       if mean_symmetry_loss is not None:
         mean_symmetry_loss += symmetry_loss.item()
