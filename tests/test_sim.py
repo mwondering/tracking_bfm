@@ -6,6 +6,7 @@ import pytest
 import torch
 from conftest import get_test_device
 
+import mjlab.sim.sim as sim_mod
 from mjlab.sim import MujocoCfg, Simulation, SimulationCfg
 
 
@@ -87,6 +88,18 @@ def test_simulation_config_is_piped(robot_xml, device):
   # SimulationCfg should be applied to wp_model.
   assert sim.wp_model.opt.contact_sensor_maxmatch == cfg.contact_sensor_maxmatch
   assert sim.wp_model.opt.ls_parallel == cfg.ls_parallel
+
+
+def test_cuda_graph_driver_version_uses_warp_public_api(monkeypatch) -> None:
+  class FakeDevice:
+    is_cuda = True
+
+  sim = object.__new__(Simulation)
+  sim.wp_device = FakeDevice()
+  monkeypatch.setattr(sim_mod.wp, "get_cuda_driver_version", lambda: (12, 8))
+  monkeypatch.setattr(sim_mod.wp, "is_mempool_enabled", lambda device: True)
+
+  assert sim._should_use_cuda_graph() is True
 
 
 def test_sim_reset_restores_initial_state(robot_xml, device):
