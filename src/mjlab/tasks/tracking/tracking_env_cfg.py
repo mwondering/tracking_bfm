@@ -233,7 +233,7 @@ def make_tracking_env_cfg(
       params={
         "asset_cfg": SceneEntityCfg("robot", geom_names=()),  # Set per-robot.
         "operation": "abs",
-        "ranges": (0.3, 1.2),
+        "ranges": (0.3, 2.0),
         "shared_random": True,  # All foot geoms share the same friction.
       },
     ),
@@ -246,12 +246,12 @@ def make_tracking_env_cfg(
   rewards: dict[str, RewardTermCfg] = {
     "motion_global_root_pos": RewardTermCfg(
       func=mdp.motion_global_anchor_position_error_exp,
-      weight=0.5,
+      weight=1.0,
       params={"command_name": "motion", "std": 0.3},
     ),
     "motion_global_root_ori": RewardTermCfg(
       func=mdp.motion_global_anchor_orientation_error_exp,
-      weight=0.5,
+      weight=1.0,
       params={"command_name": "motion", "std": 0.4},
     ),
     "motion_body_pos": RewardTermCfg(
@@ -277,7 +277,7 @@ def make_tracking_env_cfg(
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-1e-1),
     "waist_action_rate_l2": RewardTermCfg(
       func=mdp.joint_action_rate_l2,
-      weight=-1e-1,
+      weight=-5e-2,
       params={
         "asset_cfg": SceneEntityCfg(
           "robot",

@@ -1,7 +1,5 @@
 """Tests specific to motion tracking tasks."""
 
-import math
-
 import pytest
 
 from mjlab.asset_zoo.robots import G1_ACTION_SCALE
@@ -146,13 +144,12 @@ def test_g1_tracking_penalizes_waist_action_rate(
 ) -> None:
   """G1 tracking tasks should include a waist-only action-rate penalty."""
   for task_id in g1_tracking_task_ids:
-    if "LatentTracking" in task_id:
-      continue
     cfg = load_env_cfg(task_id)
 
     assert "waist_action_rate_l2" in cfg.rewards
     reward = cfg.rewards["waist_action_rate_l2"]
     assert reward.func is mdp.joint_action_rate_l2
+    assert reward.weight == -5.0e-2
     assert reward.params["action_name"] == "joint_pos"
     assert reward.params["asset_cfg"].joint_names == (
       "waist_yaw_joint",
@@ -161,43 +158,63 @@ def test_g1_tracking_penalizes_waist_action_rate(
     )
 
 
-def test_tracking_bfm_defaults_to_inertia_randomization() -> None:
-  """BFM tracking should randomize torso and non-torso inertial parameters."""
+def test_g1_tracking_global_root_position_weight_is_one(
+  g1_tracking_task_ids: list[str],
+) -> None:
+  """G1 tracking tasks should emphasize global root position tracking."""
+  for task_id in g1_tracking_task_ids:
+    if "LatentTracking" in task_id:
+      continue
+    cfg = load_env_cfg(task_id)
+
+    assert cfg.rewards["motion_global_root_pos"].weight == 1.0
+
+
+def test_g1_tracking_foot_friction_uses_sonic_plus_range(
+  g1_tracking_task_ids: list[str],
+) -> None:
+  """G1 tracking foot friction should cover the SONIC range with a higher cap."""
+  for task_id in g1_tracking_task_ids:
+    cfg = load_env_cfg(task_id)
+
+    assert cfg.events["foot_friction"].params["ranges"] == (0.3, 2.0)
+
+
+def test_tracking_bfm_defaults_to_torso_mass_and_com_randomization() -> None:
+  """BFM tracking should randomize torso mass/COM and leave inertia disabled."""
   cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1")
 
-  assert "base_inertia" in cfg.events
-  assert "body_inertia" in cfg.events
-  assert "base_com" not in cfg.events
-
-  base_event = cfg.events["base_inertia"]
-  body_event = cfg.events["body_inertia"]
+  assert "base_com" in cfg.events
+  assert "base_mass" in cfg.events
+  assert "base_inertia" not in cfg.events
+  assert "body_inertia" not in cfg.events
+  base_event = cfg.events["base_com"]
+  mass_event = cfg.events["base_mass"]
 
   assert base_event.mode == "startup"
-  assert base_event.func is dr.pseudo_inertia
+  assert base_event.func is dr.body_com_offset
   assert base_event.params["asset_cfg"].body_names == ("torso_link",)
-  assert base_event.params["alpha_range"] == (
-    0.5 * math.log(0.92),
-    0.5 * math.log(1.08),
-  )
-  assert base_event.params["t_range"] == (-0.01, 0.01)
-
-  assert body_event.mode == "startup"
-  assert body_event.func is dr.pseudo_inertia
-  assert body_event.params["asset_cfg"].body_names == r"^(?!torso_link$).+"
-  assert body_event.params["alpha_range"] == (
-    0.5 * math.log(0.95),
-    0.5 * math.log(1.05),
-  )
-  assert body_event.params["t_range"] == (-0.005, 0.005)
+  assert base_event.params["ranges"] == {
+    0: (-0.075, 0.075),
+    1: (-0.075, 0.075),
+    2: (-0.075, 0.075),
+  }
+  assert mass_event.mode == "startup"
+  assert mass_event.func is dr.body_mass
+  assert mass_event.params["asset_cfg"].body_names == ("torso_link",)
+  assert mass_event.params["operation"] == "add"
+  assert mass_event.params["ranges"] == (-1.0, 1.0)
 
 
 def test_tracking_bfm_play_keeps_inertia_randomization() -> None:
-  """BFM play mode should keep startup inertial DR like other startup DR."""
+  """BFM play mode should keep startup torso COM DR like other startup DR."""
   cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1", play=True)
 
   assert "push_robot" not in cfg.events
-  assert "base_inertia" in cfg.events
-  assert "body_inertia" in cfg.events
+  assert "base_com" in cfg.events
+  assert "base_mass" in cfg.events
+  assert "base_inertia" not in cfg.events
+  assert "body_inertia" not in cfg.events
 
 
 def test_tracking_1stage_task_uses_sparse_actor_obs() -> None:

@@ -188,6 +188,20 @@ def _unitree_g1_flat_tracking_env_cfg(
     "asset_cfg"
   ].geom_names = r"^(left|right)_foot[1-7]_collision$"
   cfg.events["base_com"].params["asset_cfg"].body_names = ("torso_link",)
+  cfg.events["base_com"].params["ranges"] = {
+    0: (-0.075, 0.075),
+    1: (-0.075, 0.075),
+    2: (-0.075, 0.075),
+  }
+  cfg.events["base_mass"] = EventTermCfg(
+    mode="startup",
+    func=dr.body_mass,
+    params={
+      "asset_cfg": SceneEntityCfg("robot", body_names=("torso_link",)),
+      "operation": "add",
+      "ranges": (-1.0, 1.0),
+    },
+  )
 
   cfg.terminations["ee_body_pos"].params["body_names"] = (
     "left_ankle_roll_link",
@@ -254,9 +268,9 @@ def unitree_g1_flat_tracking_bfm_env_cfg(
     has_state_estimation=has_state_estimation,
     play=play,
   )
-  cfg.events.pop("base_com", None)
-  add_base_inertia_randomization(cfg)
-  add_body_inertia_randomization(cfg)
+  # Keep torso COM randomization from the base G1 config. Mass and inertia
+  # randomization are disabled for now.
+  # add_body_inertia_randomization(cfg)
   return cfg
 
 

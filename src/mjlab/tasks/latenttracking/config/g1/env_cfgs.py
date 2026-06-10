@@ -64,7 +64,7 @@ def _make_sparse_tracking_rewards() -> dict[str, RewardTermCfg]:
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-1e-1),
     "waist_action_rate_l2": RewardTermCfg(
       func=mdp.joint_action_rate_l2,
-      weight=-1e-1,
+      weight=-5e-2,
       params={
         "asset_cfg": SceneEntityCfg(
           "robot",
