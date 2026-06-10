@@ -130,6 +130,12 @@ class LatentActionDistillationAlgorithm:
     mmd_max_samples: int = 1024,
     latent_smooth_weight: float = 1.0e-3,
     latent_smooth_max_pairs: int = 2048,
+    sphere_radius: float = -1.0,
+    sphere_orthonormal_weight: float = 0.0,
+    sphere_knn_smooth_weight: float = 0.0,
+    sphere_knn_k: int = 4,
+    sphere_knn_max_samples: int = 2048,
+    sphere_eps: float = 1.0e-6,
     multi_gpu_cfg: dict | None = None,
   ):
     self.policy = policy
@@ -138,9 +144,9 @@ class LatentActionDistillationAlgorithm:
     self.kl_weight = float(kl_weight)
     self.kl_warmup_iterations = int(kl_warmup_iterations)
     self.free_nats_per_dim = float(free_nats_per_dim)
-    if latent_regularization not in {"kl", "wae_mmd"}:
+    if latent_regularization not in {"kl", "wae_mmd", "bfmzero_sphere"}:
       raise ValueError(
-        "latent_regularization must be one of {'kl', 'wae_mmd'}, "
+        "latent_regularization must be one of {'kl', 'wae_mmd', 'bfmzero_sphere'}, "
         f"got {latent_regularization!r}"
       )
     self.latent_regularization = latent_regularization
@@ -149,6 +155,19 @@ class LatentActionDistillationAlgorithm:
     self.mmd_max_samples = int(mmd_max_samples)
     self.latent_smooth_weight = float(latent_smooth_weight)
     self.latent_smooth_max_pairs = int(latent_smooth_max_pairs)
+    self.sphere_radius = float(sphere_radius)
+    self.sphere_orthonormal_weight = float(sphere_orthonormal_weight)
+    self.sphere_knn_smooth_weight = float(sphere_knn_smooth_weight)
+    self.sphere_knn_k = int(sphere_knn_k)
+    self.sphere_knn_max_samples = int(sphere_knn_max_samples)
+    self.sphere_eps = float(sphere_eps)
+    if (
+      hasattr(self.policy, "latent_mode")
+      and self.latent_regularization == "bfmzero_sphere"
+    ):
+      self.policy.latent_mode = "bfmzero_sphere"
+      self.policy.sphere_radius = self.sphere_radius
+      self.policy.sphere_eps = self.sphere_eps
     self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=learning_rate)
     self.is_multi_gpu = multi_gpu_cfg is not None
     if multi_gpu_cfg is not None:
@@ -191,7 +210,24 @@ class LatentActionDistillationAlgorithm:
     num_mini_batches = max(1, min(num_mini_batches, batch_size))
     mini_batch_size = math.ceil(batch_size / num_mini_batches)
     effective_kl_weight = self._effective_kl_weight(iteration)
-    effective_mmd_weight = self.mmd_weight if self.latent_regularization == "wae_mmd" else 0.0
+    effective_mmd_weight = (
+      self.mmd_weight if self.latent_regularization == "wae_mmd" else 0.0
+    )
+    effective_latent_smooth_weight = (
+      self.latent_smooth_weight
+      if self.latent_regularization != "bfmzero_sphere"
+      else 0.0
+    )
+    effective_sphere_orthonormal_weight = (
+      self.sphere_orthonormal_weight
+      if self.latent_regularization == "bfmzero_sphere"
+      else 0.0
+    )
+    effective_sphere_knn_smooth_weight = (
+      self.sphere_knn_smooth_weight
+      if self.latent_regularization == "bfmzero_sphere"
+      else 0.0
+    )
 
     totals = {
       "action_mse": 0.0,
@@ -204,6 +240,10 @@ class LatentActionDistillationAlgorithm:
       "latent_mu_norm": 0.0,
       "latent_std_mean": 0.0,
       "latent_smooth_loss": 0.0,
+      "sphere_orthonormal_loss": 0.0,
+      "sphere_knn_smooth_loss": 0.0,
+      "sphere_radius_mean": 0.0,
+      "sphere_radius_std": 0.0,
       "total_loss": 0.0,
       "grad_norm": 0.0,
     }
@@ -237,11 +277,25 @@ class LatentActionDistillationAlgorithm:
           dones=dones,
           batch_size=mini_batch_size,
         )
+        if self.latent_regularization == "bfmzero_sphere":
+          sphere_orthonormal_loss = self._sphere_orthonormality_loss(
+            latent["z"], self.sphere_knn_max_samples
+          )
+          sphere_knn_smooth_loss = self._sphere_knn_smoothness(
+            obs=batch_obs,
+            z=latent["z"],
+          )
+        else:
+          sphere_orthonormal_loss = latent["z"].new_zeros(())
+          sphere_knn_smooth_loss = latent["z"].new_zeros(())
+        sphere_radius = latent["z"].norm(dim=-1)
         total_loss = (
           mse_loss
           + effective_kl_weight * kl_loss
           + effective_mmd_weight * mmd_loss
-          + self.latent_smooth_weight * smooth_loss
+          + effective_latent_smooth_weight * smooth_loss
+          + effective_sphere_orthonormal_weight * sphere_orthonormal_loss
+          + effective_sphere_knn_smooth_weight * sphere_knn_smooth_loss
         )
 
         self.optimizer.zero_grad(set_to_none=True)
@@ -258,10 +312,15 @@ class LatentActionDistillationAlgorithm:
         totals["kl_per_dim"] += float(raw_kl.mean().item())
         totals["mmd_loss"] += float(mmd_loss.item())
         totals["aggregate_mean_norm"] += float(latent["z"].mean(dim=0).norm().item())
-        totals["aggregate_std_mean"] += float(latent["z"].std(dim=0, unbiased=False).mean().item())
+        aggregate_std = latent["z"].std(dim=0, unbiased=False).mean()
+        totals["aggregate_std_mean"] += float(aggregate_std.item())
         totals["latent_mu_norm"] += float(latent["mu"].norm(dim=-1).mean().item())
         totals["latent_std_mean"] += float(torch.exp(latent["log_std"]).mean().item())
         totals["latent_smooth_loss"] += float(smooth_loss.item())
+        totals["sphere_orthonormal_loss"] += float(sphere_orthonormal_loss.item())
+        totals["sphere_knn_smooth_loss"] += float(sphere_knn_smooth_loss.item())
+        totals["sphere_radius_mean"] += float(sphere_radius.mean().item())
+        totals["sphere_radius_std"] += float(sphere_radius.std(unbiased=False).item())
         totals["total_loss"] += float(total_loss.item())
         totals["grad_norm"] += float(grad_norm.item())
         updates += 1
@@ -269,6 +328,9 @@ class LatentActionDistillationAlgorithm:
     metrics = {key: value / updates for key, value in totals.items()}
     metrics["kl_weight"] = effective_kl_weight
     metrics["mmd_weight"] = effective_mmd_weight
+    metrics["latent_smooth_weight"] = effective_latent_smooth_weight
+    metrics["sphere_orthonormal_weight"] = effective_sphere_orthonormal_weight
+    metrics["sphere_knn_smooth_weight"] = effective_sphere_knn_smooth_weight
     return metrics
 
   def save(self) -> dict:
@@ -287,6 +349,12 @@ class LatentActionDistillationAlgorithm:
         "mmd_max_samples": self.mmd_max_samples,
         "latent_smooth_weight": self.latent_smooth_weight,
         "latent_smooth_max_pairs": self.latent_smooth_max_pairs,
+        "sphere_radius": self.sphere_radius,
+        "sphere_orthonormal_weight": self.sphere_orthonormal_weight,
+        "sphere_knn_smooth_weight": self.sphere_knn_smooth_weight,
+        "sphere_knn_k": self.sphere_knn_k,
+        "sphere_knn_max_samples": self.sphere_knn_max_samples,
+        "sphere_eps": self.sphere_eps,
       },
       "latent_cfg": self.policy.latent_cfg()
       if hasattr(self.policy, "latent_cfg")
@@ -348,6 +416,56 @@ class LatentActionDistillationAlgorithm:
     current_mu, _ = self.policy.encode(current_obs)
     next_mu, _ = self.policy.encode(next_obs)
     return (next_mu - current_mu).square().mean()
+
+  def _sphere_knn_smoothness(
+    self,
+    obs: TensorDict,
+    z: torch.Tensor,
+  ) -> torch.Tensor:
+    if self.sphere_knn_smooth_weight <= 0.0 or z.shape[0] < 2:
+      return z.new_zeros(())
+    encoder_obs_group = getattr(self.policy, "encoder_obs_group", None)
+    if encoder_obs_group is None:
+      return z.new_zeros(())
+
+    sample_size = min(
+      z.shape[0],
+      max(self.sphere_knn_max_samples, 0),
+    )
+    if sample_size < 2:
+      return z.new_zeros(())
+
+    if sample_size < z.shape[0]:
+      sample_idx = torch.randperm(z.shape[0], device=z.device)[:sample_size]
+      encoder_obs = obs[encoder_obs_group][sample_idx]
+      z = z[sample_idx]
+    else:
+      encoder_obs = obs[encoder_obs_group]
+
+    flat_obs = encoder_obs.reshape(sample_size, -1).float()
+    distances = torch.cdist(flat_obs, flat_obs)
+    distances.fill_diagonal_(float("inf"))
+    k = min(max(self.sphere_knn_k, 1), sample_size - 1)
+    neighbors = torch.topk(distances, k=k, dim=-1, largest=False).indices
+
+    unit_z = F.normalize(z, dim=-1, eps=self.sphere_eps)
+    neighbor_z = unit_z[neighbors]
+    cosine = (unit_z[:, None, :] * neighbor_z).sum(dim=-1)
+    return (1.0 - cosine).mean()
+
+  def _sphere_orthonormality_loss(
+    self,
+    z: torch.Tensor,
+    max_samples: int,
+  ) -> torch.Tensor:
+    if z.shape[0] < 2:
+      return z.new_zeros(())
+    z = self._subsample_rows(z, max_samples)
+    unit_z = F.normalize(z, dim=-1, eps=self.sphere_eps)
+    gram = unit_z @ unit_z.T
+    eye = torch.eye(gram.shape[0], dtype=torch.bool, device=gram.device)
+    off_diagonal = gram.masked_fill(eye, 0.0)
+    return off_diagonal.square().sum() / float(gram.shape[0] * (gram.shape[0] - 1))
 
   @staticmethod
   def _trajectory_latent_smoothness(

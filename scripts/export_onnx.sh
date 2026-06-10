@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-CHECKPOINT="${CHECKPOINT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0608_ckpt_bcrl/model_16000.pt}"
+CHECKPOINT="${CHECKPOINT:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0608_ckpt_bc/model_8000.pt}"
 TASK_ID="${TASK_ID:-Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop}"
 MOTION_PATH="${MOTION_PATH:-/home/lenovo/DATASETS/Data10k}"
 

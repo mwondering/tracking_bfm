@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
+import os
 from collections import deque
 from dataclasses import asdict
-import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-
-import torch
-import pytest
-from tensordict import TensorDict
 from unittest.mock import patch
+
+import pytest
+import torch
+from tensordict import TensorDict
 
 from mjlab.tasks.distillation.config.g1.rl_cfg import DistillationRunnerCfg
 from mjlab.tasks.distillation.rl.algorithm import ActionDistillationAlgorithm
@@ -207,6 +207,49 @@ def test_latent_distillation_runner_can_use_wae_mmd_regularization() -> None:
   assert runner.last_loss_dict["kl_weight"] == 0.0
   assert runner.last_loss_dict["mmd_weight"] == 1.0e-2
   assert "mmd_loss" in runner.last_loss_dict
+
+
+def test_latent_distillation_runner_can_use_bfmzero_sphere_regularization() -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(
+    logger="tensorboard",
+    save_interval=1,
+    num_steps_per_env=3,
+    max_iterations=1,
+    num_learning_epochs=1,
+    num_mini_batches=1,
+    upload_model=False,
+    student_model_type="latent",
+    student_obs_group="unused_student_actor",
+    encoder_obs_group="teacher_actor",
+    decoder_obs_group="proprio_actor",
+    latent_dim=5,
+    encoder_hidden_dims=(16, 16),
+    decoder_hidden_dims=(16, 16),
+    latent_regularization="bfmzero_sphere",
+    sphere_orthonormal_weight=1.0e-2,
+    sphere_knn_smooth_weight=1.0e-2,
+    sphere_knn_k=2,
+    sphere_knn_max_samples=8,
+  )
+  teacher_adapter = TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25)
+
+  runner = DistillationRunner(
+    env,
+    asdict(cfg),
+    log_dir=None,
+    device="cpu",
+    teacher_adapter=teacher_adapter,
+  )
+
+  runner.learn(num_learning_iterations=1)
+
+  assert runner.last_loss_dict["kl_weight"] == 0.0
+  assert runner.last_loss_dict["mmd_weight"] == 0.0
+  assert runner.last_loss_dict["sphere_orthonormal_weight"] == 1.0e-2
+  assert runner.last_loss_dict["sphere_knn_smooth_weight"] == 1.0e-2
+  assert "sphere_orthonormal_loss" in runner.last_loss_dict
+  assert "sphere_knn_smooth_loss" in runner.last_loss_dict
 
 
 def test_latent_distillation_runner_passes_rollout_shape_and_dones_to_algorithm() -> None:

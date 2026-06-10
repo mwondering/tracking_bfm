@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 import os
 import statistics
 import time
 from collections import defaultdict, deque
+from contextlib import contextmanager
 from dataclasses import asdict
 from typing import Any
 
@@ -15,6 +15,7 @@ from tensordict import TensorDict
 
 from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.registry import load_rl_cfg, load_runner_cls
+
 from .algorithm import ActionDistillationAlgorithm, LatentActionDistillationAlgorithm
 from .models import build_latent_student_model, build_student_model
 from .schedules import LinearTeacherMixSchedule
@@ -99,6 +100,9 @@ class DistillationRunner:
         obs_normalization=True,
         log_std_min=float(self.cfg.get("latent_log_std_min", -5.0)),
         log_std_max=float(self.cfg.get("latent_log_std_max", 2.0)),
+        latent_mode=self.cfg.get("latent_regularization", "kl"),
+        sphere_radius=float(self.cfg.get("sphere_radius", -1.0)),
+        sphere_eps=float(self.cfg.get("sphere_eps", 1.0e-6)),
       ).to(self.device)
       self.alg = LatentActionDistillationAlgorithm(
         policy=self.student_policy,
@@ -113,6 +117,16 @@ class DistillationRunner:
         mmd_max_samples=int(self.cfg.get("mmd_max_samples", 1024)),
         latent_smooth_weight=float(self.cfg["latent_smooth_weight"]),
         latent_smooth_max_pairs=int(self.cfg.get("latent_smooth_max_pairs", 2048)),
+        sphere_radius=float(self.cfg.get("sphere_radius", -1.0)),
+        sphere_orthonormal_weight=float(
+          self.cfg.get("sphere_orthonormal_weight", 0.0)
+        ),
+        sphere_knn_smooth_weight=float(
+          self.cfg.get("sphere_knn_smooth_weight", 0.0)
+        ),
+        sphere_knn_k=int(self.cfg.get("sphere_knn_k", 4)),
+        sphere_knn_max_samples=int(self.cfg.get("sphere_knn_max_samples", 2048)),
+        sphere_eps=float(self.cfg.get("sphere_eps", 1.0e-6)),
         multi_gpu_cfg=self.multi_gpu_cfg,
       )
     elif self.student_model_type == "mlp":

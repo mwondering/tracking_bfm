@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import torch
 from rsl_rl.models import MLPModel
 from tensordict import TensorDict
@@ -23,6 +25,9 @@ class LatentDistillationModel(torch.nn.Module):
     obs_normalization: bool = True,
     log_std_min: float = -5.0,
     log_std_max: float = 2.0,
+    latent_mode: str = "gaussian",
+    sphere_radius: float = -1.0,
+    sphere_eps: float = 1.0e-6,
   ):
     super().__init__()
     self.encoder_obs_group = encoder_obs_group
@@ -31,6 +36,9 @@ class LatentDistillationModel(torch.nn.Module):
     self.action_dim = int(action_dim)
     self.log_std_min = float(log_std_min)
     self.log_std_max = float(log_std_max)
+    self.latent_mode = latent_mode
+    self.sphere_radius = float(sphere_radius)
+    self.sphere_eps = float(sphere_eps)
     self.decoder_input_group = "_latent_decoder_input"
 
     self.encoder = MLPModel(
@@ -75,6 +83,47 @@ class LatentDistillationModel(torch.nn.Module):
   def sample(mu: torch.Tensor, log_std: torch.Tensor) -> torch.Tensor:
     return mu + torch.randn_like(mu) * torch.exp(log_std)
 
+  @staticmethod
+  def spherical_project(
+    z: torch.Tensor,
+    radius: float = -1.0,
+    eps: float = 1.0e-6,
+  ) -> torch.Tensor:
+    radius_value = math.sqrt(z.shape[-1]) if radius < 0.0 else float(radius)
+    norm = z.norm(dim=-1, keepdim=True)
+    fallback = torch.zeros_like(z)
+    fallback[..., 0] = 1.0
+    unit = torch.where(norm > float(eps), z / norm.clamp_min(float(eps)), fallback)
+    return unit * radius_value
+
+  @staticmethod
+  def slerp(
+    z0: torch.Tensor,
+    z1: torch.Tensor,
+    t: float | torch.Tensor,
+    radius: float = -1.0,
+    eps: float = 1.0e-6,
+  ) -> torch.Tensor:
+    radius_value = math.sqrt(z0.shape[-1]) if radius < 0.0 else float(radius)
+    u0 = LatentDistillationModel.spherical_project(z0, radius=1.0, eps=eps)
+    u1 = LatentDistillationModel.spherical_project(z1, radius=1.0, eps=eps)
+    dot = (u0 * u1).sum(dim=-1, keepdim=True).clamp(-1.0 + eps, 1.0 - eps)
+    omega = torch.acos(dot)
+    sin_omega = torch.sin(omega)
+    t_tensor = torch.as_tensor(t, dtype=z0.dtype, device=z0.device)
+    while t_tensor.ndim < z0.ndim:
+      t_tensor = t_tensor.unsqueeze(-1)
+    lerp = (1.0 - t_tensor) * u0 + t_tensor * u1
+    slerp = (
+      torch.sin((1.0 - t_tensor) * omega) / sin_omega * u0
+      + torch.sin(t_tensor * omega) / sin_omega * u1
+    )
+    near_collinear = sin_omega.abs() < eps
+    interpolated = torch.where(near_collinear, lerp, slerp)
+    return LatentDistillationModel.spherical_project(
+      interpolated, radius=radius_value, eps=eps
+    )
+
   def decode(self, obs: TensorDict, z: torch.Tensor) -> torch.Tensor:
     decoder_obs = self._decoder_obs(obs, z)
     return self.decoder(decoder_obs)
@@ -85,9 +134,13 @@ class LatentDistillationModel(torch.nn.Module):
     deterministic: bool = False,
   ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     mu, log_std = self.encode(obs)
-    z = mu if deterministic else self.sample(mu, log_std)
+    z_raw = mu if deterministic else self.sample(mu, log_std)
+    z = self._decode_latent(z_raw)
     actions = self.decode(obs, z)
-    return actions, {"mu": mu, "log_std": log_std, "z": z}
+    latent = {"mu": mu, "log_std": log_std, "z": z, "z_raw": z_raw}
+    if self.latent_mode == "bfmzero_sphere":
+      latent["z_sphere"] = z
+    return actions, latent
 
   def act(self, obs: TensorDict, deterministic: bool = True) -> torch.Tensor:
     actions, _ = self.forward(obs, deterministic=deterministic)
@@ -97,7 +150,8 @@ class LatentDistillationModel(torch.nn.Module):
     self.encoder.update_normalization(obs)
     with torch.no_grad():
       mu, _ = self.encode(obs)
-    self.decoder.update_normalization(self._decoder_obs(obs, mu.detach()))
+    decoder_obs = self._decoder_obs(obs, self._decode_latent(mu).detach())
+    self.decoder.update_normalization(decoder_obs)
 
   def latent_cfg(self) -> dict[str, int | float | str]:
     return {
@@ -107,7 +161,19 @@ class LatentDistillationModel(torch.nn.Module):
       "action_dim": self.action_dim,
       "log_std_min": self.log_std_min,
       "log_std_max": self.log_std_max,
+      "latent_mode": self.latent_mode,
+      "sphere_radius": self.sphere_radius,
+      "sphere_eps": self.sphere_eps,
     }
+
+  def _decode_latent(self, z_raw: torch.Tensor) -> torch.Tensor:
+    if self.latent_mode == "bfmzero_sphere":
+      return self.spherical_project(
+        z_raw,
+        radius=self.sphere_radius,
+        eps=self.sphere_eps,
+      )
+    return z_raw
 
   def _decoder_obs(self, obs: TensorDict, z: torch.Tensor) -> TensorDict:
     decoder_input = torch.cat([obs[self.decoder_obs_group], z], dim=-1)
@@ -150,6 +216,9 @@ def build_latent_student_model(
   obs_normalization: bool = True,
   log_std_min: float = -5.0,
   log_std_max: float = 2.0,
+  latent_mode: str = "gaussian",
+  sphere_radius: float = -1.0,
+  sphere_eps: float = 1.0e-6,
 ) -> LatentDistillationModel:
   """Build the latent encoder/decoder student policy."""
   return LatentDistillationModel(
@@ -164,4 +233,7 @@ def build_latent_student_model(
     obs_normalization=obs_normalization,
     log_std_min=log_std_min,
     log_std_max=log_std_max,
+    latent_mode=latent_mode,
+    sphere_radius=sphere_radius,
+    sphere_eps=sphere_eps,
   )

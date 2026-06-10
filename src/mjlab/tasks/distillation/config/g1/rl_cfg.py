@@ -26,7 +26,7 @@ class DistillationRunnerCfg(RslRlBaseRunnerCfg):
   encoder_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (2048,2048,1024, 512, 256))
   decoder_hidden_dims: tuple[int, ...] = field(default_factory=lambda: (2048,2048,1024, 1024, 512, 256, 128))
   latent_activation: str = "elu"
-  latent_regularization: Literal["kl", "wae_mmd"] = "kl"
+  latent_regularization: Literal["kl", "wae_mmd", "bfmzero_sphere"] = "kl"
   kl_weight: float = 1.0e-4
   kl_warmup_iterations: int = 2_000
   free_nats_per_dim: float = 0.02
@@ -35,6 +35,12 @@ class DistillationRunnerCfg(RslRlBaseRunnerCfg):
   mmd_max_samples: int = 1024
   latent_smooth_weight: float = 1.0e-3
   latent_smooth_max_pairs: int = 2048
+  sphere_radius: float = -1.0
+  sphere_orthonormal_weight: float = 0.0
+  sphere_knn_smooth_weight: float = 0.0
+  sphere_knn_k: int = 4
+  sphere_knn_max_samples: int = 2048
+  sphere_eps: float = 1.0e-6
   latent_log_std_min: float = -5.0
   latent_log_std_max: float = 2.0
   learning_rate: float = 1.0e-3

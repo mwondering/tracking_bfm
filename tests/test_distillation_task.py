@@ -60,6 +60,10 @@ def test_latent_distillation_task_is_registered() -> None:
   assert rl_cfg.mmd_weight == 0.0
   assert rl_cfg.mmd_max_samples == 1024
   assert rl_cfg.latent_smooth_max_pairs == 2048
+  assert rl_cfg.sphere_orthonormal_weight == 0.0
+  assert rl_cfg.sphere_knn_smooth_weight == 0.0
+  assert rl_cfg.sphere_knn_k == 4
+  assert rl_cfg.sphere_knn_max_samples == 2048
   assert runner_cls is not None
 
 
