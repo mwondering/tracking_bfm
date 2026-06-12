@@ -7,15 +7,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1-wbteleop}"
+TASK="${TASK:-Mjlab-Trackingbfm-Flat-Unitree-G1}"
 # MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/sonic_filtered/230324/flip_360_001__A304.npz}"
-MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/Data10k/homejrhangmr_dataset_pbhc_contact_maskACCADFemale1General_c3dA5-pickupbox_posespkl/motion.npz}"
+MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/jumps1_subject1.npz}"
 # MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/generated_motion_data/motion.npz}"
 # MOTION_FILE="${MOTION_FILE:-/home/lenovo/DATASETS/test_motion/pufu.npz}"
 
 # CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0604_ckpt/model_14000.pt}"
 # CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0603_ckpt/model_88000.pt}"
-CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0606_ckpt_distillation/model_8000.pt}"
+CHECKPOINT_FILE="${CHECKPOINT_FILE:-/home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/0603_ckpt/model_88000.pt}"
 
 
 # /home/lenovo/workspace/UNICTL/tracking_bfm/logs/rsl_rl/teacher_ckpt_0501/model_48000.pt
@@ -27,6 +27,13 @@ VIEWER="${VIEWER:-viser}"
 
     # --env.commands.motion.history_steps 0 \
     # --env.commands.motion.future_steps 1 \
+    # --env.observations.actor.terms.ref_limb_ee_pose_b.history_length 5 \
+    # --env.observations.actor.terms.robot_limb_ee_pose_b.history_length 5 \
+    #     --env.observations.actor.terms.projected_gravity.history_length 5 \
+    # --env.observations.actor.terms.base_ang_vel.history_length 5 \
+    # --env.observations.actor.terms.joint_pos.history_length 5 \
+    # --env.observations.actor.terms.joint_vel.history_length 5 \
+    # --env.observations.actor.terms.actions.history_length 5 \
 uv run play "$TASK" \
     --env.commands.motion.history_steps 0 \
     --env.commands.motion.future_steps 1 \
@@ -36,11 +43,4 @@ uv run play "$TASK" \
     --env.commands.motion.future_steps 1 \
     --env.decimation 4 \
     --num-envs 10 \
-    --env.observations.actor.terms.projected_gravity.history_length 5 \
-    --env.observations.actor.terms.base_ang_vel.history_length 5 \
-    --env.observations.actor.terms.joint_pos.history_length 5 \
-    --env.observations.actor.terms.joint_vel.history_length 5 \
-    --env.observations.actor.terms.actions.history_length 5 \
-    --env.observations.actor.terms.ref_limb_ee_pose_b.history_length 5 \
-    --env.observations.actor.terms.robot_limb_ee_pose_b.history_length 5 \
     --viewer viser

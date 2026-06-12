@@ -172,6 +172,71 @@ def test_latent_distillation_runner_learn_smoke() -> None:
     assert Path(tmpdir, "model_0.pt").exists()
 
 
+def test_distillation_runner_wandb_logger_uses_rsl_rl_logger(
+  tmp_path: Path,
+) -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="wandb", upload_model=False)
+  constructed: list[dict] = []
+
+  class _WriterProbe:
+    pass
+
+  class _LoggerProbe:
+    def __init__(
+      self,
+      *,
+      log_dir,
+      cfg,
+      env_cfg,
+      num_envs,
+      is_distributed,
+      gpu_world_size,
+      gpu_global_rank,
+      device,
+    ) -> None:
+      constructed.append(
+        {
+          "log_dir": log_dir,
+          "cfg": cfg,
+          "env_cfg": env_cfg,
+          "num_envs": num_envs,
+          "is_distributed": is_distributed,
+          "gpu_world_size": gpu_world_size,
+          "gpu_global_rank": gpu_global_rank,
+          "device": device,
+        }
+      )
+      self.writer = None
+      self.logger_type = None
+      self.disable_logs = bool(is_distributed and gpu_global_rank != 0)
+
+    def init_logging_writer(self) -> None:
+      self.logger_type = "WandbLogWriter"
+      self.writer = _WriterProbe()
+
+  with patch(
+    "mjlab.tasks.distillation.rl.runner.Logger",
+    _LoggerProbe,
+    create=True,
+  ):
+    runner = DistillationRunner(
+      env,
+      asdict(cfg),
+      log_dir=str(tmp_path),
+      device="cpu",
+      teacher_adapter=TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25),
+    )
+    runner._prepare_logging_writer()
+
+  assert len(constructed) == 1
+  assert constructed[0]["cfg"]["logger"] == "wandb"
+  assert constructed[0]["cfg"]["algorithm"]["rnd_cfg"] is None
+  assert runner.logger is not None
+  assert isinstance(runner.writer, _WriterProbe)
+  assert runner.logger_type == "WandbLogWriter"
+
+
 def test_latent_distillation_runner_can_use_wae_mmd_regularization() -> None:
   env = _DummyVecEnv()
   cfg = DistillationRunnerCfg(

@@ -7,10 +7,12 @@ import statistics
 import time
 from collections import defaultdict, deque
 from contextlib import contextmanager
+from copy import deepcopy
 from dataclasses import asdict
 from typing import Any
 
 import torch
+from rsl_rl.utils.logger import Logger
 from tensordict import TensorDict
 
 from mjlab.rl.runner import MjlabOnPolicyRunner
@@ -75,10 +77,19 @@ class DistillationRunner:
     self.decoder_obs_group = self.cfg.get("decoder_obs_group", self.student_obs_group)
 
     self.git_status_repos: list[str] = []
-    self.writer = None
-    self.logger = None
-    self.logger_type = self.cfg.get("logger", "tensorboard").lower()
-    self.disable_logs = self.is_distributed and self.gpu_global_rank != 0
+    self.logger = Logger(
+      log_dir=log_dir,
+      cfg=self._rsl_logger_cfg(self.cfg),
+      env_cfg=getattr(self.env, "cfg", {}),
+      num_envs=self.env.num_envs,
+      is_distributed=self.is_distributed,
+      gpu_world_size=self.gpu_world_size,
+      gpu_global_rank=self.gpu_global_rank,
+      device="cpu",
+    )
+    self.writer = self.logger.writer
+    self.logger_type = self._logger_type_name(self.cfg.get("logger", "tensorboard"))
+    self.disable_logs = self.logger.disable_logs
 
     self.current_learning_iteration = 0
     self.tot_timesteps = 0
@@ -209,13 +220,8 @@ class DistillationRunner:
     saved_dict["iter"] = self.current_learning_iteration
     saved_dict["infos"] = {**(infos or {}), "env_state": env_state}
     torch.save(saved_dict, path)
-    if (
-      self.logger_type in {"wandb", "neptune"}
-      and self.writer is not None
-      and self.cfg.get("upload_model", True)
-      and hasattr(self.writer, "save_model")
-    ):
-      self.writer.save_model(path, self.current_learning_iteration)
+    if self.cfg.get("upload_model", True):
+      self.logger.save_model(path, self.current_learning_iteration)
 
   def load(
     self,
@@ -388,6 +394,8 @@ class DistillationRunner:
 
     if self.log_dir is not None and not self.disable_logs:
       self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+    if not self.disable_logs:
+      self.logger.stop_logging_writer()
 
   def _prepare_logging_writer(self) -> None:
     if self.disable_logs:
@@ -395,21 +403,10 @@ class DistillationRunner:
     if self.log_dir is None or self.writer is not None:
       return
 
-    if self.logger_type == "wandb":
-      from rsl_rl.utils.wandb_utils import WandbSummaryWriter
-
-      self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
-    elif self.logger_type == "neptune":
-      from rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
-
-      self.writer = NeptuneSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
-    elif self.logger_type == "tensorboard":
-      from torch.utils.tensorboard import SummaryWriter
-
-      self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
-    else:
-      raise ValueError(f"Unsupported logger type: {self.logger_type}")
-    self.logger = self.writer
+    self.logger.init_logging_writer()
+    self.writer = self.logger.writer
+    if self.logger.logger_type is not None:
+      self.logger_type = self.logger.logger_type
 
   def _build_teacher_adapter(self) -> TeacherPolicyAdapter:
     checkpoint_path = self.cfg.get("teacher_checkpoint_path", "")
@@ -613,3 +610,21 @@ class DistillationRunner:
         return float(value.item())
       return float(value.float().mean().item())
     return float(value)
+
+  @staticmethod
+  def _rsl_logger_cfg(cfg: dict) -> dict:
+    logger_cfg = deepcopy(cfg)
+    algorithm_cfg = logger_cfg.get("algorithm")
+    if not isinstance(algorithm_cfg, dict):
+      algorithm_cfg = {}
+    else:
+      algorithm_cfg = dict(algorithm_cfg)
+    algorithm_cfg.setdefault("rnd_cfg", None)
+    logger_cfg["algorithm"] = algorithm_cfg
+    return logger_cfg
+
+  @staticmethod
+  def _logger_type_name(logger_cfg: Any) -> str:
+    if isinstance(logger_cfg, dict):
+      return str(logger_cfg.get("class_name", "tensorboard"))
+    return str(logger_cfg)
