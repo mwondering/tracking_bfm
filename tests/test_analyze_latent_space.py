@@ -5,11 +5,14 @@ from __future__ import annotations
 import torch
 from tensordict import TensorDict
 
+from mjlab.scripts import analyze_latent_space as latent_analysis
 from mjlab.scripts.analyze_latent_space import (
   LatentSpaceAnalysisConfig,
   _apply_latent_analysis_overrides,
   _coerce_plot_range,
+  _normalize_to_unit_sphere,
   collect_latent_batches,
+  save_latent_plots,
 )
 
 
@@ -153,3 +156,71 @@ def test_latent_analysis_defaults_to_fixed_plot_range() -> None:
 
 def test_latent_analysis_can_disable_fixed_plot_range() -> None:
   assert _coerce_plot_range(None) is None
+
+
+def test_normalize_to_unit_sphere_keeps_nonzero_latents_on_sphere() -> None:
+  samples = torch.tensor(
+    [
+      [3.0, 4.0, 0.0],
+      [0.0, 0.0, 0.0],
+      [0.0, -5.0, 12.0],
+    ]
+  )
+
+  normalized = _normalize_to_unit_sphere(samples)
+
+  assert torch.allclose(normalized[0].norm(), torch.tensor(1.0))
+  assert torch.allclose(normalized[1], torch.zeros(3))
+  assert torch.allclose(normalized[2].norm(), torch.tensor(1.0))
+
+
+def test_save_latent_plots_writes_only_spherical_tsne_images(
+  tmp_path,
+  monkeypatch,
+) -> None:
+  latents = {
+    "z": torch.tensor(
+      [
+        [2.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0],
+        [0.0, 0.0, 4.0],
+        [5.0, 0.0, 0.0],
+      ]
+    ),
+    "mu": torch.zeros(4, 3),
+    "log_std": torch.zeros(4, 3),
+    "dones": torch.zeros(4, dtype=torch.bool),
+    "step": torch.arange(4),
+  }
+  stale_plot = tmp_path / "pca_z_vs_prior.png"
+  stale_plot.write_text("old")
+  seen: dict[int, torch.Tensor] = {}
+
+  def fake_tsne_embedding(
+    samples: torch.Tensor,
+    n_components: int,
+    *,
+    random_state: int = 0,
+    perplexity: float = 30.0,
+  ):
+    del random_state, perplexity
+    seen[n_components] = samples.detach().clone()
+    coords = torch.arange(samples.shape[0] * n_components, dtype=torch.float32)
+    return coords.view(samples.shape[0], n_components).numpy()
+
+  monkeypatch.setattr(latent_analysis, "_tsne_embedding", fake_tsne_embedding)
+
+  save_latent_plots(
+    latents,
+    tmp_path,
+    max_plot_points=4,
+    plot_range=None,
+  )
+
+  assert sorted(path.name for path in tmp_path.glob("*.png")) == [
+    "tsne_sphere_z_2d.png",
+    "tsne_sphere_z_3d.png",
+  ]
+  assert not stale_plot.exists()
+  assert torch.allclose(seen[2].norm(dim=-1), torch.ones(4))
+  assert torch.allclose(seen[3], seen[2])

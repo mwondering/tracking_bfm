@@ -133,13 +133,39 @@ def collect_latent_batches(
   return {key: torch.cat(value, dim=0) for key, value in collected.items()}
 
 
-def _pca_2d(samples: torch.Tensor) -> tuple[np.ndarray, np.ndarray]:
-  centered = samples - samples.mean(dim=0, keepdim=True)
-  _, singular_values, vh = torch.linalg.svd(centered, full_matrices=False)
-  coords = centered @ vh[:2].T
-  variance = singular_values.square()
-  explained = variance[: min(2, variance.numel())] / torch.clamp(variance.sum(), min=1.0e-12)
-  return coords.cpu().numpy(), explained.cpu().numpy()
+def _normalize_to_unit_sphere(samples: torch.Tensor, eps: float = 1.0e-12) -> torch.Tensor:
+  norms = torch.linalg.vector_norm(samples, dim=-1, keepdim=True)
+  return samples / torch.clamp(norms, min=eps)
+
+
+def _tsne_embedding(
+  samples: torch.Tensor,
+  n_components: int,
+  *,
+  random_state: int = 0,
+  perplexity: float = 30.0,
+) -> np.ndarray:
+  if samples.shape[0] < 2:
+    return np.zeros((samples.shape[0], n_components), dtype=np.float32)
+
+  try:
+    from sklearn.manifold import TSNE
+  except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+      "t-SNE plotting requires scikit-learn. Install it with `uv add scikit-learn` "
+      "or add scikit-learn to the project dependencies."
+    ) from exc
+
+  effective_perplexity = min(float(perplexity), max(1.0, (samples.shape[0] - 1) / 3.0))
+  tsne = TSNE(
+    n_components=n_components,
+    perplexity=effective_perplexity,
+    init="random",
+    learning_rate="auto",
+    random_state=random_state,
+    method="barnes_hut",
+  )
+  return tsne.fit_transform(samples.detach().cpu().numpy())
 
 
 def _effective_rank(eigenvalues: torch.Tensor) -> float:
@@ -208,75 +234,64 @@ def save_latent_plots(
 
   output_dir.mkdir(parents=True, exist_ok=True)
   z = latents["z"].float()
-  mu = latents["mu"].float()
   axis_range = _coerce_plot_range(plot_range)
   plot_count = min(max_plot_points, z.shape[0])
   plot_idx = torch.linspace(0, z.shape[0] - 1, plot_count).long()
+  sphere_z = _normalize_to_unit_sphere(z[plot_idx])
+  colors = latents.get("step", torch.arange(z.shape[0]))[plot_idx].cpu().numpy()
 
-  z_2d, z_explained = _pca_2d(z[plot_idx])
-  prior = torch.randn_like(z[plot_idx])
-  prior_2d, _ = _pca_2d(prior)
+  for old_plot_name in (
+    "pca_z_vs_prior.png",
+    "pca_mu.png",
+    "radius_hist.png",
+    "cov_heatmap.png",
+    "pca_spectrum.png",
+  ):
+    (output_dir / old_plot_name).unlink(missing_ok=True)
+
+  tsne_2d = _tsne_embedding(sphere_z, n_components=2)
 
   plt.figure(figsize=(7, 6))
-  plt.scatter(prior_2d[:, 0], prior_2d[:, 1], s=2, alpha=0.25, label="N(0,I)")
-  plt.scatter(z_2d[:, 0], z_2d[:, 1], s=2, alpha=0.35, label="encoder z")
-  plt.xlabel(f"PC1 ({z_explained[0] * 100:.1f}%)")
-  plt.ylabel(f"PC2 ({z_explained[1] * 100:.1f}%)" if z_explained.size > 1 else "PC2")
+  scatter = plt.scatter(
+    tsne_2d[:, 0],
+    tsne_2d[:, 1],
+    c=colors,
+    cmap="viridis",
+    s=3,
+    alpha=0.65,
+  )
+  plt.xlabel("t-SNE 1")
+  plt.ylabel("t-SNE 2")
   if axis_range is not None:
     plt.xlim(axis_range)
     plt.ylim(axis_range)
-  plt.legend(markerscale=4)
+  plt.colorbar(scatter, label="rollout step")
   plt.tight_layout()
-  plt.savefig(output_dir / "pca_z_vs_prior.png", dpi=180)
+  plt.savefig(output_dir / "tsne_sphere_z_2d.png", dpi=180)
   plt.close()
 
-  mu_2d, mu_explained = _pca_2d(mu[plot_idx])
-  plt.figure(figsize=(7, 6))
-  plt.scatter(mu_2d[:, 0], mu_2d[:, 1], s=2, alpha=0.35)
-  plt.xlabel(f"PC1 ({mu_explained[0] * 100:.1f}%)")
-  plt.ylabel(f"PC2 ({mu_explained[1] * 100:.1f}%)" if mu_explained.size > 1 else "PC2")
+  tsne_3d = _tsne_embedding(sphere_z, n_components=3)
+  fig = plt.figure(figsize=(8, 7))
+  ax = fig.add_subplot(111, projection="3d")
+  scatter = ax.scatter(
+    tsne_3d[:, 0],
+    tsne_3d[:, 1],
+    tsne_3d[:, 2],
+    c=colors,
+    cmap="viridis",
+    s=3,
+    alpha=0.65,
+  )
+  ax.set_xlabel("t-SNE 1")
+  ax.set_ylabel("t-SNE 2")
+  ax.set_zlabel("t-SNE 3")
   if axis_range is not None:
-    plt.xlim(axis_range)
-    plt.ylim(axis_range)
+    ax.set_xlim(axis_range)
+    ax.set_ylim(axis_range)
+    ax.set_zlim(axis_range)
+  fig.colorbar(scatter, ax=ax, label="rollout step", shrink=0.75)
   plt.tight_layout()
-  plt.savefig(output_dir / "pca_mu.png", dpi=180)
-  plt.close()
-
-  radius = z.norm(dim=-1).cpu().numpy()
-  prior_radius = torch.randn_like(z).norm(dim=-1).cpu().numpy()
-  plt.figure(figsize=(7, 4))
-  plt.hist(prior_radius, bins=80, alpha=0.45, density=True, label="N(0,I)")
-  plt.hist(radius, bins=80, alpha=0.45, density=True, label="encoder z")
-  plt.xlabel("||z||")
-  plt.ylabel("density")
-  if axis_range is not None:
-    plt.xlim(axis_range)
-  plt.legend()
-  plt.tight_layout()
-  plt.savefig(output_dir / "radius_hist.png", dpi=180)
-  plt.close()
-
-  centered = z - z.mean(dim=0, keepdim=True)
-  cov = centered.T @ centered / max(z.shape[0] - 1, 1)
-  plt.figure(figsize=(6, 5))
-  imshow_kwargs = {"cmap": "coolwarm"}
-  if axis_range is not None:
-    imshow_kwargs |= {"vmin": axis_range[0], "vmax": axis_range[1]}
-  plt.imshow(cov.cpu().numpy(), **imshow_kwargs)
-  plt.colorbar(label="covariance")
-  plt.tight_layout()
-  plt.savefig(output_dir / "cov_heatmap.png", dpi=180)
-  plt.close()
-
-  eigenvalues = torch.linalg.eigvalsh(cov).flip(0).cpu().numpy()
-  plt.figure(figsize=(7, 4))
-  plt.plot(eigenvalues)
-  plt.xlabel("principal component")
-  plt.ylabel("eigenvalue")
-  if axis_range is not None:
-    plt.ylim(axis_range)
-  plt.tight_layout()
-  plt.savefig(output_dir / "pca_spectrum.png", dpi=180)
+  plt.savefig(output_dir / "tsne_sphere_z_3d.png", dpi=180)
   plt.close()
 
 
