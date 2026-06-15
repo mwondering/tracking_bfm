@@ -1,6 +1,7 @@
 """Unitree G1 flat tracking environment configurations."""
 
 import math
+from copy import deepcopy
 
 from mjlab.asset_zoo.robots import (
   G1_ACTION_SCALE,
@@ -26,6 +27,12 @@ _STUDENT_EE_BODY_NAMES = ("left_wrist_yaw_link", "right_wrist_yaw_link")
 _STUDENT_ANCHOR_BODY_NAME = "pelvis"
 _BASE_INERTIA_ALPHA_RANGE = (0.5 * math.log(0.92), 0.5 * math.log(1.08))
 _BODY_INERTIA_ALPHA_RANGE = (0.5 * math.log(0.95), 0.5 * math.log(1.05))
+_REGULARIZATION_REWARD_NAMES = (
+  "action_rate_l2",
+  "waist_action_rate_l2",
+  "joint_limit",
+  "self_collisions",
+)
 
 
 def _robot_state_history_length(history_steps: int) -> int:
@@ -137,6 +144,36 @@ def add_body_inertia_randomization(cfg: ManagerBasedRlEnvCfg) -> None:
       "t_range": (-0.01, 0.01),
     },
   )
+
+
+def _use_full_critic_actor_observations(cfg: ManagerBasedRlEnvCfg) -> None:
+  """Give the policy the same uncorrupted observation terms used by the critic."""
+  critic_obs = cfg.observations["critic"]
+  cfg.observations["actor"] = ObservationGroupCfg(
+    terms=deepcopy(critic_obs.terms),
+    concatenate_terms=True,
+    enable_corruption=False,
+  )
+
+
+def _use_global_body_pose_rewards(cfg: ManagerBasedRlEnvCfg) -> None:
+  cfg.rewards["motion_body_pos"].func = mdp.motion_global_body_position_error_exp
+  cfg.rewards["motion_body_ori"].func = mdp.motion_global_body_orientation_error_exp
+
+
+def _disable_tracking_regularization_rewards(cfg: ManagerBasedRlEnvCfg) -> None:
+  for reward_name in _REGULARIZATION_REWARD_NAMES:
+    cfg.rewards.pop(reward_name, None)
+
+
+def _disable_tracking_domain_randomization(cfg: ManagerBasedRlEnvCfg) -> None:
+  cfg.events.clear()
+
+  motion_cmd = cfg.commands["motion"]
+  assert isinstance(motion_cmd, (SingleMotionCommandCfg, MultiMotionCommandCfg))
+  motion_cmd.pose_range = {}
+  motion_cmd.velocity_range = {}
+  motion_cmd.joint_position_range = (0.0, 0.0)
 
 
 def _unitree_g1_flat_tracking_env_cfg(
@@ -299,4 +336,21 @@ def unitree_g1_flat_tracking_bfm_1stage_env_cfg(
     future_steps=motion_cmd.future_steps,
     enable_corruption=not play,
   )
+  return cfg
+
+
+def unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(
+  play: bool = False,
+  disable_reg_and_dr: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create a full-state, global-body-reward task for optimality probes."""
+  cfg = unitree_g1_flat_tracking_bfm_env_cfg(play=play)
+
+  _use_full_critic_actor_observations(cfg)
+  _use_global_body_pose_rewards(cfg)
+
+  if disable_reg_and_dr:
+    _disable_tracking_regularization_rewards(cfg)
+    _disable_tracking_domain_randomization(cfg)
+
   return cfg

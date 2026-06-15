@@ -144,6 +144,8 @@ def test_g1_tracking_penalizes_waist_action_rate(
 ) -> None:
   """G1 tracking tasks should include a waist-only action-rate penalty."""
   for task_id in g1_tracking_task_ids:
+    if task_id.endswith("-NoRegNoDR"):
+      continue
     cfg = load_env_cfg(task_id)
 
     assert "waist_action_rate_l2" in cfg.rewards
@@ -175,6 +177,8 @@ def test_g1_tracking_foot_friction_uses_sonic_plus_range(
 ) -> None:
   """G1 tracking foot friction should cover the SONIC range with a higher cap."""
   for task_id in g1_tracking_task_ids:
+    if task_id.endswith("-NoRegNoDR"):
+      continue
     cfg = load_env_cfg(task_id)
 
     assert cfg.events["foot_friction"].params["ranges"] == (0.3, 2.0)
@@ -259,3 +263,50 @@ def test_tracking_bfm_action_trunk_task_config() -> None:
   assert "joint_pos" in cfg.actions
   assert isinstance(cfg.actions["joint_pos"], JointPositionActionCfg)
   assert cfg.actions["joint_pos"].scale == G1_ACTION_SCALE
+
+
+def test_tracking_bfm_test_optimal_uses_full_critic_actor_obs() -> None:
+  """The optimality probe should give the policy the full critic observation."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal")
+
+  actor = cfg.observations["actor"]
+  critic = cfg.observations["critic"]
+
+  assert set(actor.terms.keys()) == set(critic.terms.keys())
+  assert actor.enable_corruption is False
+  assert critic.enable_corruption is False
+  assert all(term.noise is None for term in actor.terms.values())
+
+
+def test_tracking_bfm_test_optimal_uses_global_body_pose_rewards() -> None:
+  """The optimality probe should track body poses in the world frame."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal")
+
+  assert cfg.rewards["motion_body_pos"].func is mdp.motion_global_body_position_error_exp
+  assert (
+    cfg.rewards["motion_body_ori"].func
+    is mdp.motion_global_body_orientation_error_exp
+  )
+  assert cfg.rewards["motion_body_lin_vel"].func is (
+    mdp.motion_global_body_linear_velocity_error_exp
+  )
+  assert cfg.rewards["motion_body_ang_vel"].func is (
+    mdp.motion_global_body_angular_velocity_error_exp
+  )
+
+
+def test_tracking_bfm_test_optimal_no_reg_no_dr_removes_interference() -> None:
+  """The pure optimality probe should remove DR and regularization rewards."""
+  cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR")
+
+  assert cfg.events == {}
+  assert "action_rate_l2" not in cfg.rewards
+  assert "waist_action_rate_l2" not in cfg.rewards
+  assert "joint_limit" not in cfg.rewards
+  assert "self_collisions" not in cfg.rewards
+
+  motion_cmd = cfg.commands["motion"]
+  assert isinstance(motion_cmd, MultiMotionCommandCfg)
+  assert motion_cmd.pose_range == {}
+  assert motion_cmd.velocity_range == {}
+  assert motion_cmd.joint_position_range == (0.0, 0.0)
