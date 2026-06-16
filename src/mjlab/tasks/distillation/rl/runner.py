@@ -511,20 +511,22 @@ class DistillationRunner:
     fps = int(collection_size / max(collection_time + learn_time, 1.0e-6))
 
     for key, value in self.last_loss_dict.items():
-      self.writer.add_scalar(f"Train/distill/{key}", value, it)
+      self.writer.add_scalar(f"Train/loss/{key}", value, it)
     for key, value in self.last_train_metrics.items():
-      self.writer.add_scalar(f"Train/distill/{key}", value, it)
+      self.writer.add_scalar(f"Train/metrics/{key}", value, it)
 
     if "mean_reward" in env_metrics:
-      self.writer.add_scalar("Train/env/mean_reward", env_metrics["mean_reward"], it)
       self.writer.add_scalar(
-        "Train/env/mean_episode_length",
+        "Train/reward/mean_reward", env_metrics["mean_reward"], it
+      )
+      self.writer.add_scalar(
+        "Train/metrics/mean_episode_length",
         env_metrics["mean_episode_length"],
         it,
       )
 
     for key, value in aggregated_ep_info.items():
-      self.writer.add_scalar(f"Train/env/{key}", value, it)
+      self.writer.add_scalar(self._train_scalar_path(key), value, it)
 
     self.writer.add_scalar("Perf/total_fps", fps, it)
     self.writer.add_scalar("Perf/collection_time", collection_time, it)
@@ -610,6 +612,26 @@ class DistillationRunner:
         return float(value.item())
       return float(value.float().mean().item())
     return float(value)
+
+  @staticmethod
+  def _train_scalar_path(key: str) -> str:
+    if key.startswith("Episode_Reward/"):
+      return f"Train/reward/{key.removeprefix('Episode_Reward/')}"
+    if key.startswith("Episode_Metrics/"):
+      return f"Train/metrics/{key.removeprefix('Episode_Metrics/')}"
+    if key.startswith("Episode_Termination/"):
+      return f"Train/termination/{key.removeprefix('Episode_Termination/')}"
+    if key.startswith("Metrics/"):
+      return f"Train/metrics/{key.removeprefix('Metrics/')}"
+
+    lower_key = key.lower()
+    if lower_key in {"return", "reward", "episode_return", "episode_reward"}:
+      return f"Train/reward/{key}"
+    if "reward" in lower_key:
+      return f"Train/reward/{key}"
+    if "termination" in lower_key or "terminated" in lower_key:
+      return f"Train/termination/{key}"
+    return f"Train/metrics/{key}"
 
   @staticmethod
   def _rsl_logger_cfg(cfg: dict) -> dict:

@@ -537,6 +537,68 @@ def test_distillation_runner_consumes_log_extras(capsys) -> None:
   assert "Metrics/action_abs" in out
 
 
+def test_distillation_runner_logs_scalars_into_separate_wandb_groups() -> None:
+  env = _DummyVecEnv()
+  cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
+  runner = DistillationRunner(
+    env,
+    asdict(cfg),
+    log_dir=None,
+    device="cpu",
+    teacher_adapter=TeacherPolicyAdapter(lambda obs: obs["actor"][..., :3] * 0.25),
+  )
+
+  class _WriterProbe:
+    def __init__(self) -> None:
+      self.scalars: dict[str, float] = {}
+
+    def add_scalar(self, key: str, value: float, step: int) -> None:
+      assert step == 7
+      self.scalars[key] = value
+
+  writer = _WriterProbe()
+  runner.writer = writer
+  runner.last_loss_dict = {
+    "action_mse": 0.1,
+    "kl_loss": 0.2,
+    "kl_weight": 0.3,
+  }
+  runner.last_train_metrics = {
+    "beta_teacher": 0.4,
+    "teacher_action_ratio": 0.5,
+  }
+
+  runner._log_train_iteration(
+    it=7,
+    total_iterations=8,
+    collection_time=1.0,
+    learn_time=1.0,
+    env_metrics={"mean_reward": 2.0, "mean_episode_length": 3.0},
+    aggregated_ep_info={
+      "Episode_Reward/motion_body_pos": 4.0,
+      "Episode_Metrics/error_body_pos": 5.0,
+      "Episode_Termination/anchor_pos": 6.0,
+      "Metrics/motion/sampling_entropy": 7.0,
+      "return": 8.0,
+    },
+  )
+
+  assert writer.scalars["Train/loss/action_mse"] == pytest.approx(0.1)
+  assert writer.scalars["Train/loss/kl_loss"] == pytest.approx(0.2)
+  assert writer.scalars["Train/loss/kl_weight"] == pytest.approx(0.3)
+  assert writer.scalars["Train/metrics/beta_teacher"] == pytest.approx(0.4)
+  assert writer.scalars["Train/metrics/teacher_action_ratio"] == pytest.approx(0.5)
+  assert writer.scalars["Train/reward/mean_reward"] == pytest.approx(2.0)
+  assert writer.scalars["Train/metrics/mean_episode_length"] == pytest.approx(3.0)
+  assert writer.scalars["Train/reward/motion_body_pos"] == pytest.approx(4.0)
+  assert writer.scalars["Train/metrics/error_body_pos"] == pytest.approx(5.0)
+  assert writer.scalars["Train/termination/anchor_pos"] == pytest.approx(6.0)
+  assert writer.scalars["Train/metrics/motion/sampling_entropy"] == pytest.approx(7.0)
+  assert writer.scalars["Train/reward/return"] == pytest.approx(8.0)
+  assert "Train/distill/action_mse" not in writer.scalars
+  assert "Train/env/Episode_Reward/motion_body_pos" not in writer.scalars
+
+
 def test_distillation_runner_configures_multi_gpu_state_from_environment(monkeypatch) -> None:
   env = _DummyVecEnv()
   cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
