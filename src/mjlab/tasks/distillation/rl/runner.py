@@ -511,16 +511,16 @@ class DistillationRunner:
     fps = int(collection_size / max(collection_time + learn_time, 1.0e-6))
 
     for key, value in self.last_loss_dict.items():
-      self.writer.add_scalar(f"Train/loss/{key}", value, it)
+      self.writer.add_scalar(f"Loss/{key}", value, it)
     for key, value in self.last_train_metrics.items():
-      self.writer.add_scalar(f"Train/metrics/{key}", value, it)
+      self.writer.add_scalar(f"Metrics/{key}", value, it)
 
     if "mean_reward" in env_metrics:
       self.writer.add_scalar(
-        "Train/reward/mean_reward", env_metrics["mean_reward"], it
+        "Reward/mean_reward", env_metrics["mean_reward"], it
       )
       self.writer.add_scalar(
-        "Train/metrics/mean_episode_length",
+        "Metrics/mean_episode_length",
         env_metrics["mean_episode_length"],
         it,
       )
@@ -616,22 +616,22 @@ class DistillationRunner:
   @staticmethod
   def _train_scalar_path(key: str) -> str:
     if key.startswith("Episode_Reward/"):
-      return f"Train/reward/{key.removeprefix('Episode_Reward/')}"
+      return f"Reward/{key.removeprefix('Episode_Reward/')}"
     if key.startswith("Episode_Metrics/"):
-      return f"Train/metrics/{key.removeprefix('Episode_Metrics/')}"
+      return f"Metrics/{key.removeprefix('Episode_Metrics/')}"
     if key.startswith("Episode_Termination/"):
-      return f"Train/termination/{key.removeprefix('Episode_Termination/')}"
+      return f"Termination/{key.removeprefix('Episode_Termination/')}"
     if key.startswith("Metrics/"):
-      return f"Train/metrics/{key.removeprefix('Metrics/')}"
+      return f"Metrics/{key.removeprefix('Metrics/')}"
 
     lower_key = key.lower()
     if lower_key in {"return", "reward", "episode_return", "episode_reward"}:
-      return f"Train/reward/{key}"
+      return f"Reward/{key}"
     if "reward" in lower_key:
-      return f"Train/reward/{key}"
+      return f"Reward/{key}"
     if "termination" in lower_key or "terminated" in lower_key:
-      return f"Train/termination/{key}"
-    return f"Train/metrics/{key}"
+      return f"Termination/{key}"
+    return f"Metrics/{key}"
 
   @staticmethod
   def _rsl_logger_cfg(cfg: dict) -> dict:

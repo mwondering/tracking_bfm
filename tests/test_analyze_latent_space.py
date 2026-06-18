@@ -13,6 +13,7 @@ from mjlab.scripts.analyze_latent_space import (
   _normalize_to_unit_sphere,
   collect_latent_batches,
   save_latent_plots,
+  summarize_latents,
 )
 
 
@@ -111,6 +112,7 @@ class _DummyScene:
 class _DummyEnvCfg:
   def __init__(self) -> None:
     self.scene = _DummyScene()
+    self.sim = type("DummySim", (), {"nconmax": 35, "njmax": 250})()
     self.commands = {"motion": _DummyMotionCfg()}
     self.observations = {"proprio_actor": _DummyGroup()}
 
@@ -145,6 +147,46 @@ def test_apply_latent_analysis_overrides_keeps_checkpoint_observation_shape_comp
     "joint_vel": 20,
     "actions": 20,
   }
+  assert env_cfg.sim.njmax == 600
+  assert env_cfg.sim.nconmax == 35
+
+
+def test_apply_latent_analysis_overrides_allows_sim_buffer_override() -> None:
+  env_cfg = _DummyEnvCfg()
+  cfg = LatentSpaceAnalysisConfig(
+    checkpoint_file="checkpoint.pt",
+    output_dir="out",
+    sim_njmax=1024,
+    sim_nconmax=96,
+  )
+
+  _apply_latent_analysis_overrides(env_cfg, cfg)
+
+  assert env_cfg.sim.njmax == 1024
+  assert env_cfg.sim.nconmax == 96
+
+
+def test_summarize_latents_handles_degenerate_nonfinite_covariance() -> None:
+  latents = {
+    "z": torch.tensor(
+      [
+        [float("nan"), 0.0, 0.0],
+        [float("inf"), 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0],
+      ]
+    ),
+    "mu": torch.zeros(4, 3),
+    "log_std": torch.zeros(4, 3),
+    "dones": torch.tensor([False, True, False, False]),
+  }
+
+  summary = summarize_latents(latents)
+
+  assert summary["num_points"] == 4
+  assert summary["finite_num_points"] == 2
+  assert summary["nonfinite_num_points"] == 2
+  assert summary["effective_rank"] == 0.0
 
 
 def test_latent_analysis_defaults_to_fixed_plot_range() -> None:

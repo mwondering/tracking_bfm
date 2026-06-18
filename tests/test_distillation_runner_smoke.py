@@ -537,7 +537,7 @@ def test_distillation_runner_consumes_log_extras(capsys) -> None:
   assert "Metrics/action_abs" in out
 
 
-def test_distillation_runner_logs_scalars_into_separate_wandb_groups() -> None:
+def test_distillation_runner_logs_scalars_into_top_level_wandb_groups() -> None:
   env = _DummyVecEnv()
   cfg = DistillationRunnerCfg(logger="tensorboard", upload_model=False)
   runner = DistillationRunner(
@@ -583,19 +583,20 @@ def test_distillation_runner_logs_scalars_into_separate_wandb_groups() -> None:
     },
   )
 
-  assert writer.scalars["Train/loss/action_mse"] == pytest.approx(0.1)
-  assert writer.scalars["Train/loss/kl_loss"] == pytest.approx(0.2)
-  assert writer.scalars["Train/loss/kl_weight"] == pytest.approx(0.3)
-  assert writer.scalars["Train/metrics/beta_teacher"] == pytest.approx(0.4)
-  assert writer.scalars["Train/metrics/teacher_action_ratio"] == pytest.approx(0.5)
-  assert writer.scalars["Train/reward/mean_reward"] == pytest.approx(2.0)
-  assert writer.scalars["Train/metrics/mean_episode_length"] == pytest.approx(3.0)
-  assert writer.scalars["Train/reward/motion_body_pos"] == pytest.approx(4.0)
-  assert writer.scalars["Train/metrics/error_body_pos"] == pytest.approx(5.0)
-  assert writer.scalars["Train/termination/anchor_pos"] == pytest.approx(6.0)
-  assert writer.scalars["Train/metrics/motion/sampling_entropy"] == pytest.approx(7.0)
-  assert writer.scalars["Train/reward/return"] == pytest.approx(8.0)
+  assert writer.scalars["Loss/action_mse"] == pytest.approx(0.1)
+  assert writer.scalars["Loss/kl_loss"] == pytest.approx(0.2)
+  assert writer.scalars["Loss/kl_weight"] == pytest.approx(0.3)
+  assert writer.scalars["Metrics/beta_teacher"] == pytest.approx(0.4)
+  assert writer.scalars["Metrics/teacher_action_ratio"] == pytest.approx(0.5)
+  assert writer.scalars["Reward/mean_reward"] == pytest.approx(2.0)
+  assert writer.scalars["Metrics/mean_episode_length"] == pytest.approx(3.0)
+  assert writer.scalars["Reward/motion_body_pos"] == pytest.approx(4.0)
+  assert writer.scalars["Metrics/error_body_pos"] == pytest.approx(5.0)
+  assert writer.scalars["Termination/anchor_pos"] == pytest.approx(6.0)
+  assert writer.scalars["Metrics/motion/sampling_entropy"] == pytest.approx(7.0)
+  assert writer.scalars["Reward/return"] == pytest.approx(8.0)
   assert "Train/distill/action_mse" not in writer.scalars
+  assert "Train/loss/action_mse" not in writer.scalars
   assert "Train/env/Episode_Reward/motion_body_pos" not in writer.scalars
 
 
