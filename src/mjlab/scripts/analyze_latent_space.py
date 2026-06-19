@@ -36,6 +36,10 @@ class LatentSpaceAnalysisConfig:
   motion_history_steps: int | None = None
   motion_future_steps: int | None = None
   proprio_history_length: int | None = None
+  sim_njmax: int | None = 600
+  """Override analysis env constraint buffer size. Set None to keep task default."""
+  sim_nconmax: int | None = None
+  """Override analysis env contact buffer size. Set None to keep task default."""
   max_plot_points: int = 10_000
   plot_range: tuple[float, float] | None = (-20.0, 20.0)
   """Fixed plotting range for latent visualizations; set to None for autoscale."""
@@ -55,6 +59,10 @@ def _latent_policy_obs(policy, obs: TensorDict) -> TensorDict:
 def _apply_latent_analysis_overrides(env_cfg, cfg: LatentSpaceAnalysisConfig) -> None:
   if cfg.num_envs is not None:
     env_cfg.scene.num_envs = cfg.num_envs
+  if cfg.sim_njmax is not None:
+    env_cfg.sim.njmax = int(cfg.sim_njmax)
+  if cfg.sim_nconmax is not None:
+    env_cfg.sim.nconmax = int(cfg.sim_nconmax)
 
   motion_cfg = env_cfg.commands.get("motion")
   motion_overrides = (
@@ -178,26 +186,65 @@ def _effective_rank(eigenvalues: torch.Tensor) -> float:
   return float(torch.exp(entropy).item())
 
 
+def _safe_covariance_eigenvalues(cov: torch.Tensor) -> torch.Tensor:
+  if cov.numel() == 0:
+    return cov.new_zeros((0,))
+  cov = torch.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
+  cov = 0.5 * (cov + cov.T)
+  cov64 = cov.to(dtype=torch.float64)
+  try:
+    eigenvalues = torch.linalg.eigvalsh(cov64)
+  except torch.linalg.LinAlgError:
+    jitter = torch.eye(cov64.shape[0], dtype=cov64.dtype, device=cov64.device) * 1.0e-8
+    try:
+      eigenvalues = torch.linalg.eigvalsh(cov64 + jitter)
+    except torch.linalg.LinAlgError:
+      return cov.new_zeros((cov.shape[0],))
+  return eigenvalues.to(dtype=cov.dtype).flip(0)
+
+
+def _finite_latent_rows(*tensors: torch.Tensor) -> torch.Tensor:
+  masks = []
+  for tensor in tensors:
+    masks.append(torch.isfinite(tensor).reshape(tensor.shape[0], -1).all(dim=1))
+  finite = masks[0]
+  for mask in masks[1:]:
+    finite &= mask
+  return finite
+
+
 def summarize_latents(latents: dict[str, torch.Tensor]) -> dict[str, Any]:
   z = latents["z"].float()
   mu = latents["mu"].float()
   log_std = latents["log_std"].float()
-  radius = z.norm(dim=-1)
-  centered = z - z.mean(dim=0, keepdim=True)
-  cov = centered.T @ centered / max(z.shape[0] - 1, 1)
+  finite_rows = _finite_latent_rows(z, mu, log_std)
+  finite_count = int(finite_rows.count_nonzero().item())
+  if finite_count > 0:
+    z_stats = z[finite_rows]
+    mu_stats = mu[finite_rows]
+    log_std_stats = log_std[finite_rows]
+  else:
+    z_stats = torch.zeros((1, z.shape[-1]), dtype=z.dtype, device=z.device)
+    mu_stats = torch.zeros_like(z_stats)
+    log_std_stats = torch.zeros_like(z_stats)
+  radius = z_stats.norm(dim=-1)
+  centered = z_stats - z_stats.mean(dim=0, keepdim=True)
+  cov = centered.T @ centered / max(z_stats.shape[0] - 1, 1)
   diag_mask = torch.eye(cov.shape[0], dtype=torch.bool)
   offdiag = cov[~diag_mask]
-  eigenvalues = torch.linalg.eigvalsh(cov).flip(0)
-  prior = torch.randn_like(z)
+  eigenvalues = _safe_covariance_eigenvalues(cov)
+  prior = torch.randn_like(z_stats)
   return {
     "num_points": int(z.shape[0]),
+    "finite_num_points": finite_count,
+    "nonfinite_num_points": int(z.shape[0] - finite_count),
     "latent_dim": int(z.shape[-1]),
-    "mu_mean_norm": float(mu.mean(dim=0).norm().item()),
-    "z_mean_norm": float(z.mean(dim=0).norm().item()),
-    "z_std_mean": float(z.std(dim=0, unbiased=False).mean().item()),
-    "z_std_min": float(z.std(dim=0, unbiased=False).min().item()),
-    "z_std_max": float(z.std(dim=0, unbiased=False).max().item()),
-    "latent_std_mean": float(torch.exp(log_std).mean().item()),
+    "mu_mean_norm": float(mu_stats.mean(dim=0).norm().item()),
+    "z_mean_norm": float(z_stats.mean(dim=0).norm().item()),
+    "z_std_mean": float(z_stats.std(dim=0, unbiased=False).mean().item()),
+    "z_std_min": float(z_stats.std(dim=0, unbiased=False).min().item()),
+    "z_std_max": float(z_stats.std(dim=0, unbiased=False).max().item()),
+    "latent_std_mean": float(torch.exp(log_std_stats).mean().item()),
     "cov_offdiag_mean_abs": float(offdiag.abs().mean().item()) if offdiag.numel() else 0.0,
     "radius_mean": float(radius.mean().item()),
     "radius_std": float(radius.std(unbiased=False).item()),
