@@ -23,6 +23,8 @@ from mjlab.tasks.tracking.mdp.multi_commands import (
 from mjlab.tasks.tracking.tracking_env_cfg import make_tracking_env_cfg
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 
+from .attention_cfg import ACTOR_HISTORY_LENGTH
+
 _STUDENT_EE_BODY_NAMES = ("left_wrist_yaw_link", "right_wrist_yaw_link")
 _STUDENT_ANCHOR_BODY_NAME = "pelvis"
 _BASE_INERTIA_ALPHA_RANGE = (0.5 * math.log(0.92), 0.5 * math.log(1.08))
@@ -353,4 +355,25 @@ def unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(
     _disable_tracking_regularization_rewards(cfg)
     _disable_tracking_domain_randomization(cfg)
 
+  return cfg
+
+
+def unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg(
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create TestOptimal-NoRegNoDR with actor observation history for attention."""
+  cfg = unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(
+    play=play,
+    disable_reg_and_dr=True,
+  )
+
+  motion_cmd = cfg.commands["motion"]
+  assert isinstance(motion_cmd, MultiMotionCommandCfg)
+  motion_cmd.history_steps = 0
+  motion_cmd.future_steps = 1
+
+  actor_obs = cfg.observations["actor"]
+  for term in actor_obs.terms.values():
+    term.history_length = ACTOR_HISTORY_LENGTH
+    term.flatten_history_dim = True
   return cfg

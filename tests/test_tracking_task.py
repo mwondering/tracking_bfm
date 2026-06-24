@@ -5,7 +5,7 @@ import pytest
 from mjlab.asset_zoo.robots import G1_ACTION_SCALE
 from mjlab.envs.mdp import dr
 from mjlab.envs.mdp.actions import JointPositionActionCfg
-from mjlab.tasks.registry import list_tasks, load_env_cfg
+from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg
 from mjlab.tasks.tracking import mdp
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
@@ -310,3 +310,49 @@ def test_tracking_bfm_test_optimal_no_reg_no_dr_removes_interference() -> None:
   assert motion_cmd.pose_range == {}
   assert motion_cmd.velocity_range == {}
   assert motion_cmd.joint_position_range == (0.0, 0.0)
+
+
+ATTENTION_TEST_OPTIMAL_TASKS = {
+  "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-FullObsCausalAttn-NoRegNoDR": (
+    "mjlab.tasks.tracking.rl.attention_models:FullObsCausalAttentionActor"
+  ),
+  "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-ProprioRefCrossAttn-NoRegNoDR": (
+    "mjlab.tasks.tracking.rl.attention_models:ProprioRefCrossAttentionActor"
+  ),
+  "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR": (
+    "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor"
+  ),
+}
+
+
+def test_tracking_attention_test_optimal_tasks_are_registered() -> None:
+  registered = set(list_tasks())
+
+  for task_id in ATTENTION_TEST_OPTIMAL_TASKS:
+    assert task_id in registered
+
+
+def test_tracking_attention_test_optimal_uses_no_future_ref_and_actor_history() -> None:
+  for task_id in ATTENTION_TEST_OPTIMAL_TASKS:
+    cfg = load_env_cfg(task_id)
+
+    motion_cmd = cfg.commands["motion"]
+    assert isinstance(motion_cmd, MultiMotionCommandCfg)
+    assert motion_cmd.history_steps == 0
+    assert motion_cmd.future_steps == 1
+
+    actor_terms = cfg.observations["actor"].terms
+    assert actor_terms
+    for term in actor_terms.values():
+      assert term.history_length == 11
+      assert term.flatten_history_dim is True
+
+
+def test_tracking_attention_test_optimal_keeps_baseline_mlp_critic() -> None:
+  baseline = load_rl_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR")
+
+  for task_id in ATTENTION_TEST_OPTIMAL_TASKS:
+    rl_cfg = load_rl_cfg(task_id)
+
+    assert rl_cfg.critic == baseline.critic
+    assert rl_cfg.actor.class_name == ATTENTION_TEST_OPTIMAL_TASKS[task_id]

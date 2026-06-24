@@ -6,6 +6,8 @@ from mjlab.rl import (
   RslRlPpoAlgorithmCfg,
 )
 
+from .attention_cfg import AttentionVariant, tracking_attention_actor_cfg
+
 
 def unitree_g1_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
   """Create RL runner configuration for Unitree G1 tracking task."""
@@ -83,6 +85,16 @@ def unitree_g1_trackingbfm_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
     num_steps_per_env=24,
     max_iterations=300_000,
   )
+
+
+def unitree_g1_trackingbfm_attention_ppo_runner_cfg(
+  variant: AttentionVariant,
+) -> RslRlOnPolicyRunnerCfg:
+  """Create BFM PPO cfg with an attention actor and the baseline MLP critic."""
+  cfg = unitree_g1_trackingbfm_ppo_runner_cfg()
+  cfg.actor = tracking_attention_actor_cfg(variant)
+  cfg.experiment_name = "test_optimal_tracking_bfm_attention"
+  return cfg
 
 
 def unitree_g1_trackingbfm_action_trunk_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
