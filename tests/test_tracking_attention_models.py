@@ -12,6 +12,8 @@ from mjlab.tasks.tracking.config.g1.attention_cfg import (
   tracking_attention_actor_cfg,
 )
 from mjlab.tasks.tracking.rl.attention_models import (
+  PROPRIO_TERMS,
+  TERM_DIMS,
   FullObsCausalAttentionActor,
   HistProprioCrossAttentionActor,
   ProprioRefCrossAttentionActor,
@@ -35,6 +37,16 @@ def _dummy_obs(batch_size: int = 4, obs_dim: int | None = None) -> TensorDict:
   return TensorDict(
     {"actor": torch.randn(batch_size, obs_dim)},
     batch_size=[batch_size],
+  )
+
+
+def _flat_term_major_obs(term_histories: dict[str, torch.Tensor]) -> torch.Tensor:
+  return torch.cat(
+    [
+      term_histories[name].reshape(term_histories[name].shape[0], -1)
+      for name in TERM_DIMS
+    ],
+    dim=-1,
   )
 
 
@@ -131,3 +143,38 @@ def test_tracking_attention_actor_onnx_wrapper_shape(
   out = wrapper(torch.randn(2, ACTOR_HISTORY_LENGTH * FRAME_DIM))
 
   assert out.shape == (2, NUM_DOFS)
+
+
+def test_proprio_ref_cross_attention_preserves_history_order() -> None:
+  actor = _make_actor("proprio_ref_cross", ProprioRefCrossAttentionActor)
+  actor.eval()
+
+  term_histories = {
+    name: torch.zeros(1, ACTOR_HISTORY_LENGTH, dim) for name, dim in TERM_DIMS.items()
+  }
+  for name in PROPRIO_TERMS:
+    dim = TERM_DIMS[name]
+    term_histories[name] = torch.arange(
+      ACTOR_HISTORY_LENGTH * dim,
+      dtype=torch.float32,
+    ).reshape(1, ACTOR_HISTORY_LENGTH, dim)
+
+  reversed_histories = {
+    name: history.flip(dims=(1,)) if name in PROPRIO_TERMS else history
+    for name, history in term_histories.items()
+  }
+
+  forward_obs = TensorDict(
+    {"actor": _flat_term_major_obs(term_histories)},
+    batch_size=[1],
+  )
+  reversed_obs = TensorDict(
+    {"actor": _flat_term_major_obs(reversed_histories)},
+    batch_size=[1],
+  )
+
+  with torch.no_grad():
+    forward_action = actor(forward_obs)
+    reversed_action = actor(reversed_obs)
+
+  assert not torch.allclose(forward_action, reversed_action)

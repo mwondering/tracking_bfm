@@ -237,14 +237,36 @@ class _BaseTrackingAttentionActor(MLPModel):
 
   def _frame_history(self, flat_obs: torch.Tensor) -> torch.Tensor:
     terms = self._term_history(flat_obs)
-    return torch.cat([terms[name] for name in TERM_DIMS], dim=-1)
+    return self._frame_history_from_terms(terms)
 
   def _proprio_history(self, flat_obs: torch.Tensor) -> torch.Tensor:
     terms = self._term_history(flat_obs)
-    return torch.cat([terms[name] for name in PROPRIO_TERMS], dim=-1)
+    return self._proprio_history_from_terms(terms)
 
   def _current_command_tokens(self, flat_obs: torch.Tensor) -> torch.Tensor:
     command = self._term_history(flat_obs)["command"][:, -1]
+    return self._command_tokens(command)
+
+  def _frame_history_from_terms(
+    self,
+    terms: dict[str, torch.Tensor],
+  ) -> torch.Tensor:
+    return torch.cat([terms[name] for name in TERM_DIMS], dim=-1)
+
+  def _proprio_history_from_terms(
+    self,
+    terms: dict[str, torch.Tensor],
+  ) -> torch.Tensor:
+    return torch.cat([terms[name] for name in PROPRIO_TERMS], dim=-1)
+
+  def _current_command_tokens_from_terms(
+    self,
+    terms: dict[str, torch.Tensor],
+  ) -> torch.Tensor:
+    command = terms["command"][:, -1]
+    return self._command_tokens(command)
+
+  def _command_tokens(self, command: torch.Tensor) -> torch.Tensor:
     q_ref = command[:, : self.num_dofs]
     qd_ref = command[:, self.num_dofs :]
     return torch.stack((q_ref, qd_ref), dim=-1)
@@ -307,7 +329,8 @@ class FullObsCausalAttentionActor(_BaseTrackingAttentionActor):
     return self.d_model
 
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
-    frames = self._frame_history(flat_obs)
+    terms = self._term_history(flat_obs)
+    frames = self._frame_history_from_terms(terms)
     tokens = self.frame_proj(frames) + self.pos_embedding
     encoded = self.history_encoder(tokens, mask=self._causal_mask)
     return encoded[:, -1]
@@ -324,6 +347,8 @@ class ProprioRefCrossAttentionActor(_BaseTrackingAttentionActor):
     )
     self.command_token_proj = nn.Linear(2, self.d_model)
     self.joint_embedding = nn.Parameter(torch.zeros(1, self.num_dofs, self.d_model))
+    self.history_pool = nn.Linear(self.history_length * self.d_model, self.d_model)
+    self._init_current_token_history_pool()
     self.query_norm = nn.LayerNorm(self.d_model)
     self.cross_blocks = self._build_cross_blocks(self.cross_layers)
 
@@ -331,16 +356,26 @@ class ProprioRefCrossAttentionActor(_BaseTrackingAttentionActor):
     return self.d_model
 
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
-    proprio = self._proprio_history(flat_obs)
+    terms = self._term_history(flat_obs)
+    proprio = self._proprio_history_from_terms(terms)
     proprio_tokens = self.proprio_proj(proprio) + self.proprio_pos_embedding
-    query = self.query_norm(proprio_tokens.mean(dim=1, keepdim=True))
+    query = self.history_pool(proprio_tokens.flatten(start_dim=1)).unsqueeze(1)
+    query = self.query_norm(query)
 
-    ref_tokens = self.command_token_proj(self._current_command_tokens(flat_obs))
+    ref_tokens = self.command_token_proj(self._current_command_tokens_from_terms(terms))
     ref_tokens = ref_tokens + self.joint_embedding
 
     for block in self.cross_blocks:
       query = block(query, ref_tokens)
     return query.squeeze(1)
+
+  def _init_current_token_history_pool(self) -> None:
+    nn.init.zeros_(self.history_pool.weight)
+    nn.init.zeros_(self.history_pool.bias)
+    current_offset = (self.history_length - 1) * self.d_model
+    with torch.no_grad():
+      for dim_idx in range(self.d_model):
+        self.history_pool.weight[dim_idx, current_offset + dim_idx] = 1.0
 
 
 class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
@@ -366,17 +401,18 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
     return self.frame_dim + 2 * self.d_model
 
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
-    proprio = self._proprio_history(flat_obs)
+    terms = self._term_history(flat_obs)
+    proprio = self._proprio_history_from_terms(terms)
     proprio_tokens = self.proprio_proj(proprio) + self.proprio_pos_embedding
     dynamics_tokens = self.history_encoder(proprio_tokens, mask=self._causal_mask)
     dynamics = dynamics_tokens[:, -1]
 
-    ref_tokens = self.command_token_proj(self._current_command_tokens(flat_obs))
+    ref_tokens = self.command_token_proj(self._current_command_tokens_from_terms(terms))
     ref_tokens = ref_tokens + self.joint_embedding
     command_query = dynamics.unsqueeze(1)
     for block in self.cross_blocks:
       command_query = block(command_query, ref_tokens)
     command_embedding = command_query.squeeze(1)
 
-    current_full_obs = self._frame_history(flat_obs)[:, -1]
+    current_full_obs = self._frame_history_from_terms(terms)[:, -1]
     return torch.cat((current_full_obs, dynamics, command_embedding), dim=-1)
