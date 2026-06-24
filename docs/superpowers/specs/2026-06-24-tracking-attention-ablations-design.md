@@ -100,22 +100,41 @@ Target:
 - actor parameter count: approximately 10M
 - accepted test window: `8_000_000 <= actor_params <= 10_500_000`
 
-Default attention hyperparameters:
+Default attention hyperparameters are variant-specific so each actor stays near
+the same parameter budget:
 
 ```python
-d_model = 512
-num_heads = 8
-ffn_dim = 2048
-history_layers = 2
-cross_layers = 1
-head_hidden_dims = (1536, 1024, 512, 256)
+FullObsCausalAttentionActor:
+  d_model = 384
+  num_heads = 6
+  ffn_dim = 1536
+  history_layers = 3
+  cross_layers = 0
+  head_hidden_dims = (1536, 1024, 512, 256)
+
+ProprioRefCrossAttentionActor:
+  d_model = 384
+  num_heads = 6
+  ffn_dim = 1536
+  history_layers = 0
+  cross_layers = 3
+  head_hidden_dims = (1536, 1024, 512, 256)
+
+HistProprioCrossAttentionActor:
+  d_model = 384
+  num_heads = 6
+  ffn_dim = 1536
+  history_layers = 2
+  cross_layers = 1
+  head_hidden_dims = (1536, 1024, 512, 256)
+
 dropout = 0.0
 activation = "gelu"
 ```
 
-If one actor variant naturally falls below the budget because it has fewer
-attention blocks, tune only that variant's MLP head or layer count enough to
-keep capacity comparable.
+The implementation should not use one shared transformer depth for all variants.
+Each actor has a different number of attention blocks because the fusion pattern
+changes the amount of MLP input and the total parameter count.
 
 ## Observation Layout
 
