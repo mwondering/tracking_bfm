@@ -274,6 +274,13 @@ class _BaseTrackingAttentionActor(MLPModel):
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
     raise NotImplementedError
 
+  def _zero_mlp_input_weights_from(self, start_dim: int) -> None:
+    first_layer = self.mlp[0]
+    if not isinstance(first_layer, nn.Linear):
+      raise TypeError("expected the MLP head to start with nn.Linear")
+    with torch.no_grad():
+      first_layer.weight[:, start_dim:] = 0.0
+
   def as_onnx(self, verbose: bool = False) -> nn.Module:
     return _OnnxTrackingAttentionActor(self, verbose)
 
@@ -316,6 +323,7 @@ class FullObsCausalAttentionActor(_BaseTrackingAttentionActor):
 
   def __init__(self, *args, **kwargs) -> None:
     super().__init__(*args, **kwargs)
+    self._zero_mlp_input_weights_from(self.frame_dim)
     self.frame_proj = nn.Linear(self.frame_dim, self.d_model)
     self.pos_embedding = nn.Parameter(torch.zeros(1, self.history_length, self.d_model))
     self.history_encoder = self._build_history_encoder(self.history_layers)
@@ -326,14 +334,14 @@ class FullObsCausalAttentionActor(_BaseTrackingAttentionActor):
     )
 
   def _attention_latent_dim(self) -> int:
-    return self.d_model
+    return self.frame_dim + self.d_model
 
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
     terms = self._term_history(flat_obs)
     frames = self._frame_history_from_terms(terms)
     tokens = self.frame_proj(frames) + self.pos_embedding
     encoded = self.history_encoder(tokens, mask=self._causal_mask)
-    return encoded[:, -1]
+    return torch.cat((frames[:, -1], encoded[:, -1]), dim=-1)
 
 
 class ProprioRefCrossAttentionActor(_BaseTrackingAttentionActor):
@@ -383,6 +391,7 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
 
   def __init__(self, *args, **kwargs) -> None:
     super().__init__(*args, **kwargs)
+    self._zero_attention_feature_head_weights()
     self.proprio_proj = nn.Linear(93, self.d_model)
     self.proprio_pos_embedding = nn.Parameter(
       torch.zeros(1, self.history_length, self.d_model)
@@ -399,6 +408,9 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
 
   def _attention_latent_dim(self) -> int:
     return self.frame_dim + 2 * self.d_model
+
+  def _zero_attention_feature_head_weights(self) -> None:
+    self._zero_mlp_input_weights_from(self.frame_dim)
 
   def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
     terms = self._term_history(flat_obs)

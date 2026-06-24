@@ -178,3 +178,24 @@ def test_proprio_ref_cross_attention_preserves_history_order() -> None:
     reversed_action = actor(reversed_obs)
 
   assert not torch.allclose(forward_action, reversed_action)
+
+
+def test_hist_proprio_cross_attention_features_are_zero_impact_at_init() -> None:
+  actor = _make_actor("hist_proprio_cross", HistProprioCrossAttentionActor)
+  first_layer = actor.mlp[0]
+  assert isinstance(first_layer, torch.nn.Linear)
+
+  attention_feature_weights = first_layer.weight[:, FRAME_DIM:]
+
+  assert torch.count_nonzero(attention_feature_weights) == 0
+
+
+def test_full_obs_causal_uses_current_frame_residual_at_init() -> None:
+  actor = _make_actor("full_obs_causal", FullObsCausalAttentionActor)
+  first_layer = actor.mlp[0]
+  assert isinstance(first_layer, torch.nn.Linear)
+
+  transformer_feature_weights = first_layer.weight[:, FRAME_DIM:]
+
+  assert first_layer.in_features == FRAME_DIM + actor.d_model
+  assert torch.count_nonzero(transformer_feature_weights) == 0
