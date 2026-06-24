@@ -53,37 +53,31 @@ def tracking_attention_actor_cfg(
   variant: AttentionVariant,
 ) -> TrackingAttentionModelCfg:
   """Build an actor config for one tracking attention ablation."""
-  common = {
-    "hidden_dims": (1536, 1024, 512, 256),
-    "head_hidden_dims": (1536, 1024, 512, 256),
-    "activation": "gelu",
-    "obs_normalization": True,
-    "distribution_cfg": {
+  if variant == "full_obs_causal":
+    return _tracking_attention_actor_cfg(FULL_OBS_CAUSAL_CLASS, 3, 0)
+  if variant == "proprio_ref_cross":
+    return _tracking_attention_actor_cfg(PROPRIO_REF_CROSS_CLASS, 0, 3)
+  if variant == "hist_proprio_cross":
+    return _tracking_attention_actor_cfg(HIST_PROPRIO_CROSS_CLASS, 2, 1)
+  raise ValueError(f"Unknown attention variant: {variant}")
+
+
+def _tracking_attention_actor_cfg(
+  class_name: str,
+  history_layers: int,
+  cross_layers: int,
+) -> TrackingAttentionModelCfg:
+  return TrackingAttentionModelCfg(
+    class_name=class_name,
+    hidden_dims=(1536, 1024, 512, 256),
+    head_hidden_dims=(1536, 1024, 512, 256),
+    activation="gelu",
+    obs_normalization=True,
+    distribution_cfg={
       "class_name": "GaussianDistribution",
       "init_std": 1.0,
       "std_type": "scalar",
     },
-  }
-
-  if variant == "full_obs_causal":
-    return TrackingAttentionModelCfg(
-      class_name=FULL_OBS_CAUSAL_CLASS,
-      history_layers=3,
-      cross_layers=0,
-      **common,
-    )
-  if variant == "proprio_ref_cross":
-    return TrackingAttentionModelCfg(
-      class_name=PROPRIO_REF_CROSS_CLASS,
-      history_layers=0,
-      cross_layers=3,
-      **common,
-    )
-  if variant == "hist_proprio_cross":
-    return TrackingAttentionModelCfg(
-      class_name=HIST_PROPRIO_CROSS_CLASS,
-      history_layers=2,
-      cross_layers=1,
-      **common,
-    )
-  raise ValueError(f"Unknown attention variant: {variant}")
+    history_layers=history_layers,
+    cross_layers=cross_layers,
+  )

@@ -1,16 +1,20 @@
 """Tests specific to motion tracking tasks."""
 
+from typing import cast
+
 import pytest
 
 from mjlab.asset_zoo.robots import G1_ACTION_SCALE
 from mjlab.envs.mdp import dr
 from mjlab.envs.mdp.actions import JointPositionActionCfg
+from mjlab.rl import RslRlOnPolicyRunnerCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg
 from mjlab.tasks.tracking import mdp
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
+from mjlab.tasks.tracking.rl.attention_models import TERM_DIMS
 
 
 @pytest.fixture(scope="module")
@@ -250,8 +254,9 @@ def test_tracking_1stage_task_uses_sparse_actor_obs() -> None:
 
   assert "body_pos" in critic_terms
   assert "body_ori" in critic_terms
-  assert cfg.commands["motion"].history_steps == 0
-  assert cfg.commands["motion"].future_steps == 1
+  motion_cmd = cast(MultiMotionCommandCfg, cfg.commands["motion"])
+  assert motion_cmd.history_steps == 0
+  assert motion_cmd.future_steps == 1
 
 
 def test_tracking_bfm_action_trunk_task_config() -> None:
@@ -282,10 +287,11 @@ def test_tracking_bfm_test_optimal_uses_global_body_pose_rewards() -> None:
   """The optimality probe should track body poses in the world frame."""
   cfg = load_env_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal")
 
-  assert cfg.rewards["motion_body_pos"].func is mdp.motion_global_body_position_error_exp
   assert (
-    cfg.rewards["motion_body_ori"].func
-    is mdp.motion_global_body_orientation_error_exp
+    cfg.rewards["motion_body_pos"].func is mdp.motion_global_body_position_error_exp
+  )
+  assert (
+    cfg.rewards["motion_body_ori"].func is mdp.motion_global_body_orientation_error_exp
   )
   assert cfg.rewards["motion_body_lin_vel"].func is (
     mdp.motion_global_body_linear_velocity_error_exp
@@ -343,16 +349,20 @@ def test_tracking_attention_test_optimal_uses_no_future_ref_and_actor_history() 
 
     actor_terms = cfg.observations["actor"].terms
     assert actor_terms
+    assert tuple(actor_terms) == tuple(TERM_DIMS)
     for term in actor_terms.values():
       assert term.history_length == 11
       assert term.flatten_history_dim is True
 
 
 def test_tracking_attention_test_optimal_keeps_baseline_mlp_critic() -> None:
-  baseline = load_rl_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR")
+  baseline = cast(
+    RslRlOnPolicyRunnerCfg,
+    load_rl_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR"),
+  )
 
   for task_id in ATTENTION_TEST_OPTIMAL_TASKS:
-    rl_cfg = load_rl_cfg(task_id)
+    rl_cfg = cast(RslRlOnPolicyRunnerCfg, load_rl_cfg(task_id))
 
     assert rl_cfg.critic == baseline.critic
     assert rl_cfg.actor.class_name == ATTENTION_TEST_OPTIMAL_TASKS[task_id]
