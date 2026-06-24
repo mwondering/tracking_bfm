@@ -1,0 +1,988 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Tracking Attention Ablations Design &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-06-24-tracking-attention-ablations-design';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Jun 24, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-06-24-tracking-attention-ablations-design.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-06-24-tracking-attention-ablations-design.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-06-24-tracking-attention-ablations-design.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/specs/2026-06-24-tracking-attention-ablations-design.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Tracking Attention Ablations Design</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#non-goals">Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-entry-point">Existing Entry Point</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-variants">Task Variants</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critic">Critic</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-parameter-budget">Actor Parameter Budget</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-layout">Observation Layout</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-history">Observation History</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-1-fullobscausalattentionactor">Actor 1: FullObsCausalAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-2-propriorefcrossattentionactor">Actor 2: ProprioRefCrossAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-3-histpropriocrossattentionactor">Actor 3: HistProprioCrossAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model-integration">Model Integration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-integration">Config Integration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-training-commands">Expected Training Commands</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-design-decisions-resolved">Open Design Decisions Resolved</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="tracking-attention-ablations-design">
+<h1>Tracking Attention Ablations Design<a class="headerlink" href="#tracking-attention-ablations-design" title="Link to this heading">#</a></h1>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
+<p>Add three attention-based actor variants for the G1 BFM TestOptimal tracking
+task, while keeping the existing PPO algorithm, rollout storage, runner, critic,
+reward design, and task behavior intact.</p>
+<p>The purpose is to compare attention mechanisms for motion tracking under the
+same optimality-probe task used by <code class="docutils literal notranslate"><span class="pre">scripts/train_test_optimal.sh</span></code>.</p>
+</section>
+<section id="non-goals">
+<h2>Non-Goals<a class="headerlink" href="#non-goals" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Do not modify shared <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl</span></code> configuration or runner code.</p></li>
+<li><p>Do not change PPO, rollout storage, reward computation, motion sampling, or
+environment stepping.</p></li>
+<li><p>Do not use future reference frames.</p></li>
+<li><p>Do not implement MaskedMimic-style masked inpainting, VAE training, scene
+point tokens, or PointNet scene encoders.</p></li>
+<li><p>Do not change the critic architecture for these attention ablations.</p></li>
+</ul>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
+<p>Runtime implementation should stay under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking</span></code>.
+Tests may be added under <code class="docutils literal notranslate"><span class="pre">tests/</span></code>.</p>
+<p>The minimal expected code footprint is:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/attention_models.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/attention_cfg.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p></li>
+<li><p>focused task/script tests if needed</p></li>
+</ul>
+</section>
+<section id="existing-entry-point">
+<h2>Existing Entry Point<a class="headerlink" href="#existing-entry-point" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/train_test_optimal.sh</span></code> already forces:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--env.commands.motion.history_steps<span class="w"> </span><span class="m">0</span>
+--env.commands.motion.future_steps<span class="w"> </span><span class="m">1</span>
+</pre></div>
+</div>
+<p>This should remain the default for the attention ablations. Reference command
+history and future windows from <code class="docutils literal notranslate"><span class="pre">MultiMotionCommand</span></code> are not used. Temporal
+history comes from observation history buffers.</p>
+<p>The new tasks are selected by overriding <code class="docutils literal notranslate"><span class="pre">TASK</span></code>, for example:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">TASK</span><span class="o">=</span>Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>scripts/train_test_optimal.sh
+</pre></div>
+</div>
+</section>
+<section id="task-variants">
+<h2>Task Variants<a class="headerlink" href="#task-variants" title="Link to this heading">#</a></h2>
+<p>Register three new tasks:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-FullObsCausalAttn-NoRegNoDR</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-ProprioRefCrossAttn-NoRegNoDR</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR</span></code></p></li>
+</ul>
+<p>Each task should start from
+<code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(disable_reg_and_dr=True)</span></code>.</p>
+<p>Each task should preserve the TestOptimal choices:</p>
+<ul class="simple">
+<li><p>actor receives full, uncorrupted critic-style observations</p></li>
+<li><p>global body pose rewards are used</p></li>
+<li><p>regularization rewards are removed</p></li>
+<li><p>domain randomization is removed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion.history_steps</span></code> is <code class="docutils literal notranslate"><span class="pre">0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion.future_steps</span></code> is <code class="docutils literal notranslate"><span class="pre">1</span></code></p></li>
+</ul>
+</section>
+<section id="critic">
+<h2>Critic<a class="headerlink" href="#critic" title="Link to this heading">#</a></h2>
+<p>The critic must remain the ordinary MLP critic used by the current BFM PPO
+configuration:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">RslRlModelCfg</span><span class="p">(</span>
+  <span class="n">hidden_dims</span><span class="o">=</span><span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+  <span class="n">activation</span><span class="o">=</span><span class="s2">&quot;elu&quot;</span><span class="p">,</span>
+  <span class="n">obs_normalization</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Critic parameter count is not part of the 10M parameter target. The ablation
+should isolate actor architecture differences.</p>
+</section>
+<section id="actor-parameter-budget">
+<h2>Actor Parameter Budget<a class="headerlink" href="#actor-parameter-budget" title="Link to this heading">#</a></h2>
+<p>Only the actor is budgeted. Each attention actor should be close to 10M
+parameters without exceeding the test threshold.</p>
+<p>Target:</p>
+<ul class="simple">
+<li><p>actor parameter count: approximately 10M</p></li>
+<li><p>accepted test window: <code class="docutils literal notranslate"><span class="pre">8_000_000</span> <span class="pre">&lt;=</span> <span class="pre">actor_params</span> <span class="pre">&lt;=</span> <span class="pre">10_500_000</span></code></p></li>
+</ul>
+<p>Default attention hyperparameters are variant-specific so each actor stays near
+the same parameter budget:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">FullObsCausalAttentionActor</span><span class="p">:</span>
+  <span class="n">d_model</span> <span class="o">=</span> <span class="mi">384</span>
+  <span class="n">num_heads</span> <span class="o">=</span> <span class="mi">6</span>
+  <span class="n">ffn_dim</span> <span class="o">=</span> <span class="mi">1536</span>
+  <span class="n">history_layers</span> <span class="o">=</span> <span class="mi">3</span>
+  <span class="n">cross_layers</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">head_hidden_dims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1536</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+
+<span class="n">ProprioRefCrossAttentionActor</span><span class="p">:</span>
+  <span class="n">d_model</span> <span class="o">=</span> <span class="mi">384</span>
+  <span class="n">num_heads</span> <span class="o">=</span> <span class="mi">6</span>
+  <span class="n">ffn_dim</span> <span class="o">=</span> <span class="mi">1536</span>
+  <span class="n">history_layers</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">cross_layers</span> <span class="o">=</span> <span class="mi">3</span>
+  <span class="n">head_hidden_dims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1536</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+
+<span class="n">HistProprioCrossAttentionActor</span><span class="p">:</span>
+  <span class="n">d_model</span> <span class="o">=</span> <span class="mi">384</span>
+  <span class="n">num_heads</span> <span class="o">=</span> <span class="mi">6</span>
+  <span class="n">ffn_dim</span> <span class="o">=</span> <span class="mi">1536</span>
+  <span class="n">history_layers</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">cross_layers</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="n">head_hidden_dims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1536</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+
+<span class="n">dropout</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">activation</span> <span class="o">=</span> <span class="s2">&quot;gelu&quot;</span>
+</pre></div>
+</div>
+<p>The implementation should not use one shared transformer depth for all variants.
+Each actor has a different number of attention blocks because the fusion pattern
+changes the amount of MLP input and the total parameter count.</p>
+</section>
+<section id="observation-layout">
+<h2>Observation Layout<a class="headerlink" href="#observation-layout" title="Link to this heading">#</a></h2>
+<p>The attention models are intentionally task-specific and will assume the current
+TestOptimal full actor observation layout:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">command</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_anchor_pos_b</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_anchor_ori_b</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">body_pos</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">body_ori</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_lin_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_pos</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">actions</span></code></p></li>
+</ul>
+<p>The expected dimensions for the G1 BFM TestOptimal task are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">command</span></code>: <code class="docutils literal notranslate"><span class="pre">58</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_anchor_pos_b</span></code>: <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">motion_anchor_ori_b</span></code>: <code class="docutils literal notranslate"><span class="pre">6</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">body_pos</span></code>: <code class="docutils literal notranslate"><span class="pre">42</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">body_ori</span></code>: <code class="docutils literal notranslate"><span class="pre">84</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_lin_vel</span></code>: <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code>: <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_pos</span></code>: <code class="docutils literal notranslate"><span class="pre">29</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_vel</span></code>: <code class="docutils literal notranslate"><span class="pre">29</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">actions</span></code>: <code class="docutils literal notranslate"><span class="pre">29</span></code></p></li>
+<li><p>full frame: <code class="docutils literal notranslate"><span class="pre">286</span></code></p></li>
+</ul>
+<p>Models should validate the observation dimension at construction. A mismatch
+should raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> instead of silently slicing incorrectly.</p>
+</section>
+<section id="observation-history">
+<h2>Observation History<a class="headerlink" href="#observation-history" title="Link to this heading">#</a></h2>
+<p>Attention task env configs should use observation history for actor terms.</p>
+<p>Use a default actor history length of <code class="docutils literal notranslate"><span class="pre">11</span></code>, representing ten previous frames
+plus the current frame:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>obs_{t-10}, ..., obs_t
+</pre></div>
+</div>
+<p>The history comes from <code class="docutils literal notranslate"><span class="pre">ObservationTermCfg.history_length</span></code> with flattened
+history, so the actor still receives a single flat TensorDict observation from
+RSL-RL. The custom actor reshapes this flat observation internally.</p>
+<p>The observation manager flattens history in term-major order:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[command_{t-H+1:t}, motion_anchor_pos_b_{t-H+1:t}, ..., actions_{t-H+1:t}]
+</pre></div>
+</div>
+<p>The custom actor must reconstruct frame-major views internally when a model
+needs full frames:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[full_obs_{t-H+1}, ..., full_obs_t]
+</pre></div>
+</div>
+<p>Reference command future is not used. The <code class="docutils literal notranslate"><span class="pre">command</span></code> term for each observation
+frame is the command available at that environment step.</p>
+</section>
+<section id="actor-1-fullobscausalattentionactor">
+<h2>Actor 1: FullObsCausalAttentionActor<a class="headerlink" href="#actor-1-fullobscausalattentionactor" title="Link to this heading">#</a></h2>
+<p>Reference: Humanoid-GPT-style causal temporal sequence modeling.</p>
+<p>Input:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[full_obs_{t-H+1}, ..., full_obs_t]
+</pre></div>
+</div>
+<p>Architecture:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>full obs frame projection
+  -&gt; add learned positional encoding
+  -&gt; causal Transformer encoder over history frames
+  -&gt; final current-frame token
+  -&gt; MLP head
+  -&gt; Gaussian policy distribution
+</pre></div>
+</div>
+<p>The causal mask ensures each frame can only attend to itself and previous
+frames. The actor output uses only the final token.</p>
+<p>This variant tests whether treating the whole tracking observation as a
+Humanoid-GPT-like temporal sequence improves tracking.</p>
+</section>
+<section id="actor-2-propriorefcrossattentionactor">
+<h2>Actor 2: ProprioRefCrossAttentionActor<a class="headerlink" href="#actor-2-propriorefcrossattentionactor" title="Link to this heading">#</a></h2>
+<p>Input:</p>
+<ul class="simple">
+<li><p>proprioception with history</p></li>
+<li><p>current reference command only</p></li>
+</ul>
+<p>Proprioception terms:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base_lin_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base_ang_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_pos</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">joint_vel</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">actions</span></code></p></li>
+</ul>
+<p>Reference terms:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">command</span></code></p></li>
+</ul>
+<p>Architecture:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>proprio history frames
+  -&gt; frame projection
+  -&gt; pooled proprio query
+
+current command
+  -&gt; per-joint reference tokens [q_ref_i, qd_ref_i]
+  -&gt; command token projection
+
+query attends to command tokens with cross-attention
+  -&gt; command embedding
+  -&gt; MLP head
+  -&gt; Gaussian policy distribution
+</pre></div>
+</div>
+<p>The reference command should be tokenized as 29 per-joint tokens. Each token
+contains the current reference joint position and velocity for one DoF. A learned
+joint embedding should be added so the model can distinguish joints.</p>
+<p>This variant tests whether cross-attention between proprioception and current
+reference command is useful without a causal history encoder.</p>
+</section>
+<section id="actor-3-histpropriocrossattentionactor">
+<h2>Actor 3: HistProprioCrossAttentionActor<a class="headerlink" href="#actor-3-histpropriocrossattentionactor" title="Link to this heading">#</a></h2>
+<p>Reference: RoHM-style causal history encoder plus dynamics-conditioned command
+aggregation.</p>
+<p>Input:</p>
+<ul class="simple">
+<li><p>proprioception with history</p></li>
+<li><p>current reference command only</p></li>
+<li><p>current full observation for final MLP fusion</p></li>
+</ul>
+<p>Architecture:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>proprio history frames
+  -&gt; frame projection
+  -&gt; causal self-attention
+  -&gt; dynamics embedding h_t
+
+current command
+  -&gt; per-joint reference tokens [q_ref_i, qd_ref_i]
+  -&gt; command token projection
+
+h_t as query attends to command tokens
+  -&gt; command embedding u_t
+
+[current full obs, h_t, u_t]
+  -&gt; MLP head
+  -&gt; Gaussian policy distribution
+</pre></div>
+</div>
+<p>This is the preferred main ablation because it directly tests the RoHM claim:
+recent robot dynamics should condition how reference commands are aggregated.</p>
+</section>
+<section id="model-integration">
+<h2>Model Integration<a class="headerlink" href="#model-integration" title="Link to this heading">#</a></h2>
+<p>Use RSL-RL’s existing <code class="docutils literal notranslate"><span class="pre">class_name</span></code> resolution with fully qualified class names:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">class_name</span><span class="o">=</span><span class="s2">&quot;mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor&quot;</span>
+</pre></div>
+</div>
+<p>The custom actor classes should match the RSL-RL model interface:</p>
+<ul class="simple">
+<li><p>constructor accepts <code class="docutils literal notranslate"><span class="pre">obs</span></code>, <code class="docutils literal notranslate"><span class="pre">obs_groups</span></code>, <code class="docutils literal notranslate"><span class="pre">obs_set</span></code>, <code class="docutils literal notranslate"><span class="pre">output_dim</span></code>, and actor
+config kwargs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forward(...)</span></code> returns deterministic output unless <code class="docutils literal notranslate"><span class="pre">stochastic_output=True</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">distribution_cfg</span></code> is supported for Gaussian actions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output_mean</span></code>, <code class="docutils literal notranslate"><span class="pre">output_std</span></code>, <code class="docutils literal notranslate"><span class="pre">output_entropy</span></code>, log-probability, and KL methods
+are compatible with PPO</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">update_normalization(obs)</span></code> updates the observation normalizer if enabled</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is_recurrent</span> <span class="pre">=</span> <span class="pre">False</span></code></p></li>
+</ul>
+<p>The implementation should reuse RSL-RL-compatible distribution and normalization
+behavior. The model is not recurrent from RSL-RL’s perspective because history is
+provided as part of the flat observation.</p>
+</section>
+<section id="config-integration">
+<h2>Config Integration<a class="headerlink" href="#config-integration" title="Link to this heading">#</a></h2>
+<p>Because shared <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl</span></code> config should not be modified, add a tracking-only
+actor config dataclass in <code class="docutils literal notranslate"><span class="pre">attention_cfg.py</span></code> that subclasses <code class="docutils literal notranslate"><span class="pre">RslRlModelCfg</span></code>.</p>
+<p>The dataclass should add these fields:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">history_length</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">frame_dim</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">command_dim</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_dofs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">d_model</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_heads</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ffn_dim</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">history_layers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cross_layers</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">head_hidden_dims</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dropout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attention_activation</span></code></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">dataclasses.asdict()</span></code> in the training entry point will pass these fields to the
+custom actor class. Baseline MLP tasks will not see these fields.</p>
+</section>
+<section id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading">#</a></h2>
+<p>The custom actors should fail early when:</p>
+<ul class="simple">
+<li><p>the actor observation group does not resolve to exactly one flat tensor group</p></li>
+<li><p>observation rank is not 2</p></li>
+<li><p>flattened dimension is not <code class="docutils literal notranslate"><span class="pre">history_length</span> <span class="pre">*</span> <span class="pre">frame_dim</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">command_dim</span></code> is not <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">num_dofs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">d_model</span></code> is not divisible by <code class="docutils literal notranslate"><span class="pre">num_heads</span></code></p></li>
+</ul>
+<p>Error messages should name the expected and actual dimensions.</p>
+</section>
+<section id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
+<p>Add focused tests:</p>
+<ul class="simple">
+<li><p>the three attention tasks are registered</p></li>
+<li><p>attention tasks keep <code class="docutils literal notranslate"><span class="pre">motion.history_steps</span> <span class="pre">==</span> <span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">motion.future_steps</span> <span class="pre">==</span> <span class="pre">1</span></code></p></li>
+<li><p>actor observation history length is applied to all terms</p></li>
+<li><p>critic config remains identical to the baseline BFM MLP critic</p></li>
+<li><p>each actor can run a forward pass with dummy observations and produce
+<code class="docutils literal notranslate"><span class="pre">(batch,</span> <span class="pre">action_dim)</span></code> output</p></li>
+<li><p>each stochastic actor exposes PPO distribution methods</p></li>
+<li><p>actor parameter count is within <code class="docutils literal notranslate"><span class="pre">8_000_000</span> <span class="pre">&lt;=</span> <span class="pre">params</span> <span class="pre">&lt;=</span> <span class="pre">10_500_000</span></code></p></li>
+<li><p>invalid observation dimensions raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code></p></li>
+</ul>
+<p>Run at least:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_attention_models.py<span class="w"> </span>tests/test_tracking_task.py
+</pre></div>
+</div>
+<p>If implementation changes script behavior, also run the relevant script tests.</p>
+</section>
+<section id="expected-training-commands">
+<h2>Expected Training Commands<a class="headerlink" href="#expected-training-commands" title="Link to this heading">#</a></h2>
+<p>Baseline:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>scripts/train_test_optimal.sh
+</pre></div>
+</div>
+<p>Humanoid-GPT-style full-observation causal attention:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">TASK</span><span class="o">=</span>Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-FullObsCausalAttn-NoRegNoDR<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="nv">RUN_NAME</span><span class="o">=</span>test_optimal_full_obs_causal_attn_no_reg_no_dr<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>scripts/train_test_optimal.sh
+</pre></div>
+</div>
+<p>Proprioception/reference cross-attention:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">TASK</span><span class="o">=</span>Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-ProprioRefCrossAttn-NoRegNoDR<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="nv">RUN_NAME</span><span class="o">=</span>test_optimal_proprio_ref_cross_attn_no_reg_no_dr<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>scripts/train_test_optimal.sh
+</pre></div>
+</div>
+<p>RoHM-style causal proprioception plus cross-attention:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">TASK</span><span class="o">=</span>Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="nv">RUN_NAME</span><span class="o">=</span>test_optimal_hist_proprio_cross_attn_no_reg_no_dr<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>scripts/train_test_optimal.sh
+</pre></div>
+</div>
+</section>
+<section id="open-design-decisions-resolved">
+<h2>Open Design Decisions Resolved<a class="headerlink" href="#open-design-decisions-resolved" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Future reference frames are not used.</p></li>
+<li><p>Critic remains the existing large MLP.</p></li>
+<li><p>Actor parameter budget is approximately 10M.</p></li>
+<li><p>Runtime changes stay under <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking</span></code>.</p></li>
+<li><p>Tests may live under <code class="docutils literal notranslate"><span class="pre">tests/</span></code>.</p></li>
+<li><p>The first implementation is task-specific to G1 BFM TestOptimal rather than a
+general attention framework for all tasks.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#non-goals">Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-entry-point">Existing Entry Point</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#task-variants">Task Variants</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critic">Critic</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-parameter-budget">Actor Parameter Budget</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-layout">Observation Layout</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observation-history">Observation History</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-1-fullobscausalattentionactor">Actor 1: FullObsCausalAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-2-propriorefcrossattentionactor">Actor 2: ProprioRefCrossAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actor-3-histpropriocrossattentionactor">Actor 3: HistProprioCrossAttentionActor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model-integration">Model Integration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-integration">Config Integration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expected-training-commands">Expected Training Commands</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-design-decisions-resolved">Open Design Decisions Resolved</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jun 24, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
