@@ -180,22 +180,23 @@ def test_proprio_ref_cross_attention_preserves_history_order() -> None:
   assert not torch.allclose(forward_action, reversed_action)
 
 
-def test_hist_proprio_cross_attention_features_are_zero_impact_at_init() -> None:
-  actor = _make_actor("hist_proprio_cross", HistProprioCrossAttentionActor)
-  first_layer = actor.mlp[0]
-  assert isinstance(first_layer, torch.nn.Linear)
+@pytest.mark.parametrize(
+  ("variant", "cls"),
+  (
+    ("full_obs_causal", FullObsCausalAttentionActor),
+    ("hist_proprio_cross", HistProprioCrossAttentionActor),
+  ),
+)
+def test_attention_branch_receives_initial_gradient(
+  variant: AttentionVariant,
+  cls: AttentionActorClass,
+) -> None:
+  actor = _make_actor(variant, cls)
+  obs = _dummy_obs(batch_size=4)
 
-  attention_feature_weights = first_layer.weight[:, FRAME_DIM:]
+  actor(obs).pow(2).mean().backward()
 
-  assert torch.count_nonzero(attention_feature_weights) == 0
+  grad = actor.history_encoder.layers[0].self_attn.in_proj_weight.grad
 
-
-def test_full_obs_causal_uses_current_frame_residual_at_init() -> None:
-  actor = _make_actor("full_obs_causal", FullObsCausalAttentionActor)
-  first_layer = actor.mlp[0]
-  assert isinstance(first_layer, torch.nn.Linear)
-
-  transformer_feature_weights = first_layer.weight[:, FRAME_DIM:]
-
-  assert first_layer.in_features == FRAME_DIM + actor.d_model
-  assert torch.count_nonzero(transformer_feature_weights) == 0
+  assert grad is not None
+  assert torch.count_nonzero(grad) > 0

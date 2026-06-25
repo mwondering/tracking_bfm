@@ -19,6 +19,7 @@ HISTORY_STEPS="${HISTORY_STEPS:-0}"
 FUTURE_STEPS="${FUTURE_STEPS:-1}"
 ROBOT_HISTORY_LENGTH="${ROBOT_HISTORY_LENGTH:-10}"
 ######bc settings
+BC_LR="${BC_LR:-2e-4}"
 BC_WEIGHT_START="${BC_WEIGHT_START:-0.5}"
 BC_WEIGHT_END="${BC_WEIGHT_END:-0.1}"
 BC_DECAY_STEPS="${BC_DECAY_STEPS:-10000}"
@@ -42,7 +43,7 @@ RUN_NAME="${RUN_NAME:-wbteleop_adaptive_bfm}"
 WANDB_PROJECT="${WANDB_PROJECT:-tracking_bfm}"
 SAMPLING_MODE="${SAMPLING_MODE:-adaptive}"
 ADAPTIVE_WINDOW_STEPS="${ADAPTIVE_WINDOW_STEPS:-200}"
-GPU_IDS="${GPU_IDS:-[0,1,2,3]}"
+GPU_IDS="${GPU_IDS:-[0,1,2]}"
 DRY_RUN="${DRY_RUN:-false}"
 
 cmd=(
@@ -75,6 +76,7 @@ cmd=(
   --agent.experiment_name "$EXPERIMENT_NAME"
   --agent.run_name "$RUN_NAME"
   --agent.wandb_project "$WANDB_PROJECT"
+  --agent.algorithm.learning_rate "$BC_LR"
   --debug False
   --agent.upload-model False
   --gpu_ids "$GPU_IDS"
