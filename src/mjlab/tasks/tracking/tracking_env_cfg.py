@@ -277,7 +277,7 @@ def make_tracking_env_cfg(
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-1e-1),
     "waist_action_rate_l2": RewardTermCfg(
       func=mdp.joint_action_rate_l2,
-      weight=-2e-1,
+      weight=-5e-1,
       params={
         "asset_cfg": SceneEntityCfg(
           "robot",
