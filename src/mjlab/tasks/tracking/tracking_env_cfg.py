@@ -277,7 +277,7 @@ def make_tracking_env_cfg(
     "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-1e-1),
     "waist_action_rate_l2": RewardTermCfg(
       func=mdp.joint_action_rate_l2,
-      weight=-5e-2,
+      weight=-2e-1,
       params={
         "asset_cfg": SceneEntityCfg(
           "robot",
@@ -352,8 +352,8 @@ def make_tracking_env_cfg(
       azimuth=120.0,
     ),
     sim=SimulationCfg(
-      nconmax=35,
-      njmax=250,
+      nconmax=128,
+      njmax=512,
       mujoco=MujocoCfg(
         timestep=0.005,
         iterations=10,
