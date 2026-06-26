@@ -11,6 +11,7 @@ AttentionVariant = Literal[
   "full_obs_causal",
   "proprio_ref_cross",
   "hist_proprio_cross",
+  "sparsetrack_full_ref",
 ]
 
 FRAME_DIM = 286
@@ -26,6 +27,9 @@ PROPRIO_REF_CROSS_CLASS = (
 )
 HIST_PROPRIO_CROSS_CLASS = (
   "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor"
+)
+SPARSETRACK_FULL_REF_CLASS = (
+  "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionActor"
 )
 
 
@@ -59,6 +63,19 @@ def tracking_attention_actor_cfg(
     return _tracking_attention_actor_cfg(PROPRIO_REF_CROSS_CLASS, 0, 3)
   if variant == "hist_proprio_cross":
     return _tracking_attention_actor_cfg(HIST_PROPRIO_CROSS_CLASS, 2, 1)
+  if variant == "sparsetrack_full_ref":
+    return _tracking_attention_actor_cfg(
+      SPARSETRACK_FULL_REF_CLASS,
+      4,
+      0,
+      d_model=256,
+      num_heads=4,
+      ffn_dim=256,
+      head_hidden_dims=(512, 256),
+      activation="elu",
+      init_std=0.5,
+      std_range=(0.001, 1.0),
+    )
   raise ValueError(f"Unknown attention variant: {variant}")
 
 
@@ -66,18 +83,32 @@ def _tracking_attention_actor_cfg(
   class_name: str,
   history_layers: int,
   cross_layers: int,
+  d_model: int = 384,
+  num_heads: int = 6,
+  ffn_dim: int = 1536,
+  head_hidden_dims: tuple[int, ...] = (1536, 1024, 512, 256),
+  activation: str = "gelu",
+  init_std: float = 1.0,
+  std_range: tuple[float, float] | None = None,
 ) -> TrackingAttentionModelCfg:
+  distribution_cfg = {
+    "class_name": "GaussianDistribution",
+    "init_std": init_std,
+    "std_type": "scalar",
+  }
+  if std_range is not None:
+    distribution_cfg["std_range"] = std_range
+
   return TrackingAttentionModelCfg(
     class_name=class_name,
-    hidden_dims=(1536, 1024, 512, 256),
-    head_hidden_dims=(1536, 1024, 512, 256),
-    activation="gelu",
+    hidden_dims=head_hidden_dims,
+    head_hidden_dims=head_hidden_dims,
+    activation=activation,
     obs_normalization=True,
-    distribution_cfg={
-      "class_name": "GaussianDistribution",
-      "init_std": 1.0,
-      "std_type": "scalar",
-    },
+    distribution_cfg=distribution_cfg,
+    d_model=d_model,
+    num_heads=num_heads,
+    ffn_dim=ffn_dim,
     history_layers=history_layers,
     cross_layers=cross_layers,
   )

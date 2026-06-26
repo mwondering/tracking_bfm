@@ -98,3 +98,11 @@ register_mjlab_task(
   rl_cfg=unitree_g1_trackingbfm_attention_ppo_runner_cfg("hist_proprio_cross"),
   runner_cls=MotionTrackingOnPolicyRunner,
 )
+
+register_mjlab_task(
+  task_id="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR",
+  env_cfg=unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg(),
+  play_env_cfg=unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg(play=True),
+  rl_cfg=unitree_g1_trackingbfm_attention_ppo_runner_cfg("sparsetrack_full_ref"),
+  runner_cls=MotionTrackingOnPolicyRunner,
+)

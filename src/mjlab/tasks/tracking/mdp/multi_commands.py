@@ -28,6 +28,7 @@ if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
 
 _DESIRED_FRAME_COLORS = ((1.0, 0.5, 0.5), (0.5, 1.0, 0.5), (0.5, 0.5, 1.0))
+_EXTRA_REFERENCE_GHOST_COLOR = (1.0, 0.45, 0.1, 0.45)
 
 _ISAACLAB_JOINT_NAMES = [
   "left_hip_pitch_joint",
@@ -455,7 +456,9 @@ class MultiMotionCommand(CommandTerm):
     super().__init__(cfg, env)
 
     self.robot: Entity = env.scene[cfg.entity_name]
-    self.robot_anchor_body_index = self.robot.body_names.index(self.cfg.anchor_body_name)
+    self.robot_anchor_body_index = self.robot.body_names.index(
+      self.cfg.anchor_body_name
+    )
     self.motion_anchor_body_index = self.cfg.body_names.index(self.cfg.anchor_body_name)
     self.body_indexes = torch.tensor(
       self.robot.find_bodies(self.cfg.body_names, preserve_order=True)[0],
@@ -509,9 +512,9 @@ class MultiMotionCommand(CommandTerm):
     self.valid_motion_ids, self.valid_bin_ids = torch.where(self.bin_valid_mask)
     self.num_valid_motion_bins = max(int(self.valid_motion_ids.numel()), 1)
     bin_starts = bin_indices.unsqueeze(0) * self.bin_width_steps
-    remaining_lengths = (
-      self.motion.file_lengths.unsqueeze(1) - bin_starts
-    ).clamp(min=0)
+    remaining_lengths = (self.motion.file_lengths.unsqueeze(1) - bin_starts).clamp(
+      min=0
+    )
     self.bin_lengths = torch.minimum(
       remaining_lengths,
       torch.full_like(remaining_lengths, self.bin_width_steps),
@@ -580,6 +583,20 @@ class MultiMotionCommand(CommandTerm):
     # Ghost model created lazily on first visualization
     self._ghost_model: mujoco.MjModel | None = None
     self._ghost_color = np.array(cfg.viz.ghost_color, dtype=np.float32)
+    self._extra_reference_ghost_model: mujoco.MjModel | None = None
+    self._extra_reference_ghost_color = np.array(
+      _EXTRA_REFERENCE_GHOST_COLOR, dtype=np.float32
+    )
+    self.extra_reference_motion = (
+      MotionLoader(
+        self.cfg.extra_reference_motion_file,
+        self.body_indexes,
+        motion_type=self.cfg.motion_type,
+        device=self.device,
+      )
+      if self.cfg.extra_reference_motion_file
+      else None
+    )
 
   def _resolve_motion_files(self) -> list[str]:
     """Resolve multi-motion inputs from ``motion_path`` or a single ``motion_file``."""
@@ -629,9 +646,7 @@ class MultiMotionCommand(CommandTerm):
   def _compute_motion_bin_indices(
     self, time_steps: torch.Tensor, motion_indices: torch.Tensor
   ) -> torch.Tensor:
-    raw_bin_indices = torch.div(
-      time_steps, self.bin_width_steps, rounding_mode="floor"
-    )
+    raw_bin_indices = torch.div(time_steps, self.bin_width_steps, rounding_mode="floor")
     max_bin_indices = self.motion_bin_counts[motion_indices] - 1
     return torch.minimum(raw_bin_indices, max_bin_indices)
 
@@ -859,9 +874,8 @@ class MultiMotionCommand(CommandTerm):
       motion_probabilities.scatter_add_(0, valid_motion_ids, constrained)
       motion_scale = torch.ones_like(motion_probabilities)
       oversized = motion_probabilities > max_prob_per_motion
-      motion_scale[oversized] = (
-        max_prob_per_motion
-        / torch.clamp(motion_probabilities[oversized], min=1e-12)
+      motion_scale[oversized] = max_prob_per_motion / torch.clamp(
+        motion_probabilities[oversized], min=1e-12
       )
       constrained = constrained * motion_scale[valid_motion_ids]
       constrained = constrained / torch.clamp(constrained.sum(), min=1e-12)
@@ -877,8 +891,8 @@ class MultiMotionCommand(CommandTerm):
     failure_rate = self._compute_failure_rate()
     valid_failure_rate = failure_rate[valid_motion_ids, valid_bin_ids]
     failure_rate_mean = valid_failure_rate.mean()
-    failure_rate_upper_bound = (
-      failure_rate_mean * float(self.cfg.adaptive_failure_rate_max_over_mean)
+    failure_rate_upper_bound = failure_rate_mean * float(
+      self.cfg.adaptive_failure_rate_max_over_mean
     )
     clipped_failure_rate = torch.clamp(
       valid_failure_rate, 0.0, failure_rate_upper_bound
@@ -900,9 +914,8 @@ class MultiMotionCommand(CommandTerm):
     )
     uniform_ratio = float(max(0.0, min(1.0, self.cfg.adaptive_uniform_ratio)))
     probabilities = (
-      (1.0 - uniform_ratio) * failure_based_probabilities
-      + uniform_ratio * uniform_probabilities
-    )
+      1.0 - uniform_ratio
+    ) * failure_based_probabilities + uniform_ratio * uniform_probabilities
     probabilities = probabilities * self.bin_weights[valid_motion_ids, valid_bin_ids]
     probabilities = probabilities / torch.clamp(probabilities.sum(), min=1e-12)
     probabilities = self._apply_max_probability_constraints(
@@ -947,9 +960,10 @@ class MultiMotionCommand(CommandTerm):
 
   @property
   def body_pos_w(self) -> torch.Tensor:
-    return self._gather_motion_field(
-      "body_pos_w", self.motion_idx, self.time_steps
-    ) + self._env.scene.env_origins[:, None, :]
+    return (
+      self._gather_motion_field("body_pos_w", self.motion_idx, self.time_steps)
+      + self._env.scene.env_origins[:, None, :]
+    )
 
   @property
   def body_quat_w(self) -> torch.Tensor:
@@ -957,15 +971,11 @@ class MultiMotionCommand(CommandTerm):
 
   @property
   def body_lin_vel_w(self) -> torch.Tensor:
-    return self._gather_motion_field(
-      "body_lin_vel_w", self.motion_idx, self.time_steps
-    )
+    return self._gather_motion_field("body_lin_vel_w", self.motion_idx, self.time_steps)
 
   @property
   def body_ang_vel_w(self) -> torch.Tensor:
-    return self._gather_motion_field(
-      "body_ang_vel_w", self.motion_idx, self.time_steps
-    )
+    return self._gather_motion_field("body_ang_vel_w", self.motion_idx, self.time_steps)
 
   @property
   def anchor_pos_w(self) -> torch.Tensor:
@@ -1079,7 +1089,9 @@ class MultiMotionCommand(CommandTerm):
     reference_anchor_pos = self._gather_motion_field(
       "body_pos_w", self.motion_idx, reference_time_steps
     )[:, :, self.motion_anchor_body_index]
-    reference_anchor_pos = reference_anchor_pos + self._env.scene.env_origins[:, None, :]
+    reference_anchor_pos = (
+      reference_anchor_pos + self._env.scene.env_origins[:, None, :]
+    )
     return reference_anchor_pos.reshape(self.num_envs, -1)
 
   @property
@@ -1195,10 +1207,12 @@ class MultiMotionCommand(CommandTerm):
     )
 
   def _adaptive_sampling(self, env_ids: torch.Tensor):
-    sampling_probabilities, valid_failure_rate = self._compute_pair_sampling_probabilities(
-      self.valid_motion_ids,
-      self.valid_bin_ids,
-      self.motion.num_files,
+    sampling_probabilities, valid_failure_rate = (
+      self._compute_pair_sampling_probabilities(
+        self.valid_motion_ids,
+        self.valid_bin_ids,
+        self.motion.num_files,
+      )
     )
     sampled_pair_indices = torch.multinomial(
       sampling_probabilities, len(env_ids), replacement=True
@@ -1208,9 +1222,7 @@ class MultiMotionCommand(CommandTerm):
 
     H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
     denom = (
-      math.log(self.num_valid_motion_bins)
-      if self.num_valid_motion_bins > 1
-      else 1.0
+      math.log(self.num_valid_motion_bins) if self.num_valid_motion_bins > 1 else 1.0
     )
     H_norm = H / denom if self.num_valid_motion_bins > 1 else 0.0
     pmax, _ = sampling_probabilities.max(dim=0)
@@ -1231,7 +1243,9 @@ class MultiMotionCommand(CommandTerm):
     self.motion_length[env_ids] = self.motion.file_lengths[sampled_motion_indices]
 
     bin_starts = sampled_bin_indices * self.bin_width_steps
-    bin_ends = torch.minimum(bin_starts + self.bin_width_steps, self.motion_length[env_ids])
+    bin_ends = torch.minimum(
+      bin_starts + self.bin_width_steps, self.motion_length[env_ids]
+    )
     bin_lengths = torch.clamp(bin_ends - bin_starts, min=1)
     offsets = (
       sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device)
@@ -1260,8 +1274,12 @@ class MultiMotionCommand(CommandTerm):
         self.motion_idx[env_ids]
       )
       self.metrics["sampling_entropy"][env_ids] = 1.0  # Maximum entropy for uniform.
-      self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
-      self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities[: len(env_ids)]
+      self.metrics["sampling_uniform_prob"][env_ids] = uniform_probabilities[
+        : len(env_ids)
+      ]
+      self.metrics["sampling_top1_prob"][env_ids] = uniform_probabilities[
+        : len(env_ids)
+      ]
       self.metrics["sampling_top1_ratio"][env_ids] = 1.0
       self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
       self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
@@ -1404,6 +1422,14 @@ class MultiMotionCommand(CommandTerm):
       if self._ghost_model is None:
         self._ghost_model = copy.deepcopy(self._env.sim.mj_model)
         self._ghost_model.geom_rgba[:] = self._ghost_color
+      if (
+        self.extra_reference_motion is not None
+        and self._extra_reference_ghost_model is None
+      ):
+        self._extra_reference_ghost_model = copy.deepcopy(self._env.sim.mj_model)
+        self._extra_reference_ghost_model.geom_rgba[:] = (
+          self._extra_reference_ghost_color
+        )
 
       entity: Entity = self._env.scene[self.cfg.entity_name]
       indexing = entity.indexing
@@ -1417,6 +1443,30 @@ class MultiMotionCommand(CommandTerm):
         qpos[joint_q_adr] = self.joint_pos[batch].cpu().numpy()
 
         visualizer.add_ghost_mesh(qpos, model=self._ghost_model, label=f"ghost_{batch}")
+        if self.extra_reference_motion is not None:
+          assert self._extra_reference_ghost_model is not None
+          extra_time_step = torch.clamp(
+            self.time_steps[batch],
+            min=0,
+            max=self.extra_reference_motion.time_step_total - 1,
+          )
+          extra_qpos = np.zeros(self._env.sim.mj_model.nq)
+          extra_body_pos_w = (
+            self.extra_reference_motion.body_pos_w[extra_time_step]
+            + self._env.scene.env_origins[batch]
+          )
+          extra_qpos[free_joint_q_adr[0:3]] = extra_body_pos_w[0].cpu().numpy()
+          extra_qpos[free_joint_q_adr[3:7]] = (
+            self.extra_reference_motion.body_quat_w[extra_time_step, 0].cpu().numpy()
+          )
+          extra_qpos[joint_q_adr] = (
+            self.extra_reference_motion.joint_pos[extra_time_step].cpu().numpy()
+          )
+          visualizer.add_ghost_mesh(
+            extra_qpos,
+            model=self._extra_reference_ghost_model,
+            label=f"extra_reference_ghost_{batch}",
+          )
 
     elif self.cfg.viz.mode == "frames":
       for batch in env_indices:
@@ -1472,6 +1522,7 @@ class MultiMotionCommandCfg(CommandTermCfg):
   entity_name: str
   motion_path: str = ""
   motion_file: str = ""
+  extra_reference_motion_file: str = ""
   motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
   anchor_body_name: str
   body_names: tuple[str, ...]

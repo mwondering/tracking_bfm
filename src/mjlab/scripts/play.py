@@ -45,6 +45,8 @@ class PlayConfig:
   """Optional checkpoint name within the W&B run to load (e.g. 'model_4000.pt')."""
   checkpoint_file: str | None = None
   motion_file: str | None = None
+  extra_reference_motion_file: str | None = None
+  """Optional second reference motion rendered as an extra ghost during play."""
   motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
   num_envs: int | None = None
   device: str | None = None
@@ -58,6 +60,8 @@ class PlayConfig:
   """Disable all termination conditions (useful for viewing motions with dummy agents)."""
   show_reference_motion: bool = True
   """For distillation play, keep sparse student refs visible but optionally hide full reference motion."""
+  domain_randomization: bool = True
+  """Keep configured domain-randomization events enabled during play."""
 
   # Internal flag used by demo script.
   _demo_mode: tyro.conf.Suppress[bool] = False
@@ -75,13 +79,36 @@ class PlayCliConfig(PlayConfig):
     return PlayCliConfig(env=load_env_cfg(task_id, play=True), rl=load_rl_cfg(task_id))
 
 
-def _configure_distillation_play_visualization(env_cfg, show_reference_motion: bool) -> None:
+def _configure_distillation_play_visualization(
+  env_cfg, show_reference_motion: bool
+) -> None:
   motion_cfg = env_cfg.commands.get("motion")
   student_sparse_vis_cfg = env_cfg.commands.get("student_sparse_vis")
   if motion_cfg is None or student_sparse_vis_cfg is None:
     return
   motion_cfg.debug_vis = show_reference_motion
   student_sparse_vis_cfg.debug_vis = True
+
+
+def _apply_play_domain_randomization_override(
+  env_cfg: ManagerBasedRlEnvCfg,
+  domain_randomization: bool,
+) -> None:
+  if not domain_randomization:
+    env_cfg.events = {}
+
+
+def _apply_extra_reference_motion_file(
+  env_cfg: ManagerBasedRlEnvCfg,
+  extra_reference_motion_file: str | None,
+) -> None:
+  if extra_reference_motion_file is None:
+    return
+
+  motion_cfg = env_cfg.commands.get("motion")
+  if motion_cfg is None or not hasattr(motion_cfg, "extra_reference_motion_file"):
+    return
+  motion_cfg.extra_reference_motion_file = extra_reference_motion_file
 
 
 def _get_trained_policy(runner, device: str, stochastic: bool):
@@ -110,7 +137,9 @@ def run_play(task_id: str, cfg: PlayConfig):
     if isinstance(cfg, PlayCliConfig)
     else load_env_cfg(task_id, play=True)
   )
-  agent_cfg = deepcopy(cfg.rl) if isinstance(cfg, PlayCliConfig) else load_rl_cfg(task_id)
+  agent_cfg = (
+    deepcopy(cfg.rl) if isinstance(cfg, PlayCliConfig) else load_rl_cfg(task_id)
+  )
 
   DUMMY_MODE = cfg.agent in {"zero", "random"}
   TRAINED_MODE = not DUMMY_MODE
@@ -119,6 +148,21 @@ def run_play(task_id: str, cfg: PlayConfig):
   if cfg.no_terminations:
     env_cfg.terminations = {}
     print("[INFO]: Terminations disabled")
+
+  _apply_play_domain_randomization_override(
+    env_cfg, domain_randomization=cfg.domain_randomization
+  )
+  if cfg.extra_reference_motion_file is not None:
+    if not Path(cfg.extra_reference_motion_file).exists():
+      raise FileNotFoundError(
+        f"Extra reference motion file not found: {cfg.extra_reference_motion_file}"
+      )
+    print(
+      f"[INFO]: Using extra reference motion file: {cfg.extra_reference_motion_file}"
+    )
+  _apply_extra_reference_motion_file(
+    env_cfg, extra_reference_motion_file=cfg.extra_reference_motion_file
+  )
 
   _configure_distillation_play_visualization(
     env_cfg, show_reference_motion=cfg.show_reference_motion
@@ -275,7 +319,9 @@ def run_play(task_id: str, cfg: PlayConfig):
     runner.load(
       str(resume_path), load_cfg={"actor": True}, strict=True, map_location=device
     )
-    policy = _get_trained_policy(runner, device=device, stochastic=cfg.stochastic_policy)
+    policy = _get_trained_policy(
+      runner, device=device, stochastic=cfg.stochastic_policy
+    )
     env = runner.env
 
   # Build checkpoint manager for hot-swapping checkpoints in the viewer.

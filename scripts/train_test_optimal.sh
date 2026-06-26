@@ -8,13 +8,42 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 DISABLE_REG_AND_DR="${DISABLE_REG_AND_DR:-True}"
+ATTENTION_VARIANT="${ATTENTION_VARIANT:-sparsetrack_full_ref}"
 
 case "${DISABLE_REG_AND_DR,,}" in
   1|true|yes|on)
-    DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR"
-    DEFAULT_RUN_NAME="test_optimal_global_body_full_obs_no_reg_no_dr"
+    case "${ATTENTION_VARIANT,,}" in
+      mlp|none|false|off|0)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_global_body_full_obs_no_reg_no_dr"
+        ;;
+      full_obs_causal)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-FullObsCausalAttn-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_full_obs_causal_attn_no_reg_no_dr"
+        ;;
+      proprio_ref_cross)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-ProprioRefCrossAttn-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_proprio_ref_cross_attn_no_reg_no_dr"
+        ;;
+      hist_proprio_cross)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_hist_proprio_cross_attn_no_reg_no_dr"
+        ;;
+      sparsetrack_full_ref)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_sparsetrack_full_ref_attn_no_reg_no_dr"
+        ;;
+      *)
+        echo "ATTENTION_VARIANT must be one of mlp, full_obs_causal, proprio_ref_cross, hist_proprio_cross, sparsetrack_full_ref; got: $ATTENTION_VARIANT" >&2
+        exit 2
+        ;;
+    esac
     ;;
   0|false|no|off)
+    if [[ "${ATTENTION_VARIANT,,}" != "mlp" ]]; then
+      echo "ATTENTION_VARIANT is only supported when DISABLE_REG_AND_DR=True" >&2
+      exit 2
+    fi
     DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal"
     DEFAULT_RUN_NAME="test_optimal_global_body_full_obs_with_reg_dr"
     ;;

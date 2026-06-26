@@ -94,6 +94,11 @@ def unitree_g1_trackingbfm_attention_ppo_runner_cfg(
   cfg = unitree_g1_trackingbfm_ppo_runner_cfg()
   cfg.actor = tracking_attention_actor_cfg(variant)
   cfg.experiment_name = "test_optimal_tracking_bfm_attention"
+  if variant == "sparsetrack_full_ref":
+    cfg.algorithm.learning_rate = 5.0e-5
+    cfg.algorithm.num_learning_epochs = 2
+    cfg.algorithm.num_mini_batches = 16
+    cfg.algorithm.entropy_coef = 0.001
   return cfg
 
 

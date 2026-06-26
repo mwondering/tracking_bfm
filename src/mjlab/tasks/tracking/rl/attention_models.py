@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 from collections import OrderedDict
 from typing import ClassVar, cast
 
@@ -26,6 +27,14 @@ TERM_DIMS: OrderedDict[str, int] = OrderedDict(
   )
 )
 PROPRIO_TERMS = ("base_lin_vel", "base_ang_vel", "joint_pos", "joint_vel", "actions")
+SPARSETRACK_PROP_TERMS = ("base_lin_vel", "base_ang_vel", "joint_pos", "joint_vel")
+SPARSETRACK_TASK_TERMS = (
+  "command",
+  "motion_anchor_pos_b",
+  "motion_anchor_ori_b",
+  "body_pos",
+  "body_ori",
+)
 
 
 def _make_causal_mask(length: int) -> torch.Tensor:
@@ -94,6 +103,94 @@ class _CrossAttentionBlock(nn.Module):
     )
     query = query + attn_out
     return query + self.ffn(self.ffn_norm(query))
+
+
+class _RMSNorm(nn.Module):
+  def __init__(self, dim: int, eps: float = 1e-8) -> None:
+    super().__init__()
+    self.scale = nn.Parameter(torch.ones(dim))
+    self.eps = eps
+
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+    norm = x.norm(dim=-1, keepdim=True) / math.sqrt(x.shape[-1])
+    return self.scale * x / (norm + self.eps)
+
+
+class _RoPEPositionalEncoding(nn.Module):
+  def __init__(self, dim: int, base: float = 10000.0) -> None:
+    super().__init__()
+    if dim % 2 != 0:
+      raise ValueError("RoPE dimension must be even")
+    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+    self.register_buffer("inv_freq", inv_freq, persistent=False)
+
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+    seq_len = x.shape[1]
+    position = torch.arange(seq_len, device=x.device, dtype=torch.float32)
+    freqs = torch.outer(position, self.inv_freq)
+    cos_freqs = torch.cos(freqs).unsqueeze(0)
+    sin_freqs = torch.sin(freqs).unsqueeze(0)
+
+    x_even = x[..., 0::2]
+    x_odd = x[..., 1::2]
+    x_rotated = torch.empty_like(x)
+    x_rotated[..., 0::2] = x_even * cos_freqs - x_odd * sin_freqs
+    x_rotated[..., 1::2] = x_even * sin_freqs + x_odd * cos_freqs
+    return x_rotated
+
+
+class _SwiGLU(nn.Module):
+  def __init__(self, input_dim: int, hidden_dim: int) -> None:
+    super().__init__()
+    self.w = nn.Linear(input_dim, hidden_dim, bias=False)
+    self.v = nn.Linear(input_dim, hidden_dim, bias=False)
+    self.output = nn.Linear(hidden_dim, input_dim, bias=False)
+    self.silu = nn.SiLU()
+
+  def forward(self, x: torch.Tensor) -> torch.Tensor:
+    return self.output(self.silu(self.w(x)) * self.v(x))
+
+
+class _SparseTrackTransformerBlock(nn.Module):
+  def __init__(self, embed_dim: int, num_heads: int, ff_dim: int) -> None:
+    super().__init__()
+    self.self_attention = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
+    self.cross_attention = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
+    self.feed_forward = _SwiGLU(embed_dim, ff_dim)
+    self.rmsnorm1 = _RMSNorm(embed_dim)
+    self.rmsnorm2 = _RMSNorm(embed_dim)
+    self.rmsnorm3 = _RMSNorm(embed_dim)
+    self.cond_norm = _RMSNorm(embed_dim)
+    self.rope = _RoPEPositionalEncoding(embed_dim)
+
+  def forward(
+    self,
+    x: torch.Tensor,
+    task_tokens: torch.Tensor,
+    self_attn_mask: torch.Tensor | None = None,
+  ) -> torch.Tensor:
+    x_norm = self.rmsnorm1(x)
+    x_rope = self.rope(x_norm)
+    attn_output, _ = self.self_attention(
+      x_rope,
+      x_rope,
+      x_norm,
+      attn_mask=self_attn_mask,
+      need_weights=False,
+    )
+    x = x + attn_output
+
+    x_norm2 = self.rmsnorm2(x)
+    task_norm = self.cond_norm(task_tokens)
+    cross_output, _ = self.cross_attention(
+      x_norm2,
+      task_norm,
+      task_norm,
+      need_weights=False,
+    )
+    x = x + cross_output
+
+    return x + self.feed_forward(self.rmsnorm3(x))
 
 
 class _BaseTrackingAttentionActor(MLPModel):
@@ -331,9 +428,7 @@ class FullObsCausalAttentionActor(_BaseTrackingAttentionActor):
   def __init__(self, *args, **kwargs) -> None:
     super().__init__(*args, **kwargs)
     self.frame_proj = nn.Linear(self.frame_dim, self.d_model)
-    self.pos_embedding = nn.Parameter(
-      torch.empty(1, self.history_length, self.d_model)
-    )
+    self.pos_embedding = nn.Parameter(torch.empty(1, self.history_length, self.d_model))
     nn.init.trunc_normal_(self.pos_embedding, std=0.02)
     self.history_encoder = self._build_history_encoder(self.history_layers)
     self.register_buffer(
@@ -437,3 +532,140 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
 
     current_full_obs = self._frame_history_from_terms(terms)[:, -1]
     return torch.cat((current_full_obs, dynamics, command_embedding), dim=-1)
+
+
+class SparseTrackFullRefAttentionActor(_BaseTrackingAttentionActor):
+  """SparseTrack-style transformer over full-ref tracking observations."""
+
+  def __init__(self, *args, **kwargs) -> None:
+    super().__init__(*args, **kwargs)
+    self.prop_obs_dim = sum(TERM_DIMS[name] for name in SPARSETRACK_PROP_TERMS)
+    self.task_obs_dim = sum(TERM_DIMS[name] for name in SPARSETRACK_TASK_TERMS)
+
+    self.prop_projection = nn.Linear(self.prop_obs_dim, self.d_model)
+    self.action_projection = nn.Linear(self.num_dofs, self.d_model)
+    self.task_projection = nn.Linear(self.task_obs_dim, self.d_model)
+    self.empty_embedding = nn.Parameter(torch.empty(1, 1, self.d_model))
+    self.transformer_blocks = nn.ModuleList(
+      [
+        _SparseTrackTransformerBlock(
+          embed_dim=self.d_model,
+          num_heads=self.num_heads,
+          ff_dim=self.ffn_dim,
+        )
+        for _ in range(self.history_layers)
+      ]
+    )
+    self.final_norm = _RMSNorm(self.d_model)
+    self.register_buffer(
+      "_empty_token_mask",
+      self._make_empty_token_mask(self.history_length),
+      persistent=False,
+    )
+    self._init_sparsetrack_weights()
+    self._zero_output_head()
+
+  def _attention_latent_dim(self) -> int:
+    return self.d_model
+
+  @staticmethod
+  def _make_empty_token_mask(history_length: int) -> torch.Tensor:
+    seq_len = 2 * history_length
+    mask = torch.zeros(seq_len, seq_len, dtype=torch.bool)
+    mask[:-1, -1] = True
+    return mask
+
+  def _attention_latent_from_flat(self, flat_obs: torch.Tensor) -> torch.Tensor:
+    terms = self._term_history(flat_obs)
+    prop_obs = self._sparsetrack_prop_history_from_terms(terms)
+    action_obs = terms["actions"]
+    task_obs = self._sparsetrack_task_history_from_terms(terms)
+
+    prop_tokens = self.prop_projection(prop_obs)
+    action_tokens = self.action_projection(action_obs)
+    task_tokens = self.task_projection(task_obs)
+
+    context = prop_tokens.new_empty(
+      prop_tokens.shape[0],
+      2 * self.history_length - 1,
+      self.d_model,
+    )
+    context[:, 0::2] = prop_tokens
+    context[:, 1::2] = action_tokens[:, 1:]
+
+    empty_token = self.empty_embedding.expand(prop_tokens.shape[0], -1, -1)
+    x = torch.cat((context, empty_token), dim=1)
+    mask = self._empty_token_mask.to(device=x.device)
+
+    for block in self.transformer_blocks:
+      x = block(x, task_tokens, self_attn_mask=mask)
+    x = self.final_norm(x)
+    return x[:, -1]
+
+  def _sparsetrack_prop_history_from_terms(
+    self,
+    terms: dict[str, torch.Tensor],
+  ) -> torch.Tensor:
+    return torch.cat([terms[name] for name in SPARSETRACK_PROP_TERMS], dim=-1)
+
+  def _sparsetrack_task_history_from_terms(
+    self,
+    terms: dict[str, torch.Tensor],
+  ) -> torch.Tensor:
+    return torch.cat([terms[name] for name in SPARSETRACK_TASK_TERMS], dim=-1)
+
+  def _init_sparsetrack_weights(self) -> None:
+    num_layers = max(len(self.transformer_blocks), 1)
+    res_scale = 1.0 / math.sqrt(2.0 * num_layers)
+
+    for module in (
+      self.prop_projection,
+      self.action_projection,
+      self.task_projection,
+    ):
+      self._init_linear(module)
+
+    for block in self.transformer_blocks:
+      for module in block.modules():
+        if isinstance(module, nn.MultiheadAttention):
+          continue
+        if isinstance(module, _RMSNorm):
+          nn.init.ones_(module.scale)
+        elif isinstance(module, nn.Linear):
+          self._init_linear(module)
+
+      for module in block.modules():
+        if isinstance(module, nn.MultiheadAttention):
+          embed_dim = module.embed_dim
+          std = 1.0 / math.sqrt(embed_dim)
+          nn.init.normal_(module.in_proj_weight, mean=0.0, std=std)
+          if module.in_proj_bias is not None:
+            nn.init.zeros_(module.in_proj_bias)
+          out_std = std / math.sqrt(2.0 * num_layers)
+          nn.init.normal_(module.out_proj.weight, mean=0.0, std=out_std)
+          if module.out_proj.bias is not None:
+            nn.init.zeros_(module.out_proj.bias)
+
+      with torch.no_grad():
+        block.feed_forward.output.weight.mul_(res_scale)
+
+    nn.init.ones_(self.final_norm.scale)
+    nn.init.trunc_normal_(self.empty_embedding, std=0.02)
+
+  @staticmethod
+  def _init_linear(module: nn.Linear) -> None:
+    in_dim = module.weight.shape[1]
+    std = 1.0 / math.sqrt(in_dim)
+    nn.init.normal_(module.weight, mean=0.0, std=std)
+    if module.bias is not None:
+      nn.init.zeros_(module.bias)
+
+  def _zero_output_head(self) -> None:
+    last_linear = next(
+      (module for module in reversed(self.mlp) if isinstance(module, nn.Linear)),
+      None,
+    )
+    if last_linear is None:
+      raise TypeError("expected the MLP head to contain an nn.Linear output layer")
+    nn.init.zeros_(last_linear.weight)
+    nn.init.zeros_(last_linear.bias)

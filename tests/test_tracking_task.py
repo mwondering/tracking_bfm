@@ -328,6 +328,9 @@ ATTENTION_TEST_OPTIMAL_TASKS = {
   "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR": (
     "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor"
   ),
+  "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR": (
+    "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionActor"
+  ),
 }
 
 
@@ -366,3 +369,23 @@ def test_tracking_attention_test_optimal_keeps_baseline_mlp_critic() -> None:
 
     assert rl_cfg.critic == baseline.critic
     assert rl_cfg.actor.class_name == ATTENTION_TEST_OPTIMAL_TASKS[task_id]
+
+
+def test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings() -> None:
+  rl_cfg = cast(
+    RslRlOnPolicyRunnerCfg,
+    load_rl_cfg(
+      "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR"
+    ),
+  )
+
+  assert rl_cfg.actor.distribution_cfg == {
+    "class_name": "GaussianDistribution",
+    "init_std": 0.5,
+    "std_type": "scalar",
+    "std_range": (0.001, 1.0),
+  }
+  assert rl_cfg.algorithm.learning_rate == 5.0e-5
+  assert rl_cfg.algorithm.num_learning_epochs == 2
+  assert rl_cfg.algorithm.num_mini_batches == 16
+  assert rl_cfg.algorithm.entropy_coef == 0.001

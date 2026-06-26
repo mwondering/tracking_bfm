@@ -10,10 +10,7 @@ def _run_script_with_uv_stub(tmp_path: Path, **env_overrides: str) -> list[str]:
   uv_stub = tmp_path / "uv"
   args_file = tmp_path / "uv-args.txt"
 
-  uv_stub.write_text(
-    "#!/usr/bin/env bash\n"
-    "printf '%s\\n' \"$@\" > \"$UV_ARGS_FILE\"\n"
-  )
+  uv_stub.write_text('#!/usr/bin/env bash\nprintf \'%s\\n\' "$@" > "$UV_ARGS_FILE"\n')
   uv_stub.chmod(0o755)
 
   env = os.environ.copy()
@@ -61,4 +58,19 @@ def test_train_test_optimal_script_can_select_regularized_control_task(
   ]
   assert args[args.index("--agent.run_name") + 1] == (
     "test_optimal_global_body_full_obs_with_reg_dr"
+  )
+
+
+def test_train_test_optimal_script_can_select_sparsetrack_attention_task(
+  tmp_path: Path,
+) -> None:
+  args = _run_script_with_uv_stub(tmp_path, ATTENTION_VARIANT="sparsetrack_full_ref")
+
+  assert args[:3] == [
+    "run",
+    "train",
+    "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR",
+  ]
+  assert args[args.index("--agent.run_name") + 1] == (
+    "test_optimal_sparsetrack_full_ref_attn_no_reg_no_dr"
   )

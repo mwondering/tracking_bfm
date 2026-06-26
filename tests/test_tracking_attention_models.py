@@ -17,19 +17,29 @@ from mjlab.tasks.tracking.rl.attention_models import (
   FullObsCausalAttentionActor,
   HistProprioCrossAttentionActor,
   ProprioRefCrossAttentionActor,
+  SparseTrackFullRefAttentionActor,
 )
 
 AttentionActorClass = type[
   FullObsCausalAttentionActor
   | HistProprioCrossAttentionActor
   | ProprioRefCrossAttentionActor
+  | SparseTrackFullRefAttentionActor
 ]
 
 ATTENTION_ACTORS: tuple[tuple[AttentionVariant, AttentionActorClass], ...] = (
   ("full_obs_causal", FullObsCausalAttentionActor),
   ("proprio_ref_cross", ProprioRefCrossAttentionActor),
   ("hist_proprio_cross", HistProprioCrossAttentionActor),
+  ("sparsetrack_full_ref", SparseTrackFullRefAttentionActor),
 )
+
+PARAMETER_BUDGETS: dict[AttentionVariant, tuple[int, int]] = {
+  "full_obs_causal": (8_000_000, 10_500_000),
+  "proprio_ref_cross": (8_000_000, 10_500_000),
+  "hist_proprio_cross": (8_000_000, 10_500_000),
+  "sparsetrack_full_ref": (3_000_000, 3_500_000),
+}
 
 
 def _dummy_obs(batch_size: int = 4, obs_dim: int | None = None) -> TensorDict:
@@ -57,6 +67,7 @@ def _make_actor(
   FullObsCausalAttentionActor
   | HistProprioCrossAttentionActor
   | ProprioRefCrossAttentionActor
+  | SparseTrackFullRefAttentionActor
 ):
   cfg = tracking_attention_actor_cfg(variant)
   cfg_dict = cfg.__dict__.copy()
@@ -109,8 +120,9 @@ def test_tracking_attention_actor_parameter_budget(
   actor = _make_actor(variant, cls)
 
   num_params = sum(p.numel() for p in actor.parameters() if p.requires_grad)
+  low, high = PARAMETER_BUDGETS[variant]
 
-  assert 8_000_000 <= num_params <= 10_500_000, (variant, num_params)
+  assert low <= num_params <= high, (variant, num_params)
 
 
 @pytest.mark.parametrize(("variant", "cls"), ATTENTION_ACTORS)
@@ -178,6 +190,52 @@ def test_proprio_ref_cross_attention_preserves_history_order() -> None:
     reversed_action = actor(reversed_obs)
 
   assert not torch.allclose(forward_action, reversed_action)
+
+
+def test_sparsetrack_full_ref_attention_zero_initial_action_mean() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  obs = TensorDict(
+    {"actor": torch.zeros(3, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
+    batch_size=[3],
+  )
+
+  with torch.no_grad():
+    action_mean = actor(obs, stochastic_output=False)
+
+  assert torch.allclose(action_mean, torch.zeros_like(action_mean), atol=1e-6)
+
+
+def test_sparsetrack_full_ref_attention_task_tokens_affect_latent() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  actor.eval()
+
+  term_histories = {
+    name: torch.zeros(1, ACTOR_HISTORY_LENGTH, dim) for name, dim in TERM_DIMS.items()
+  }
+  changed_histories = {name: value.clone() for name, value in term_histories.items()}
+  changed_histories["command"][:, -1, 0] = 1.0
+  changed_histories["motion_anchor_pos_b"][:, -1, 1] = -0.5
+
+  flat_obs = _flat_term_major_obs(term_histories)
+  changed_flat_obs = _flat_term_major_obs(changed_histories)
+
+  with torch.no_grad():
+    latent = actor._attention_latent_from_flat(flat_obs)
+    changed_latent = actor._attention_latent_from_flat(changed_flat_obs)
+
+  assert not torch.allclose(latent, changed_latent)
+
+
+def test_sparsetrack_full_ref_attention_initializes_residual_projections_smaller() -> (
+  None
+):
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  block = actor.transformer_blocks[0]
+
+  in_proj_std = block.self_attention.in_proj_weight.std().item()
+  out_proj_std = block.self_attention.out_proj.weight.std().item()
+
+  assert out_proj_std < in_proj_std * 0.5
 
 
 @pytest.mark.parametrize(

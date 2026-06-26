@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 import torch
 
@@ -139,3 +140,97 @@ def test_adaptive_window_caps_chunk_count_to_window_iterations() -> None:
 
   assert command._adaptive_window_episode_chunks.shape[0] == 3
   assert command._adaptive_window_chunk_size == 1
+
+
+class _GhostVisualizer:
+  env_idx = 0
+  show_all_envs = False
+
+  def __init__(self):
+    self.ghosts = []
+
+  def get_env_indices(self, num_envs: int):
+    return [0] if num_envs else []
+
+  def add_ghost_mesh(self, qpos, model, label=None):
+    self.ghosts.append((qpos.copy(), model, label))
+
+
+class _Scene(dict):
+  def __init__(self, robot):
+    super().__init__({"robot": robot})
+    self.env_origins = torch.tensor([[10.0, 0.0, 0.0]])
+
+
+def test_debug_vis_draws_extra_reference_motion_ghost() -> None:
+  command = object.__new__(MultiMotionCommand)
+  command.cfg = SimpleNamespace(
+    viz=SimpleNamespace(mode="ghost"),
+    entity_name="robot",
+  )
+  command.time_steps = torch.tensor([5], dtype=torch.long)
+  command._ghost_color = np.array((0.5, 0.7, 0.5, 0.5), dtype=np.float32)
+  command._ghost_model = None
+  command._extra_reference_ghost_color = np.array(
+    (1.0, 0.45, 0.1, 0.45), dtype=np.float32
+  )
+  command._extra_reference_ghost_model = None
+  command.motion_idx = torch.tensor([0], dtype=torch.long)
+  command.motion = SimpleNamespace(
+    file_lengths=torch.tensor([8], dtype=torch.long),
+    length_starts=torch.tensor([0], dtype=torch.long),
+    body_pos_w=torch.tensor(
+      [
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0]],
+        [[0.0, 0.0, 0.0]],
+        [[1.0, 2.0, 3.0]],
+      ],
+      dtype=torch.float32,
+    ),
+    body_quat_w=torch.tensor([[[1.0, 0.0, 0.0, 0.0]]] * 6, dtype=torch.float32),
+    joint_pos=torch.tensor(
+      [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.1, 0.2]],
+      dtype=torch.float32,
+    ),
+  )
+  command.extra_reference_motion = SimpleNamespace(
+    time_step_total=3,
+    body_pos_w=torch.tensor([[[0.0, 0.0, 0.0]], [[4.0, 5.0, 6.0]], [[7.0, 8.0, 9.0]]]),
+    body_quat_w=torch.tensor(
+      [[[1.0, 0.0, 0.0, 0.0]], [[1.0, 0.0, 0.0, 0.0]], [[1.0, 0.0, 0.0, 0.0]]]
+    ),
+    joint_pos=torch.tensor([[0.0, 0.0], [0.3, 0.4], [0.5, 0.6]]),
+  )
+
+  model = SimpleNamespace(
+    nq=9,
+    geom_rgba=np.zeros((1, 4), dtype=np.float32),
+  )
+  robot = SimpleNamespace(
+    indexing=SimpleNamespace(
+      free_joint_q_adr=torch.tensor([0, 1, 2, 3, 4, 5, 6]),
+      joint_q_adr=torch.tensor([7, 8]),
+    )
+  )
+  command._env = SimpleNamespace(
+    num_envs=1,
+    device="cpu",
+    sim=SimpleNamespace(mj_model=model),
+    scene=_Scene(robot),
+  )
+
+  visualizer = _GhostVisualizer()
+  command._debug_vis_impl(visualizer)
+
+  assert [ghost[2] for ghost in visualizer.ghosts] == [
+    "ghost_0",
+    "extra_reference_ghost_0",
+  ]
+  np.testing.assert_allclose(visualizer.ghosts[1][0][0:3], np.array([17.0, 8.0, 9.0]))
+  np.testing.assert_allclose(visualizer.ghosts[1][0][7:9], np.array([0.5, 0.6]))
+  np.testing.assert_allclose(
+    visualizer.ghosts[1][1].geom_rgba[0], np.array([1.0, 0.45, 0.1, 0.45])
+  )

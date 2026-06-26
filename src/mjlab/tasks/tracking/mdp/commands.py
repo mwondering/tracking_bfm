@@ -31,6 +31,7 @@ if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
 
 _DESIRED_FRAME_COLORS = ((1.0, 0.5, 0.5), (0.5, 1.0, 0.5), (0.5, 0.5, 1.0))
+_EXTRA_REFERENCE_GHOST_COLOR = (1.0, 0.45, 0.1, 0.45)
 
 _ISAACLAB_JOINT_NAMES = [
   "left_hip_pitch_joint",
@@ -189,10 +190,18 @@ class MotionLoader:
 
     self.joint_pos = torch.tensor(data["joint_pos"], dtype=torch.float32, device=device)
     self.joint_vel = torch.tensor(data["joint_vel"], dtype=torch.float32, device=device)
-    self._body_pos_w = torch.tensor(data["body_pos_w"], dtype=torch.float32, device=device)
-    self._body_quat_w = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
-    self._body_lin_vel_w = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
-    self._body_ang_vel_w = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
+    self._body_pos_w = torch.tensor(
+      data["body_pos_w"], dtype=torch.float32, device=device
+    )
+    self._body_quat_w = torch.tensor(
+      data["body_quat_w"], dtype=torch.float32, device=device
+    )
+    self._body_lin_vel_w = torch.tensor(
+      data["body_lin_vel_w"], dtype=torch.float32, device=device
+    )
+    self._body_ang_vel_w = torch.tensor(
+      data["body_ang_vel_w"], dtype=torch.float32, device=device
+    )
     if joint_reindex is not None:
       self.joint_pos = self.joint_pos[:, joint_reindex]
       self.joint_vel = self.joint_vel[:, joint_reindex]
@@ -272,13 +281,25 @@ class MotionCommand(CommandTerm):
       self.num_envs, device=self.device
     )
     self.metrics["sampling_top1_prob"] = torch.zeros(self.num_envs, device=self.device)
-    self.metrics["sampling_top1_ratio"] = torch.zeros(
-      self.num_envs, device=self.device
-    )
+    self.metrics["sampling_top1_ratio"] = torch.zeros(self.num_envs, device=self.device)
     self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
 
     self._ghost_model = None
     self._ghost_color = np.array(cfg.viz.ghost_color, dtype=np.float32)
+    self._extra_reference_ghost_model = None
+    self._extra_reference_ghost_color = np.array(
+      _EXTRA_REFERENCE_GHOST_COLOR, dtype=np.float32
+    )
+    self.extra_reference_motion = (
+      MotionLoader(
+        self.cfg.extra_reference_motion_file,
+        self.body_indexes,
+        motion_type=self.cfg.motion_type,
+        device=self.device,
+      )
+      if self.cfg.extra_reference_motion_file
+      else None
+    )
 
   @property
   def command(self) -> torch.Tensor:
@@ -602,6 +623,21 @@ class MotionCommand(CommandTerm):
             self._ghost_model.geom_rgba[gi, 3] = 0
           else:
             self._ghost_model.geom_rgba[gi] = self._ghost_color
+      if (
+        self.extra_reference_motion is not None
+        and self._extra_reference_ghost_model is None
+      ):
+        self._extra_reference_ghost_model = copy.deepcopy(self._env.sim.mj_model)
+        for gi in range(self._extra_reference_ghost_model.ngeom):
+          if (
+            self._extra_reference_ghost_model.geom_contype[gi] != 0
+            or self._extra_reference_ghost_model.geom_conaffinity[gi] != 0
+          ):
+            self._extra_reference_ghost_model.geom_rgba[gi, 3] = 0
+          else:
+            self._extra_reference_ghost_model.geom_rgba[gi] = (
+              self._extra_reference_ghost_color
+            )
 
       entity: Entity = self._env.scene[self.cfg.entity_name]
       indexing = entity.indexing
@@ -619,6 +655,30 @@ class MotionCommand(CommandTerm):
           model=self._ghost_model,
           label=f"ghost_{batch}",
         )
+        if self.extra_reference_motion is not None:
+          assert self._extra_reference_ghost_model is not None
+          extra_time_step = torch.clamp(
+            self.time_steps[batch],
+            min=0,
+            max=self.extra_reference_motion.time_step_total - 1,
+          )
+          extra_qpos = np.zeros(self._env.sim.mj_model.nq)
+          extra_body_pos_w = (
+            self.extra_reference_motion.body_pos_w[extra_time_step]
+            + self._env.scene.env_origins[batch]
+          )
+          extra_qpos[free_joint_q_adr[0:3]] = extra_body_pos_w[0].cpu().numpy()
+          extra_qpos[free_joint_q_adr[3:7]] = (
+            self.extra_reference_motion.body_quat_w[extra_time_step, 0].cpu().numpy()
+          )
+          extra_qpos[joint_q_adr] = (
+            self.extra_reference_motion.joint_pos[extra_time_step].cpu().numpy()
+          )
+          visualizer.add_ghost_mesh(
+            extra_qpos,
+            model=self._extra_reference_ghost_model,
+            label=f"extra_reference_ghost_{batch}",
+          )
 
     elif self.cfg.viz.mode == "frames":
       for batch in env_indices:
@@ -745,6 +805,7 @@ class MotionCommand(CommandTerm):
 @dataclass(kw_only=True)
 class MotionCommandCfg(CommandTermCfg):
   motion_file: str
+  extra_reference_motion_file: str = ""
   motion_type: Literal["isaaclab", "mujoco"] = "isaaclab"
   anchor_body_name: str
   body_names: tuple[str, ...]
