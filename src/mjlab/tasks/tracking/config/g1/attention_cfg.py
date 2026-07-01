@@ -51,6 +51,8 @@ class TrackingAttentionModelCfg(RslRlModelCfg):
   )
   dropout: float = 0.0
   attention_activation: str = "gelu"
+  task_embedder_hidden_dims: tuple[int, ...] = ()
+  reduced_task_dim: int | None = None
 
 
 def tracking_attention_actor_cfg(
@@ -73,8 +75,10 @@ def tracking_attention_actor_cfg(
       ffn_dim=256,
       head_hidden_dims=(512, 256),
       activation="elu",
-      init_std=0.5,
+      init_std=0.8,
       std_range=(0.001, 1.0),
+      task_embedder_hidden_dims=(),
+      reduced_task_dim=None,
     )
   raise ValueError(f"Unknown attention variant: {variant}")
 
@@ -90,6 +94,8 @@ def _tracking_attention_actor_cfg(
   activation: str = "gelu",
   init_std: float = 1.0,
   std_range: tuple[float, float] | None = None,
+  task_embedder_hidden_dims: tuple[int, ...] = (),
+  reduced_task_dim: int | None = None,
 ) -> TrackingAttentionModelCfg:
   distribution_cfg = {
     "class_name": "GaussianDistribution",
@@ -111,4 +117,6 @@ def _tracking_attention_actor_cfg(
     ffn_dim=ffn_dim,
     history_layers=history_layers,
     cross_layers=cross_layers,
+    task_embedder_hidden_dims=task_embedder_hidden_dims,
+    reduced_task_dim=reduced_task_dim,
   )

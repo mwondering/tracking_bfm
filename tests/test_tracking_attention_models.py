@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 import torch
+from rsl_rl.storage import RolloutStorage
 from tensordict import TensorDict
 
 from mjlab.tasks.tracking.config.g1.attention_cfg import (
@@ -18,7 +19,9 @@ from mjlab.tasks.tracking.rl.attention_models import (
   HistProprioCrossAttentionActor,
   ProprioRefCrossAttentionActor,
   SparseTrackFullRefAttentionActor,
+  SparseTrackFullRefAttentionCritic,
 )
+from mjlab.tasks.tracking.rl.ppo import SparseTrackSplitLrPPO
 
 AttentionActorClass = type[
   FullObsCausalAttentionActor
@@ -38,7 +41,7 @@ PARAMETER_BUDGETS: dict[AttentionVariant, tuple[int, int]] = {
   "full_obs_causal": (8_000_000, 10_500_000),
   "proprio_ref_cross": (8_000_000, 10_500_000),
   "hist_proprio_cross": (8_000_000, 10_500_000),
-  "sparsetrack_full_ref": (3_000_000, 3_500_000),
+  "sparsetrack_full_ref": (2_900_000, 3_200_000),
 }
 
 
@@ -77,6 +80,23 @@ def _make_actor(
     {"actor": ["actor"], "critic": ["critic"]},
     "actor",
     NUM_DOFS,
+    **cfg_dict,
+  )
+
+
+def _make_sparsetrack_critic() -> SparseTrackFullRefAttentionCritic:
+  cfg = tracking_attention_actor_cfg("sparsetrack_full_ref")
+  cfg_dict = cfg.__dict__.copy()
+  cfg_dict.pop("class_name")
+  cfg_dict["distribution_cfg"] = None
+  return SparseTrackFullRefAttentionCritic(
+    TensorDict(
+      {"critic": torch.randn(4, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
+      batch_size=[4],
+    ),
+    {"actor": ["actor"], "critic": ["critic"]},
+    "critic",
+    1,
     **cfg_dict,
   )
 
@@ -226,6 +246,30 @@ def test_sparsetrack_full_ref_attention_task_tokens_affect_latent() -> None:
   assert not torch.allclose(latent, changed_latent)
 
 
+def test_sparsetrack_full_ref_attention_uses_task_embedder_module() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+
+  assert hasattr(actor, "task_embedder")
+  assert not hasattr(actor, "task_projection")
+  task_tokens = actor.task_embedder(
+    torch.zeros(2, ACTOR_HISTORY_LENGTH, actor.task_obs_dim)
+  )
+
+  assert task_tokens.shape == (2, ACTOR_HISTORY_LENGTH, actor.d_model)
+
+
+def test_sparsetrack_task_embedder_linear_init_matches_reference_scale() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  task_projection = actor.task_embedder.task_projection
+
+  assert isinstance(task_projection, torch.nn.Linear)
+  expected_std = 1.0 / (actor.task_obs_dim**0.5)
+  actual_std = task_projection.weight.std().item()
+
+  assert actual_std == pytest.approx(expected_std, rel=0.2)
+  assert torch.allclose(task_projection.bias, torch.zeros_like(task_projection.bias))
+
+
 def test_sparsetrack_full_ref_attention_initializes_residual_projections_smaller() -> (
   None
 ):
@@ -236,6 +280,53 @@ def test_sparsetrack_full_ref_attention_initializes_residual_projections_smaller
   out_proj_std = block.self_attention.out_proj.weight.std().item()
 
   assert out_proj_std < in_proj_std * 0.5
+
+
+def test_sparsetrack_full_ref_attention_uses_linear_projection_head() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  linear_layers = [
+    module for module in actor.mlp.modules() if isinstance(module, torch.nn.Linear)
+  ]
+
+  assert len(linear_layers) == 1
+  assert linear_layers[0].in_features == actor.d_model
+  assert linear_layers[0].out_features == NUM_DOFS
+
+
+def test_sparsetrack_full_ref_attention_critic_forward_shape() -> None:
+  critic = _make_sparsetrack_critic()
+  obs = TensorDict(
+    {"critic": torch.randn(3, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
+    batch_size=[3],
+  )
+
+  values = critic(obs)
+
+  assert values.shape == (3, 1)
+
+
+def test_sparsetrack_split_lr_ppo_uses_actor_critic_param_groups() -> None:
+  actor = _make_actor("sparsetrack_full_ref", SparseTrackFullRefAttentionActor)
+  critic = _make_sparsetrack_critic()
+  obs = TensorDict(
+    {
+      "actor": torch.randn(4, ACTOR_HISTORY_LENGTH * FRAME_DIM),
+      "critic": torch.randn(4, ACTOR_HISTORY_LENGTH * FRAME_DIM),
+    },
+    batch_size=[4],
+  )
+  storage = RolloutStorage("rl", 4, 2, obs, [NUM_DOFS], "cpu")
+
+  alg = SparseTrackSplitLrPPO(
+    actor,
+    critic,
+    storage,
+    actor_learning_rate=2.0e-5,
+    critic_learning_rate=1.0e-3,
+  )
+
+  assert [group["lr"] for group in alg.optimizer.param_groups] == [2.0e-5, 1.0e-3]
+  assert alg.learning_rate == 2.0e-5
 
 
 @pytest.mark.parametrize(

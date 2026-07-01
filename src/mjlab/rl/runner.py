@@ -29,6 +29,10 @@ class MjlabOnPolicyRunner(OnPolicyRunner):
         if train_cfg[key].get("rnn_type") is None:
           for opt in ("rnn_type", "rnn_hidden_dim", "rnn_num_layers"):
             train_cfg[key].pop(opt, None)
+    if "algorithm" in train_cfg:
+      for opt in ("actor_learning_rate", "critic_learning_rate"):
+        if train_cfg["algorithm"].get(opt) is None:
+          train_cfg["algorithm"].pop(opt, None)
     super().__init__(env, train_cfg, log_dir, device)
 
   def export_policy_to_onnx(

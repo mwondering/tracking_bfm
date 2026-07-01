@@ -360,6 +360,7 @@ def unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(
 
 def unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg(
   play: bool = False,
+  critic_history: bool = False,
 ) -> ManagerBasedRlEnvCfg:
   """Create TestOptimal-NoRegNoDR with actor observation history for attention."""
   cfg = unitree_g1_flat_tracking_bfm_test_optimal_env_cfg(
@@ -376,4 +377,9 @@ def unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg(
   for term in actor_obs.terms.values():
     term.history_length = ACTOR_HISTORY_LENGTH
     term.flatten_history_dim = True
+  if critic_history:
+    critic_obs = cfg.observations["critic"]
+    for term in critic_obs.terms.values():
+      term.history_length = ACTOR_HISTORY_LENGTH
+      term.flatten_history_dim = True
   return cfg

@@ -364,7 +364,11 @@ def test_tracking_attention_test_optimal_keeps_baseline_mlp_critic() -> None:
     load_rl_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR"),
   )
 
-  for task_id in ATTENTION_TEST_OPTIMAL_TASKS:
+  for task_id in (
+    task_id
+    for task_id in ATTENTION_TEST_OPTIMAL_TASKS
+    if "SparseTrackFullRefAttn" not in task_id
+  ):
     rl_cfg = cast(RslRlOnPolicyRunnerCfg, load_rl_cfg(task_id))
 
     assert rl_cfg.critic == baseline.critic
@@ -381,11 +385,38 @@ def test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings() -> 
 
   assert rl_cfg.actor.distribution_cfg == {
     "class_name": "GaussianDistribution",
-    "init_std": 0.5,
+    "init_std": 0.8,
     "std_type": "scalar",
     "std_range": (0.001, 1.0),
   }
-  assert rl_cfg.algorithm.learning_rate == 5.0e-5
+  assert rl_cfg.num_steps_per_env == 32
+  assert rl_cfg.algorithm.learning_rate == 2.0e-5
   assert rl_cfg.algorithm.num_learning_epochs == 2
   assert rl_cfg.algorithm.num_mini_batches == 16
-  assert rl_cfg.algorithm.entropy_coef == 0.001
+  assert rl_cfg.algorithm.entropy_coef == 0.005
+
+
+def test_sparsetrack_attention_test_optimal_uses_transformer_critic() -> None:
+  rl_cfg = cast(
+    RslRlOnPolicyRunnerCfg,
+    load_rl_cfg(
+      "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR"
+    ),
+  )
+
+  assert (
+    rl_cfg.critic.class_name
+    == "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionCritic"
+  )
+
+
+def test_sparsetrack_attention_test_optimal_uses_actor_critic_learning_rates() -> None:
+  rl_cfg = cast(
+    RslRlOnPolicyRunnerCfg,
+    load_rl_cfg(
+      "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR"
+    ),
+  )
+
+  assert rl_cfg.algorithm.actor_learning_rate == 2.0e-5
+  assert rl_cfg.algorithm.critic_learning_rate == 1.0e-3

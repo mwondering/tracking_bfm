@@ -151,6 +151,76 @@ class _SwiGLU(nn.Module):
     return self.output(self.silu(self.w(x)) * self.v(x))
 
 
+class _SparseTrackTaskEmbedder(nn.Module):
+  """SparseTrack task embedder for full-reference task tokens."""
+
+  def __init__(
+    self,
+    task_obs_dim: int,
+    embedding_dim: int,
+    reduced_task_dim: int | None = None,
+    hidden_dims: tuple[int, ...] | list[int] | None = None,
+  ) -> None:
+    super().__init__()
+    hidden_dims = tuple(hidden_dims or ())
+    if reduced_task_dim is not None:
+      self.task_projection = self._build_task_projection(
+        task_obs_dim,
+        reduced_task_dim,
+        hidden_dims,
+      )
+      matrix = torch.randn(embedding_dim, reduced_task_dim, dtype=torch.float)
+      q_matrix, r_matrix = torch.linalg.qr(matrix, mode="reduced")
+      diag = torch.sign(torch.diag(r_matrix))
+      diag[diag == 0] = 1.0
+      self.register_buffer("W", q_matrix * diag)
+      self._forward_method = self._reduced_task_projection
+    else:
+      self.task_projection = self._build_task_projection(
+        task_obs_dim,
+        embedding_dim,
+        hidden_dims,
+      )
+      self._forward_method = self._normal_task_projection
+
+  @staticmethod
+  def _build_task_projection(
+    input_dim: int,
+    output_dim: int,
+    hidden_dims: tuple[int, ...],
+  ) -> nn.Module:
+    if len(hidden_dims) == 0:
+      return nn.Linear(input_dim, output_dim)
+
+    layers: list[nn.Module] = [nn.Linear(input_dim, hidden_dims[0]), nn.ELU()]
+    for layer_index in range(len(hidden_dims) - 1):
+      layers.append(nn.Linear(hidden_dims[layer_index], hidden_dims[layer_index + 1]))
+      layers.append(nn.ELU())
+    layers.append(nn.Linear(hidden_dims[-1], output_dim))
+    return nn.Sequential(*layers)
+
+  def _reduced_task_projection(self, task_obs: torch.Tensor) -> torch.Tensor:
+    task_embedding = self.task_projection(task_obs)
+    task_embedding = task_embedding / (task_embedding.norm(dim=-1, keepdim=True) + 1e-8)
+    return torch.matmul(task_embedding, self.W.T)
+
+  def _normal_task_projection(self, task_obs: torch.Tensor) -> torch.Tensor:
+    return self.task_projection(task_obs)
+
+  def forward(self, task_obs: torch.Tensor) -> torch.Tensor:
+    return self._forward_method(task_obs)
+
+  @torch.no_grad()
+  def init_weights(self) -> None:
+    for module in self.modules():
+      if isinstance(module, nn.Linear):
+        in_dim = module.weight.shape[1]
+        std = 1.0 / math.sqrt(in_dim)
+        nn.init.normal_(module.weight, mean=0.0, std=std)
+        if module.bias is not None:
+          nn.init.zeros_(module.bias)
+
+
 class _SparseTrackTransformerBlock(nn.Module):
   def __init__(self, embed_dim: int, num_heads: int, ff_dim: int) -> None:
     super().__init__()
@@ -224,6 +294,8 @@ class _BaseTrackingAttentionActor(MLPModel):
     head_hidden_dims: tuple[int, ...] | list[int] = (1536, 1024, 512, 256),
     dropout: float = 0.0,
     attention_activation: str = "gelu",
+    task_embedder_hidden_dims: tuple[int, ...] | list[int] | None = None,
+    reduced_task_dim: int | None = None,
   ) -> None:
     self.history_length = int(history_length)
     self.frame_dim = int(frame_dim)
@@ -236,6 +308,8 @@ class _BaseTrackingAttentionActor(MLPModel):
     self.cross_layers = int(cross_layers)
     self.dropout = float(dropout)
     self.attention_activation = attention_activation
+    self.task_embedder_hidden_dims = tuple(task_embedder_hidden_dims or ())
+    self.reduced_task_dim = reduced_task_dim
     self._latent_dim = self._attention_latent_dim()
     if cnn_cfg is not None:
       raise ValueError("tracking attention actors do not support cnn_cfg")
@@ -257,6 +331,9 @@ class _BaseTrackingAttentionActor(MLPModel):
 
   def _attention_latent_dim(self) -> int:
     raise NotImplementedError
+
+  def _expected_output_dim(self) -> int:
+    return self.num_dofs
 
   def _build_history_encoder(self, num_layers: int) -> nn.TransformerEncoder:
     encoder_layer = _make_encoder_layer(
@@ -300,8 +377,9 @@ class _BaseTrackingAttentionActor(MLPModel):
       raise ValueError(
         f"expected command_dim {2 * self.num_dofs}, got {self.command_dim}"
       )
-    if output_dim != self.num_dofs:
-      raise ValueError(f"expected output_dim {self.num_dofs}, got {output_dim}")
+    expected_output_dim = self._expected_output_dim()
+    if output_dim != expected_output_dim:
+      raise ValueError(f"expected output_dim {expected_output_dim}, got {output_dim}")
     if self.d_model % self.num_heads != 0:
       raise ValueError("d_model must be divisible by num_heads")
 
@@ -534,17 +612,22 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
     return torch.cat((current_full_obs, dynamics, command_embedding), dim=-1)
 
 
-class SparseTrackFullRefAttentionActor(_BaseTrackingAttentionActor):
-  """SparseTrack-style transformer over full-ref tracking observations."""
+class _SparseTrackFullRefAttentionMixin:
+  """Shared SparseTrack full-reference transformer implementation."""
 
-  def __init__(self, *args, **kwargs) -> None:
-    super().__init__(*args, **kwargs)
+  def _init_sparsetrack_modules(self, output_dim: int) -> None:
+    self.mlp = nn.Sequential(nn.Linear(self.d_model, output_dim))
     self.prop_obs_dim = sum(TERM_DIMS[name] for name in SPARSETRACK_PROP_TERMS)
     self.task_obs_dim = sum(TERM_DIMS[name] for name in SPARSETRACK_TASK_TERMS)
 
     self.prop_projection = nn.Linear(self.prop_obs_dim, self.d_model)
     self.action_projection = nn.Linear(self.num_dofs, self.d_model)
-    self.task_projection = nn.Linear(self.task_obs_dim, self.d_model)
+    self.task_embedder = _SparseTrackTaskEmbedder(
+      task_obs_dim=self.task_obs_dim,
+      embedding_dim=self.d_model,
+      reduced_task_dim=self.reduced_task_dim,
+      hidden_dims=self.task_embedder_hidden_dims,
+    )
     self.empty_embedding = nn.Parameter(torch.empty(1, 1, self.d_model))
     self.transformer_blocks = nn.ModuleList(
       [
@@ -583,7 +666,7 @@ class SparseTrackFullRefAttentionActor(_BaseTrackingAttentionActor):
 
     prop_tokens = self.prop_projection(prop_obs)
     action_tokens = self.action_projection(action_obs)
-    task_tokens = self.task_projection(task_obs)
+    task_tokens = self.task_embedder(task_obs)
 
     context = prop_tokens.new_empty(
       prop_tokens.shape[0],
@@ -621,9 +704,9 @@ class SparseTrackFullRefAttentionActor(_BaseTrackingAttentionActor):
     for module in (
       self.prop_projection,
       self.action_projection,
-      self.task_projection,
     ):
       self._init_linear(module)
+    self.task_embedder.init_weights()
 
     for block in self.transformer_blocks:
       for module in block.modules():
@@ -669,3 +752,31 @@ class SparseTrackFullRefAttentionActor(_BaseTrackingAttentionActor):
       raise TypeError("expected the MLP head to contain an nn.Linear output layer")
     nn.init.zeros_(last_linear.weight)
     nn.init.zeros_(last_linear.bias)
+
+
+class SparseTrackFullRefAttentionActor(
+  _SparseTrackFullRefAttentionMixin,
+  _BaseTrackingAttentionActor,
+):
+  """SparseTrack-style transformer actor over full-ref tracking observations."""
+
+  def __init__(self, *args, **kwargs) -> None:
+    super().__init__(*args, **kwargs)
+    self._init_sparsetrack_modules(self.num_dofs)
+
+
+class SparseTrackFullRefAttentionCritic(
+  _SparseTrackFullRefAttentionMixin,
+  _BaseTrackingAttentionActor,
+):
+  """SparseTrack-style transformer critic over full-ref tracking observations."""
+
+  def __init__(self, *args, **kwargs) -> None:
+    super().__init__(*args, **kwargs)
+    self._init_sparsetrack_modules(1)
+
+  def _expected_output_dim(self) -> int:
+    return 1
+
+  def as_onnx(self, verbose: bool = False) -> nn.Module:
+    raise NotImplementedError("SparseTrack transformer critic is not exported to ONNX")

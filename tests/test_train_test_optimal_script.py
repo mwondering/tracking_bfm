@@ -37,7 +37,7 @@ def test_train_test_optimal_script_defaults_to_no_reg_no_dr_task(
   assert args[:3] == [
     "run",
     "train",
-    "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR",
+    "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR",
   ]
   assert "--agent.resume" not in args
   assert args[args.index("--env.commands.motion.sampling-mode") + 1] == "adaptive"
@@ -49,7 +49,11 @@ def test_train_test_optimal_script_defaults_to_no_reg_no_dr_task(
 def test_train_test_optimal_script_can_select_regularized_control_task(
   tmp_path: Path,
 ) -> None:
-  args = _run_script_with_uv_stub(tmp_path, DISABLE_REG_AND_DR="False")
+  args = _run_script_with_uv_stub(
+    tmp_path,
+    DISABLE_REG_AND_DR="False",
+    ATTENTION_VARIANT="mlp",
+  )
 
   assert args[:3] == [
     "run",

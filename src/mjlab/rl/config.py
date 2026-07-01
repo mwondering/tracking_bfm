@@ -50,6 +50,10 @@ class RslRlPpoAlgorithmCfg:
   """
   learning_rate: float = 1e-3
   """The learning rate."""
+  actor_learning_rate: float | None = None
+  """Optional actor-specific learning rate for algorithms that support split LR."""
+  critic_learning_rate: float | None = None
+  """Optional critic-specific learning rate for algorithms that support split LR."""
   schedule: Literal["adaptive", "fixed"] = "adaptive"
   """The learning rate schedule."""
   gamma: float = 0.99

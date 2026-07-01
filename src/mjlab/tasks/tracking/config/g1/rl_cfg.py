@@ -6,7 +6,16 @@ from mjlab.rl import (
   RslRlPpoAlgorithmCfg,
 )
 
-from .attention_cfg import AttentionVariant, tracking_attention_actor_cfg
+from .attention_cfg import (
+  AttentionVariant,
+  TrackingAttentionModelCfg,
+  tracking_attention_actor_cfg,
+)
+
+SPARSETRACK_FULL_REF_CRITIC_CLASS = (
+  "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionCritic"
+)
+SPARSETRACK_SPLIT_LR_PPO_CLASS = "mjlab.tasks.tracking.rl.ppo:SparseTrackSplitLrPPO"
 
 
 def unitree_g1_tracking_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:
@@ -95,10 +104,37 @@ def unitree_g1_trackingbfm_attention_ppo_runner_cfg(
   cfg.actor = tracking_attention_actor_cfg(variant)
   cfg.experiment_name = "test_optimal_tracking_bfm_attention"
   if variant == "sparsetrack_full_ref":
-    cfg.algorithm.learning_rate = 5.0e-5
+    actor_cfg = cfg.actor
+    assert isinstance(actor_cfg, TrackingAttentionModelCfg)
+    cfg.critic = TrackingAttentionModelCfg(
+      class_name=SPARSETRACK_FULL_REF_CRITIC_CLASS,
+      hidden_dims=(512, 256),
+      activation="elu",
+      obs_normalization=True,
+      distribution_cfg=None,
+      history_length=actor_cfg.history_length,
+      frame_dim=actor_cfg.frame_dim,
+      command_dim=actor_cfg.command_dim,
+      num_dofs=actor_cfg.num_dofs,
+      d_model=actor_cfg.d_model,
+      num_heads=actor_cfg.num_heads,
+      ffn_dim=actor_cfg.ffn_dim,
+      history_layers=actor_cfg.history_layers,
+      cross_layers=actor_cfg.cross_layers,
+      dropout=actor_cfg.dropout,
+      attention_activation=actor_cfg.attention_activation,
+      head_hidden_dims=actor_cfg.head_hidden_dims,
+      task_embedder_hidden_dims=actor_cfg.task_embedder_hidden_dims,
+      reduced_task_dim=None,
+    )
+    cfg.algorithm.class_name = SPARSETRACK_SPLIT_LR_PPO_CLASS
+    cfg.algorithm.learning_rate = 2.0e-5
+    cfg.algorithm.actor_learning_rate = 2.0e-5
+    cfg.algorithm.critic_learning_rate = 1.0e-3
     cfg.algorithm.num_learning_epochs = 2
     cfg.algorithm.num_mini_batches = 16
-    cfg.algorithm.entropy_coef = 0.001
+    cfg.algorithm.entropy_coef = 0.005
+    cfg.num_steps_per_env = 32
   return cfg
 
 
