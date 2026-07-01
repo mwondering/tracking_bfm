@@ -59,7 +59,7 @@
     <link rel="prev" title="mjlab.terrains" href="terrains.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Jun 26, 2026"/>
+    <meta name="docbuild:last-update" content="Jul 01, 2026"/>
   </head>
   
   
@@ -488,6 +488,8 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.num_learning_epochs"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.num_learning_epochs</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.num_mini_batches"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.num_mini_batches</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.learning_rate</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.actor_learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.actor_learning_rate</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.critic_learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.critic_learning_rate</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.schedule"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.schedule</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.gamma"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.gamma</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.lam"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.lam</span></code></a></li>
@@ -668,6 +670,18 @@ mini batch size = num_envs * num_steps / num_mini_batches</p>
 <dt class="sig sig-object py" id="mjlab.rl.RslRlPpoAlgorithmCfg.learning_rate">
 <span class="sig-name descname"><span class="pre">learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.001</span></em><a class="headerlink" href="#mjlab.rl.RslRlPpoAlgorithmCfg.learning_rate" title="Link to this definition">#</a></dt>
 <dd><p>The learning rate.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mjlab.rl.RslRlPpoAlgorithmCfg.actor_learning_rate">
+<span class="sig-name descname"><span class="pre">actor_learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#mjlab.rl.RslRlPpoAlgorithmCfg.actor_learning_rate" title="Link to this definition">#</a></dt>
+<dd><p>Optional actor-specific learning rate for algorithms that support split LR.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mjlab.rl.RslRlPpoAlgorithmCfg.critic_learning_rate">
+<span class="sig-name descname"><span class="pre">critic_learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#mjlab.rl.RslRlPpoAlgorithmCfg.critic_learning_rate" title="Link to this definition">#</a></dt>
+<dd><p>Optional critic-specific learning rate for algorithms that support split LR.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -988,6 +1002,8 @@ False to keep metric logging but avoid storage usage. Default is True.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.num_learning_epochs"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.num_learning_epochs</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.num_mini_batches"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.num_mini_batches</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.learning_rate</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.actor_learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.actor_learning_rate</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.critic_learning_rate"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.critic_learning_rate</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.schedule"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.schedule</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.gamma"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.gamma</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#mjlab.rl.RslRlPpoAlgorithmCfg.lam"><code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg.lam</span></code></a></li>
@@ -1067,7 +1083,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Jun 26, 2026.
+  Last updated on Jul 01, 2026.
   <br/>
 </p>
   </div>

@@ -1,0 +1,1182 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>SparseTrack Transformer Strict Alignment Implementation Plan &#8212; mjlab Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/twemoji.css" />
+    <link rel="stylesheet" type="text/css" href="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/css/all.min.css?v=53359634" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=3ea80bc3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="https://unpkg.com/twemoji@latest/dist/twemoji.min.js"></script>
+    <script src="../../_static/twemoji.js"></script>
+    <script src="/home/runner/work/tracking_bfm/tracking_bfm/.venv/lib/python3.13/site-packages/sphinxcontrib/icon/node_modules/@fortawesome/fontawesome-free/js/all.min.js?v=ec35c6c9"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/plans/2026-06-29-sparsetrack-transformer-strict-alignment';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Jul 01, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mjlab Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+        <div class="sidebar-primary-item">
+<div class="sidebar-version-switcher">
+  <label class="sidebar-version-label" for="version-select">Version</label>
+  <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
+    <option value="2026-06-29-sparsetrack-transformer-strict-alignment.html" selected>main</option>
+  </select>
+</div>
+</div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/installation.html">Installation Guide</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/contributing.html">Contributing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/architecture_overview.html">Architecture Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/entity/entity_data.html">Entity Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actuators.html">Actuators</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/scene.html">Scene</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terrain.html">Terrain</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">The Manager Layer</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/environment_config.html">Environment Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/observations.html">Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/actions.html">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/rewards.html">Rewards</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/terminations.html">Terminations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/events.html">Events</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/randomization.html">Domain Randomization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/curriculum.html">Curriculum</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/recorders.html">Recorders</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/distributed_training.html">Distributed Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/training/cloud.html">Cloud Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/nan_guard.html">NaN Guard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/debugging/export_scene.html">Export Scene</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/envs.html">mjlab.envs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/scene.html">mjlab.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sim.html">mjlab.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/entity.html">mjlab.entity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/actuator.html">mjlab.actuator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/sensor.html">mjlab.sensor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/managers.html">mjlab.managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/terrains.html">mjlab.terrains</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/rl.html">mjlab.rl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/viewer.html">mjlab.viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../source/api/tasks.html">mjlab.tasks</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../source/motivation.html">Why mjlab?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/migration_isaac_lab.html">Migrating from Isaac Lab</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/faq.html">FAQ &amp; Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/research.html">Research</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/plans/2026-06-29-sparsetrack-transformer-strict-alignment.md" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/plans/2026-06-29-sparsetrack-transformer-strict-alignment.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/superpowers/plans/2026-06-29-sparsetrack-transformer-strict-alignment.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>SparseTrack Transformer Strict Alignment Implementation Plan</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-gaps">Current Gaps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-lock-down-sparsetrack-style-task-embedder-contract">Task 1: Lock Down SparseTrack-Style Task Embedder Contract</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-replace-extra-mlp-head-with-sparsetrack-linear-projection-head-semantics">Task 2: Replace Extra MLP Head With SparseTrack Linear Projection Head Semantics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-align-sparsetrack-config-defaults-that-current-ppo-supports">Task 3: Align SparseTrack Config Defaults That Current PPO Supports</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-add-sparsetrack-transformer-critic">Task 4: Add SparseTrack Transformer Critic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-ppo-extension-for-actor-critic-lr-strictness">Task 5: Add PPO Extension For Actor/Critic LR Strictness</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-final-verification">Task 6: Final Verification</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="sparsetrack-transformer-strict-alignment-implementation-plan">
+<h1>SparseTrack Transformer Strict Alignment Implementation Plan<a class="headerlink" href="#sparsetrack-transformer-strict-alignment-implementation-plan" title="Link to this heading">#</a></h1>
+<blockquote>
+<div><p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[</span> <span class="pre">]</span></code>) syntax for tracking.</p>
+</div></blockquote>
+<p><strong>Goal:</strong> Make <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR</span></code> match SparseTrack’s tracking transformer policy as closely as the current RSL-RL integration allows.</p>
+<p><strong>Architecture:</strong> Keep the existing full-ref <code class="docutils literal notranslate"><span class="pre">TestOptimal-NoRegNoDR</span></code> observation contract, but make the SparseTrack baseline use SparseTrack-style actor and critic transformer shapes: separate prop/action/task token preparation, SparseTrack <code class="docutils literal notranslate"><span class="pre">TaskEmbedder</span></code>, <code class="docutils literal notranslate"><span class="pre">HumanoidTransformer</span></code> with a single linear projection head, zero-initialized heads, and SparseTrack PPO-facing defaults. Add a tracking-local PPO subclass for SparseTrack actor/critic split learning rates while leaving other PPO tasks on the stock RSL-RL algorithm.</p>
+<p><strong>Tech Stack:</strong> PyTorch, RSL-RL <code class="docutils literal notranslate"><span class="pre">MLPModel</span></code>, <code class="docutils literal notranslate"><span class="pre">TensorDict</span></code>, pytest, ruff.</p>
+<hr class="docutils" />
+<section id="current-gaps">
+<h2>Current Gaps<a class="headerlink" href="#current-gaps" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionActor</span></code> currently uses RSL-RL’s MLP head with <code class="docutils literal notranslate"><span class="pre">head_hidden_dims=(512,</span> <span class="pre">256)</span></code>. SparseTrack uses <code class="docutils literal notranslate"><span class="pre">HumanoidTransformer.projection_head</span> <span class="pre">=</span> <span class="pre">nn.Linear(embed_dim,</span> <span class="pre">output_dim)</span></code> directly.</p></li>
+<li><p>Task embedding is currently an inline <code class="docutils literal notranslate"><span class="pre">nn.Linear(task_obs_dim,</span> <span class="pre">d_model)</span></code>. SparseTrack uses a separate <code class="docutils literal notranslate"><span class="pre">TaskEmbedder</span></code>, with support for <code class="docutils literal notranslate"><span class="pre">task_embedder_hidden_dims=[]</span></code> and <code class="docutils literal notranslate"><span class="pre">reduced_task_dim=None</span></code>.</p></li>
+<li><p>Initial exploration std is <code class="docutils literal notranslate"><span class="pre">0.5</span></code>. SparseTrack tracking transformer config uses <code class="docutils literal notranslate"><span class="pre">init_noise_std=0.8</span></code> and <code class="docutils literal notranslate"><span class="pre">std_clamp_range=[0.001,</span> <span class="pre">1.0]</span></code>.</p></li>
+<li><p>PPO learning rate is a compromise single LR <code class="docutils literal notranslate"><span class="pre">5e-5</span></code>. SparseTrack uses actor LR <code class="docutils literal notranslate"><span class="pre">2e-5</span></code> and critic LR <code class="docutils literal notranslate"><span class="pre">1e-3</span></code>; strict alignment needs a tracking-local PPO subclass with separate optimizer parameter groups.</p></li>
+<li><p>SparseTrack’s tracking transformer uses <code class="docutils literal notranslate"><span class="pre">num_steps_per_env=32</span></code>, <code class="docutils literal notranslate"><span class="pre">num_learning_epochs=2</span></code>, <code class="docutils literal notranslate"><span class="pre">num_mini_batches=16</span></code>, <code class="docutils literal notranslate"><span class="pre">entropy_coef=0.005</span></code>. Current baseline already has epochs/minibatches aligned, but not rollout length or entropy.</p></li>
+<li><p>Current tests allow the SparseTrack actor parameter budget to be <code class="docutils literal notranslate"><span class="pre">3M-3.5M</span></code>, which encodes the extra MLP head. Strict alignment should reduce this to roughly the SparseTrack actor shape: transformer + task embedder + one linear head.</p></li>
+<li><p>The attention block implementation is already materially aligned: RMSNorm, RoPE, SwiGLU, self-attention, cross-attention, empty-token mask, residual output projection scaling, and zero-initialized mean output are all present.</p></li>
+<li><p>Current critic observation history is not expanded for the SparseTrack baseline. The transformer critic needs the same full-ref history layout as the actor.</p></li>
+</ol>
+</section>
+<section id="file-structure">
+<h2>File Structure<a class="headerlink" href="#file-structure" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/attention_models.py</span></code></p>
+<ul>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">_SparseTrackTaskEmbedder</span></code>.</p></li>
+<li><p>Replace the current SparseTrack actor’s task projection with the embedder.</p></li>
+<li><p>Replace the RSL-RL MLP head with a single <code class="docutils literal notranslate"><span class="pre">nn.Linear(d_model,</span> <span class="pre">num_dofs)</span></code> for the actor.</p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionCritic</span></code> with the same transformer/tokenization and a single <code class="docutils literal notranslate"><span class="pre">nn.Linear(d_model,</span> <span class="pre">1)</span></code> value head.</p></li>
+</ul>
+</li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/ppo.py</span></code></p>
+<ul>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">SparseTrackSplitLrPPO</span></code> with actor and critic optimizer parameter groups and adaptive KL LR updates that preserve separate rates.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/config.py</span></code> and <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/runner.py</span></code></p>
+<ul>
+<li><p>Add optional <code class="docutils literal notranslate"><span class="pre">actor_learning_rate</span></code> / <code class="docutils literal notranslate"><span class="pre">critic_learning_rate</span></code> fields.</p></li>
+<li><p>Strip None values before constructing stock PPO so existing tasks keep working.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/attention_cfg.py</span></code></p>
+<ul>
+<li><p>Add explicit config fields for <code class="docutils literal notranslate"><span class="pre">task_embedder_hidden_dims</span></code> and <code class="docutils literal notranslate"><span class="pre">reduced_task_dim</span></code>.</p></li>
+<li><p>Change <code class="docutils literal notranslate"><span class="pre">init_std</span></code> to <code class="docutils literal notranslate"><span class="pre">0.8</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code> and <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code></p>
+<ul>
+<li><p>Allow critic history expansion and enable it only for the SparseTrack full-ref baseline.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code></p>
+<ul>
+<li><p>Use the transformer critic, split-LR PPO, and SparseTrack defaults: <code class="docutils literal notranslate"><span class="pre">num_steps_per_env=32</span></code>, <code class="docutils literal notranslate"><span class="pre">entropy_coef=0.005</span></code>, actor LR <code class="docutils literal notranslate"><span class="pre">2e-5</span></code>, critic LR <code class="docutils literal notranslate"><span class="pre">1e-3</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p>
+<ul>
+<li><p>Add tests for TaskEmbedder module shape, linear-only output head, transformer critic shape, split-LR optimizer groups, and reduced parameter budget.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code></p>
+<ul>
+<li><p>Update PPO/std expectations to SparseTrack-aligned values and require transformer critic/split LRs.</p></li>
+</ul>
+</li>
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">tests/test_train_test_optimal_script.py</span></code></p>
+<ul>
+<li><p>Expect the script’s default no-reg/no-DR task to be the SparseTrack full-ref attention baseline.</p></li>
+</ul>
+</li>
+</ul>
+<hr class="docutils" />
+<section id="task-1-lock-down-sparsetrack-style-task-embedder-contract">
+<h3>Task 1: Lock Down SparseTrack-Style Task Embedder Contract<a class="headerlink" href="#task-1-lock-down-sparsetrack-style-task-embedder-contract" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/attention_models.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing tests</strong></p></li>
+</ul>
+<p>Add tests after <code class="docutils literal notranslate"><span class="pre">test_sparsetrack_full_ref_attention_task_tokens_affect_latent</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_full_ref_attention_uses_task_embedder_module</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">actor</span> <span class="o">=</span> <span class="n">_make_actor</span><span class="p">(</span><span class="s2">&quot;sparsetrack_full_ref&quot;</span><span class="p">,</span> <span class="n">SparseTrackFullRefAttentionActor</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">actor</span><span class="p">,</span> <span class="s2">&quot;task_embedder&quot;</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">actor</span><span class="p">,</span> <span class="s2">&quot;task_projection&quot;</span><span class="p">)</span>
+  <span class="n">task_tokens</span> <span class="o">=</span> <span class="n">actor</span><span class="o">.</span><span class="n">task_embedder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">ACTOR_HISTORY_LENGTH</span><span class="p">,</span> <span class="n">actor</span><span class="o">.</span><span class="n">task_obs_dim</span><span class="p">))</span>
+
+  <span class="k">assert</span> <span class="n">task_tokens</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">ACTOR_HISTORY_LENGTH</span><span class="p">,</span> <span class="n">actor</span><span class="o">.</span><span class="n">d_model</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_task_embedder_linear_init_matches_reference_scale</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">actor</span> <span class="o">=</span> <span class="n">_make_actor</span><span class="p">(</span><span class="s2">&quot;sparsetrack_full_ref&quot;</span><span class="p">,</span> <span class="n">SparseTrackFullRefAttentionActor</span><span class="p">)</span>
+  <span class="n">task_projection</span> <span class="o">=</span> <span class="n">actor</span><span class="o">.</span><span class="n">task_embedder</span><span class="o">.</span><span class="n">task_projection</span>
+
+  <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">task_projection</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span>
+  <span class="n">expected_std</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">actor</span><span class="o">.</span><span class="n">task_obs_dim</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span>
+  <span class="n">actual_std</span> <span class="o">=</span> <span class="n">task_projection</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+  <span class="k">assert</span> <span class="n">actual_std</span> <span class="o">==</span> <span class="n">pytest</span><span class="o">.</span><span class="n">approx</span><span class="p">(</span><span class="n">expected_std</span><span class="p">,</span> <span class="n">rel</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">task_projection</span><span class="o">.</span><span class="n">bias</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">task_projection</span><span class="o">.</span><span class="n">bias</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_sparsetrack_full_ref_attention_uses_task_embedder_module<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_sparsetrack_task_embedder_linear_init_matches_reference_scale<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because <code class="docutils literal notranslate"><span class="pre">task_embedder</span></code> does not exist and <code class="docutils literal notranslate"><span class="pre">task_projection</span></code> is still directly on the actor.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add <code class="docutils literal notranslate"><span class="pre">_SparseTrackTaskEmbedder</span></code></strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/attention_models.py</span></code>, add this class near <code class="docutils literal notranslate"><span class="pre">_SwiGLU</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">_SparseTrackTaskEmbedder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">task_obs_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">embedding_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">reduced_task_dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+    <span class="n">hidden_dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">hidden_dims</span> <span class="ow">or</span> <span class="p">())</span>
+    <span class="k">if</span> <span class="n">reduced_task_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_task_projection</span><span class="p">(</span>
+        <span class="n">task_obs_dim</span><span class="p">,</span> <span class="n">reduced_task_dim</span><span class="p">,</span> <span class="n">hidden_dims</span>
+      <span class="p">)</span>
+      <span class="n">matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">embedding_dim</span><span class="p">,</span> <span class="n">reduced_task_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+      <span class="n">q_matrix</span><span class="p">,</span> <span class="n">r_matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;reduced&quot;</span><span class="p">)</span>
+      <span class="n">diag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">r_matrix</span><span class="p">))</span>
+      <span class="n">diag</span><span class="p">[</span><span class="n">diag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;W&quot;</span><span class="p">,</span> <span class="n">q_matrix</span> <span class="o">*</span> <span class="n">diag</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_forward_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reduced_task_projection</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_task_projection</span><span class="p">(</span>
+        <span class="n">task_obs_dim</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="p">,</span> <span class="n">hidden_dims</span>
+      <span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_forward_method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normal_task_projection</span>
+
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_build_task_projection</span><span class="p">(</span>
+    <span class="n">input_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">output_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">hidden_dims</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hidden_dims</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">)</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">hidden_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">()]</span>
+    <span class="k">for</span> <span class="n">layer_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hidden_dims</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+      <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dims</span><span class="p">[</span><span class="n">layer_index</span><span class="p">],</span> <span class="n">hidden_dims</span><span class="p">[</span><span class="n">layer_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
+      <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">ELU</span><span class="p">())</span>
+    <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dims</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">output_dim</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="o">*</span><span class="n">layers</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_reduced_task_projection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_obs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">task_embedding</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span><span class="p">(</span><span class="n">task_obs</span><span class="p">)</span>
+    <span class="n">task_embedding</span> <span class="o">=</span> <span class="n">task_embedding</span> <span class="o">/</span> <span class="p">(</span><span class="n">task_embedding</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">task_embedding</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">_normal_task_projection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_obs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span><span class="p">(</span><span class="n">task_obs</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task_obs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_method</span><span class="p">(</span><span class="n">task_obs</span><span class="p">)</span>
+
+  <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">init_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">modules</span><span class="p">():</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">):</span>
+        <span class="n">in_dim</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">in_dim</span><span class="p">)</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">normal_</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="n">std</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">module</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+          <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Route actor through task embedder</strong></p></li>
+</ul>
+<p>Extend <code class="docutils literal notranslate"><span class="pre">_BaseTrackingAttentionActor.__init__</span></code> signature:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="n">task_embedder_hidden_dims</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">reduced_task_dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>Store:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="bp">self</span><span class="o">.</span><span class="n">task_embedder_hidden_dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">task_embedder_hidden_dims</span> <span class="ow">or</span> <span class="p">())</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">reduced_task_dim</span> <span class="o">=</span> <span class="n">reduced_task_dim</span>
+</pre></div>
+</div>
+<p>Replace in <code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionActor.__init__</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">task_obs_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">task_embedder</span> <span class="o">=</span> <span class="n">_SparseTrackTaskEmbedder</span><span class="p">(</span>
+  <span class="n">task_obs_dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">task_obs_dim</span><span class="p">,</span>
+  <span class="n">embedding_dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">d_model</span><span class="p">,</span>
+  <span class="n">reduced_task_dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">reduced_task_dim</span><span class="p">,</span>
+  <span class="n">hidden_dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">task_embedder_hidden_dims</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Replace in <code class="docutils literal notranslate"><span class="pre">_attention_latent_from_flat</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_projection</span><span class="p">(</span><span class="n">task_obs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task_tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">task_embedder</span><span class="p">(</span><span class="n">task_obs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Update <code class="docutils literal notranslate"><span class="pre">_init_sparsetrack_weights</span></code> by removing <code class="docutils literal notranslate"><span class="pre">self.task_projection</span></code> from the projection loop and adding:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">task_embedder</span><span class="o">.</span><span class="n">init_weights</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_attention_models.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: all tests pass except parameter budget if Task 2 has not yet updated it.</p>
+</section>
+<hr class="docutils" />
+<section id="task-2-replace-extra-mlp-head-with-sparsetrack-linear-projection-head-semantics">
+<h3>Task 2: Replace Extra MLP Head With SparseTrack Linear Projection Head Semantics<a class="headerlink" href="#task-2-replace-extra-mlp-head-with-sparsetrack-linear-projection-head-semantics" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/attention_cfg.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing tests</strong></p></li>
+</ul>
+<p>Add after <code class="docutils literal notranslate"><span class="pre">test_sparsetrack_full_ref_attention_zero_initial_action_mean</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_full_ref_attention_uses_linear_projection_head</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">actor</span> <span class="o">=</span> <span class="n">_make_actor</span><span class="p">(</span><span class="s2">&quot;sparsetrack_full_ref&quot;</span><span class="p">,</span> <span class="n">SparseTrackFullRefAttentionActor</span><span class="p">)</span>
+  <span class="n">linear_layers</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">module</span> <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">actor</span><span class="o">.</span><span class="n">mlp</span><span class="o">.</span><span class="n">modules</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">)</span>
+  <span class="p">]</span>
+
+  <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">linear_layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+  <span class="k">assert</span> <span class="n">linear_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">in_features</span> <span class="o">==</span> <span class="n">actor</span><span class="o">.</span><span class="n">d_model</span>
+  <span class="k">assert</span> <span class="n">linear_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">out_features</span> <span class="o">==</span> <span class="n">NUM_DOFS</span>
+</pre></div>
+</div>
+<p>Update parameter budget:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;sparsetrack_full_ref&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">2_700_000</span><span class="p">,</span> <span class="mi">3_000_000</span><span class="p">),</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run tests to verify they fail</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_sparsetrack_full_ref_attention_uses_linear_projection_head<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_tracking_attention_actor_parameter_budget<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: fail because current head has two hidden layers and parameter count is about <code class="docutils literal notranslate"><span class="pre">3,240,762</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add a linear-head override</strong></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">rsl_rl.models.MLP</span></code> cannot represent an empty hidden-dim head because it indexes <code class="docutils literal notranslate"><span class="pre">hidden_dims[0]</span></code>. A one-step hidden dim of <code class="docutils literal notranslate"><span class="pre">-1</span></code> would still add an activation, so do not use it.</p>
+<p>Instead replace <code class="docutils literal notranslate"><span class="pre">self.mlp</span></code> inside <code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionActor.__init__</span></code> after <code class="docutils literal notranslate"><span class="pre">super().__init__</span></code> and before <code class="docutils literal notranslate"><span class="pre">_zero_output_head()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dofs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Update <code class="docutils literal notranslate"><span class="pre">_zero_output_head</span></code> to support both direct <code class="docutils literal notranslate"><span class="pre">nn.Linear</span></code> and the older sequential <code class="docutils literal notranslate"><span class="pre">MLP</span></code> style:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">):</span>
+  <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="o">.</span><span class="n">weight</span><span class="p">)</span>
+  <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span>
+  <span class="k">return</span>
+</pre></div>
+</div>
+<p>Then keep the existing fallback for other <code class="docutils literal notranslate"><span class="pre">MLP</span></code>-style heads:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">last_linear</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+  <span class="p">(</span><span class="n">module</span> <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mlp</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">)),</span>
+  <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Run tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_attention_models.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: all actor model tests pass, and the SparseTrack parameter budget is lower than before.</p>
+</section>
+<hr class="docutils" />
+<section id="task-3-align-sparsetrack-config-defaults-that-current-ppo-supports">
+<h3>Task 3: Align SparseTrack Config Defaults That Current PPO Supports<a class="headerlink" href="#task-3-align-sparsetrack-config-defaults-that-current-ppo-supports" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/attention_cfg.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing config test</strong></p></li>
+</ul>
+<p>Update <code class="docutils literal notranslate"><span class="pre">test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">distribution_cfg</span> <span class="o">==</span> <span class="p">{</span>
+  <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;GaussianDistribution&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;init_std&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+  <span class="s2">&quot;std_type&quot;</span><span class="p">:</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;std_range&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">num_steps_per_env</span> <span class="o">==</span> <span class="mi">32</span>
+<span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">==</span> <span class="mf">2.0e-5</span>
+<span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">num_learning_epochs</span> <span class="o">==</span> <span class="mi">2</span>
+<span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">num_mini_batches</span> <span class="o">==</span> <span class="mi">16</span>
+<span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">entropy_coef</span> <span class="o">==</span> <span class="mf">0.005</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run test to verify it fails</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_task.py::test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: fail on <code class="docutils literal notranslate"><span class="pre">init_std</span></code>, <code class="docutils literal notranslate"><span class="pre">num_steps_per_env</span></code>, <code class="docutils literal notranslate"><span class="pre">learning_rate</span></code>, or <code class="docutils literal notranslate"><span class="pre">entropy_coef</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Update actor config</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">tracking_attention_actor_cfg(&quot;sparsetrack_full_ref&quot;)</span></code>, change:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">init_std</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+<span class="n">task_embedder_hidden_dims</span><span class="o">=</span><span class="p">(),</span>
+<span class="n">reduced_task_dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>Add these fields to <code class="docutils literal notranslate"><span class="pre">TrackingAttentionModelCfg</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task_embedder_hidden_dims</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+<span class="n">reduced_task_dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</pre></div>
+</div>
+<p>Add corresponding parameters to <code class="docutils literal notranslate"><span class="pre">_tracking_attention_actor_cfg</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Update RL defaults</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">unitree_g1_trackingbfm_attention_ppo_runner_cfg</span></code>, for <code class="docutils literal notranslate"><span class="pre">sparsetrack_full_ref</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cfg</span><span class="o">.</span><span class="n">num_steps_per_env</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="mf">2.0e-5</span>
+<span class="n">cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">num_learning_epochs</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">num_mini_batches</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">entropy_coef</span> <span class="o">=</span> <span class="mf">0.005</span>
+</pre></div>
+</div>
+<p>Do not add <code class="docutils literal notranslate"><span class="pre">critic_learning_rate</span></code> here; current <code class="docutils literal notranslate"><span class="pre">RslRlPpoAlgorithmCfg</span></code> and installed <code class="docutils literal notranslate"><span class="pre">rsl_rl.algorithms.PPO</span></code> do not support it.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Run config tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_tracking_attention_test_optimal_keeps_baseline_mlp_critic<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: pass.</p>
+</section>
+<hr class="docutils" />
+<section id="task-4-add-sparsetrack-transformer-critic">
+<h3>Task 4: Add SparseTrack Transformer Critic<a class="headerlink" href="#task-4-add-sparsetrack-transformer-critic" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/attention_models.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/env_cfgs.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/__init__.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/config/g1/rl_cfg.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p></li>
+<li><p>Test: <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write failing tests</strong></p></li>
+</ul>
+<p>Add a model forward test:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_full_ref_attention_critic_forward_shape</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">critic</span> <span class="o">=</span> <span class="n">_make_sparsetrack_critic</span><span class="p">()</span>
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">ACTOR_HISTORY_LENGTH</span> <span class="o">*</span> <span class="n">FRAME_DIM</span><span class="p">)},</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+  <span class="p">)</span>
+
+  <span class="n">values</span> <span class="o">=</span> <span class="n">critic</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Add a config test:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_attention_test_optimal_uses_transformer_critic</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">rl_cfg</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+    <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">,</span>
+    <span class="n">load_rl_cfg</span><span class="p">(</span>
+      <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR&quot;</span>
+    <span class="p">),</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">critic</span><span class="o">.</span><span class="n">class_name</span> <span class="o">==</span> <span class="s2">&quot;mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionCritic&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Add shared SparseTrack full-ref transformer implementation</strong></p></li>
+</ul>
+<p>Factor <code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionActor</span></code> internals into <code class="docutils literal notranslate"><span class="pre">_SparseTrackFullRefAttentionMixin</span></code> so actor and critic share prop/action/task tokenization, empty-token mask, transformer blocks, RMSNorm, TaskEmbedder, and SparseTrack weight initialization.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Add <code class="docutils literal notranslate"><span class="pre">SparseTrackFullRefAttentionCritic</span></code></strong></p></li>
+</ul>
+<p>Subclass the same base/mixin, override <code class="docutils literal notranslate"><span class="pre">_expected_output_dim()</span></code> to return <code class="docutils literal notranslate"><span class="pre">1</span></code>, and initialize a single <code class="docutils literal notranslate"><span class="pre">nn.Linear(d_model,</span> <span class="pre">1)</span></code> value head with zero weights/bias.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Enable critic history only for SparseTrack baseline</strong></p></li>
+</ul>
+<p>Add a <code class="docutils literal notranslate"><span class="pre">critic_history</span></code> flag to <code class="docutils literal notranslate"><span class="pre">unitree_g1_flat_tracking_bfm_attention_test_optimal_env_cfg()</span></code> and set critic term <code class="docutils literal notranslate"><span class="pre">history_length=ACTOR_HISTORY_LENGTH</span></code>, <code class="docutils literal notranslate"><span class="pre">flatten_history_dim=True</span></code> only when registering <code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR</span></code>.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Wire critic config</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">unitree_g1_trackingbfm_attention_ppo_runner_cfg(&quot;sparsetrack_full_ref&quot;)</span></code>, set <code class="docutils literal notranslate"><span class="pre">cfg.critic</span></code> to <code class="docutils literal notranslate"><span class="pre">TrackingAttentionModelCfg(class_name=&quot;mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionCritic&quot;,</span> <span class="pre">...)</span></code> with the actor’s transformer dimensions.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 6: Verify</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_sparsetrack_full_ref_attention_critic_forward_shape<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_sparsetrack_attention_test_optimal_uses_transformer_critic<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: both pass.</p>
+</section>
+<hr class="docutils" />
+<section id="task-5-add-ppo-extension-for-actor-critic-lr-strictness">
+<h3>Task 5: Add PPO Extension For Actor/Critic LR Strictness<a class="headerlink" href="#task-5-add-ppo-extension-for-actor-critic-lr-strictness" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/config.py</span></code></p></li>
+<li><p>Modify: <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/runner.py</span></code></p></li>
+<li><p>Create: <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/ppo.py</span></code></p></li>
+<li><p>Test: add or modify <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_task.py</span></code></p></li>
+<li><p>Test: add or modify <code class="docutils literal notranslate"><span class="pre">tests/test_tracking_attention_models.py</span></code></p></li>
+<li><p>[ ] <strong>Step 1: Write config and optimizer tests</strong></p></li>
+</ul>
+<p>Add a config test:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_attention_can_configure_actor_critic_learning_rates</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">rl_cfg</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+    <span class="n">RslRlOnPolicyRunnerCfg</span><span class="p">,</span>
+    <span class="n">load_rl_cfg</span><span class="p">(</span>
+      <span class="s2">&quot;Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR&quot;</span>
+    <span class="p">),</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">actor_learning_rate</span> <span class="o">==</span> <span class="mf">2.0e-5</span>
+  <span class="k">assert</span> <span class="n">rl_cfg</span><span class="o">.</span><span class="n">algorithm</span><span class="o">.</span><span class="n">critic_learning_rate</span> <span class="o">==</span> <span class="mf">1.0e-3</span>
+</pre></div>
+</div>
+<p>Add an optimizer-param-group test:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">test_sparsetrack_split_lr_ppo_uses_actor_critic_param_groups</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">actor</span> <span class="o">=</span> <span class="n">_make_actor</span><span class="p">(</span><span class="s2">&quot;sparsetrack_full_ref&quot;</span><span class="p">,</span> <span class="n">SparseTrackFullRefAttentionActor</span><span class="p">)</span>
+  <span class="n">critic</span> <span class="o">=</span> <span class="n">_make_sparsetrack_critic</span><span class="p">()</span>
+  <span class="n">obs</span> <span class="o">=</span> <span class="n">TensorDict</span><span class="p">(</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">ACTOR_HISTORY_LENGTH</span> <span class="o">*</span> <span class="n">FRAME_DIM</span><span class="p">),</span>
+      <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">ACTOR_HISTORY_LENGTH</span> <span class="o">*</span> <span class="n">FRAME_DIM</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+  <span class="p">)</span>
+  <span class="n">storage</span> <span class="o">=</span> <span class="n">RolloutStorage</span><span class="p">(</span><span class="s2">&quot;rl&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">obs</span><span class="p">,</span> <span class="p">[</span><span class="n">NUM_DOFS</span><span class="p">],</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+  <span class="n">alg</span> <span class="o">=</span> <span class="n">SparseTrackSplitLrPPO</span><span class="p">(</span>
+    <span class="n">actor</span><span class="p">,</span>
+    <span class="n">critic</span><span class="p">,</span>
+    <span class="n">storage</span><span class="p">,</span>
+    <span class="n">actor_learning_rate</span><span class="o">=</span><span class="mf">2.0e-5</span><span class="p">,</span>
+    <span class="n">critic_learning_rate</span><span class="o">=</span><span class="mf">1.0e-3</span><span class="p">,</span>
+  <span class="p">)</span>
+
+  <span class="k">assert</span> <span class="p">[</span><span class="n">group</span><span class="p">[</span><span class="s2">&quot;lr&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">alg</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mf">2.0e-5</span><span class="p">,</span> <span class="mf">1.0e-3</span><span class="p">]</span>
+  <span class="k">assert</span> <span class="n">alg</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">==</span> <span class="mf">2.0e-5</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Extend config dataclass</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/config.py</span></code>, add:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">actor_learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">critic_learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Strip None split-LR fields for stock PPO</strong></p></li>
+</ul>
+<p>In <code class="docutils literal notranslate"><span class="pre">src/mjlab/rl/runner.py</span></code>, remove <code class="docutils literal notranslate"><span class="pre">actor_learning_rate</span></code> and <code class="docutils literal notranslate"><span class="pre">critic_learning_rate</span></code> from the algorithm dict when their values are <code class="docutils literal notranslate"><span class="pre">None</span></code>, so existing stock PPO tasks do not receive unsupported keyword arguments.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Implement optimizer param groups and adaptive LR preservation</strong></p></li>
+</ul>
+<p>Create a tracking-local PPO subclass that, after base PPO construction, replaces the optimizer when both rates are configured:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">resolve_optimizer</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)(</span>
+  <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">actor_learning_rate</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">critic_learning_rate</span><span class="p">},</span>
+  <span class="p">]</span>
+<span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">actor_learning_rate</span>
+</pre></div>
+</div>
+<p>Override <code class="docutils literal notranslate"><span class="pre">update()</span></code> only for the split-LR case so adaptive KL changes actor and critic rates independently, matching SparseTrack’s behavior.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 5: Verify</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_sparsetrack_attention_test_optimal_uses_actor_critic_learning_rates<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py::test_sparsetrack_split_lr_ppo_uses_actor_critic_param_groups<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_runner.py::test_runner_persists_common_step_counter<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: pass, proving config fields are present, split optimizer groups are real, and stock PPO construction still works.</p>
+</section>
+<hr class="docutils" />
+<section id="task-6-final-verification">
+<h3>Task 6: Final Verification<a class="headerlink" href="#task-6-final-verification" title="Link to this heading">#</a></h3>
+<p><strong>Files:</strong></p>
+<ul class="simple">
+<li><p>Test only.</p></li>
+<li><p>[ ] <strong>Step 1: Run actor tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_attention_models.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected: all tests pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 2: Run focused task/config tests</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_tracking_attention_test_optimal_tasks_are_registered<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_tracking_attention_test_optimal_uses_no_future_ref_and_actor_history<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_tracking_attention_test_optimal_keeps_baseline_mlp_critic<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py::test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_train_test_optimal_script.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-q
+</pre></div>
+</div>
+<p>Expected: all focused tests pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 3: Run lint/format</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/rl/attention_models.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/config/g1/attention_cfg.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/config/g1/rl_cfg.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py
+
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>--check<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/rl/attention_models.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/config/g1/attention_cfg.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>src/mjlab/tasks/tracking/config/g1/rl_cfg.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_attention_models.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>tests/test_tracking_task.py
+</pre></div>
+</div>
+<p>Expected: both pass.</p>
+<ul class="simple">
+<li><p>[ ] <strong>Step 4: Record known unrelated failure</strong></p></li>
+</ul>
+<p>Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_tracking_task.py<span class="w"> </span>-q
+</pre></div>
+</div>
+<p>Expected in current workspace: one unrelated pre-existing failure may remain:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>test_g1_tracking_penalizes_waist_action_rate:
+expected reward.weight == -0.05, actual -0.5
+</pre></div>
+</div>
+<p>Do not fix it as part of this SparseTrack alignment task.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="self-review">
+<h2>Self-Review<a class="headerlink" href="#self-review" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Spec coverage: covers actor architecture, task embedder, projection head, initialization, std, rollout length, PPO supported defaults, and actor/critic LR mismatch.</p></li>
+<li><p>Placeholder scan: no TBD/TODO placeholders.</p></li>
+<li><p>Type consistency: all new config fields are named consistently as <code class="docutils literal notranslate"><span class="pre">task_embedder_hidden_dims</span></code> and <code class="docutils literal notranslate"><span class="pre">reduced_task_dim</span></code>.</p></li>
+<li><p>Known limitation: exact actor/critic LR split requires a PPO/runner extension because current installed RSL-RL PPO supports one shared <code class="docutils literal notranslate"><span class="pre">learning_rate</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-gaps">Current Gaps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-structure">File Structure</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-1-lock-down-sparsetrack-style-task-embedder-contract">Task 1: Lock Down SparseTrack-Style Task Embedder Contract</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-2-replace-extra-mlp-head-with-sparsetrack-linear-projection-head-semantics">Task 2: Replace Extra MLP Head With SparseTrack Linear Projection Head Semantics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-3-align-sparsetrack-config-defaults-that-current-ppo-supports">Task 3: Align SparseTrack Config Defaults That Current PPO Supports</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-4-add-sparsetrack-transformer-critic">Task 4: Add SparseTrack Transformer Critic</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-5-add-ppo-extension-for-actor-critic-lr-strictness">Task 5: Add PPO Extension For Actor/Critic LR Strictness</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#task-6-final-verification">Task 6: Final Verification</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#self-review">Self-Review</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The mjlab Developers
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, The mjlab Developers.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jul 01, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
