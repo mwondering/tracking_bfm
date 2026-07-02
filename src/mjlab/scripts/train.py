@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,26 @@ from mjlab.utils.os import (
 from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
+
+
+def _bootstrap_debug(log_dir: Path, message: str) -> None:
+  rank = os.environ.get("RANK", "launcher")
+  local_rank = os.environ.get("LOCAL_RANK", "launcher")
+  pid = os.getpid()
+  line = (
+    f"[BOOT][{time.strftime('%Y-%m-%d %H:%M:%S')}] "
+    f"rank={rank} local_rank={local_rank} pid={pid}: {message}"
+  )
+  print(line, flush=True)
+  try:
+    debug_dir = log_dir / "bootstrap_debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    log_file = debug_dir / f"rank_{rank}_local_{local_rank}_pid_{pid}.log"
+    with log_file.open("a", encoding="utf-8") as f:
+      f.write(line + "\n")
+      f.flush()
+  except Exception as exc:
+    print(f"[BOOT][WARN] failed to write bootstrap debug log: {exc}", flush=True)
 
 
 @dataclass(frozen=True)
@@ -54,7 +75,10 @@ class TrainConfig:
 
 
 def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
+  os.environ["MJLAB_BOOTSTRAP_DEBUG_DIR"] = str(log_dir / "bootstrap_debug")
+  _bootstrap_debug(log_dir, f"enter run_train task_id={task_id}")
   cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+  _bootstrap_debug(log_dir, f"CUDA_VISIBLE_DEVICES={cuda_visible!r}")
   if cuda_visible == "":
     device = "cpu"
     seed = cfg.agent.seed
@@ -68,12 +92,16 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     # Set seed to have diversity in different processes.
     seed = cfg.agent.seed + local_rank
 
+  _bootstrap_debug(log_dir, f"resolved device={device} seed={seed} rank={rank}")
+  _bootstrap_debug(log_dir, "before configure_torch_backends")
   configure_torch_backends()
+  _bootstrap_debug(log_dir, "after configure_torch_backends")
 
   cfg.agent.seed = seed
   cfg.env.seed = seed
 
   print(f"[INFO] Training with: device={device}, seed={seed}, rank={rank}")
+  _bootstrap_debug(log_dir, "after seed assignment")
   if cfg.debug:
     cfg.agent.logger = "tensorboard"
     cfg.agent.upload_model = False
@@ -145,9 +173,11 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
   if rank == 0:
     print(f"[INFO] Logging experiment in directory: {log_dir}")
 
+  _bootstrap_debug(log_dir, "before ManagerBasedRlEnv")
   env = ManagerBasedRlEnv(
     cfg=cfg.env, device=device, render_mode="rgb_array" if cfg.video else None
   )
+  _bootstrap_debug(log_dir, "after ManagerBasedRlEnv")
 
   log_root_path = log_dir.parent  # Go up from specific run dir to experiment dir.
 
@@ -183,7 +213,9 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     )
     print("[INFO] Recording videos during training.")
 
+  _bootstrap_debug(log_dir, "before RslRlVecEnvWrapper")
   env = RslRlVecEnvWrapper(env, clip_actions=cfg.agent.clip_actions)
+  _bootstrap_debug(log_dir, "after RslRlVecEnvWrapper")
   agent_cfg = asdict(cfg.agent)
   env_cfg = asdict(cfg.env)
 
@@ -201,6 +233,7 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     dump_yaml(log_dir / "params" / "env.yaml", env_cfg)
     dump_yaml(log_dir / "params" / "agent.yaml", agent_cfg)
 
+  _bootstrap_debug(log_dir, f"before runner init runner_cls={runner_cls.__name__}")
   runner = runner_cls(
     env,
     agent_cfg,
@@ -208,6 +241,7 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     device,
     **runner_kwargs,
   )
+  _bootstrap_debug(log_dir, "after runner init")
 
   if not cfg.debug:
     add_wandb_tags(cfg.agent.wandb_tags)
@@ -216,11 +250,15 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(str(resume_path))
 
+  _bootstrap_debug(log_dir, "before runner.learn")
   runner.learn(
     num_learning_iterations=cfg.agent.max_iterations, init_at_random_ep_len=True
   )
+  _bootstrap_debug(log_dir, "after runner.learn")
 
+  _bootstrap_debug(log_dir, "before env.close")
   env.close()
+  _bootstrap_debug(log_dir, "after env.close")
 
 
 def launch_training(task_id: str, args: TrainConfig | None = None):
@@ -233,9 +271,15 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
   if args.agent.run_name:
     log_dir_name += f"_{args.agent.run_name}"
   log_dir = log_root_path / log_dir_name
+  os.environ["MJLAB_BOOTSTRAP_DEBUG_DIR"] = str(log_dir / "bootstrap_debug")
+  _bootstrap_debug(log_dir, f"launch_training task_id={task_id}")
 
   # Select GPUs based on CUDA_VISIBLE_DEVICES and user specification.
   selected_gpus, num_gpus = select_gpus(args.gpu_ids)
+  _bootstrap_debug(
+    log_dir,
+    f"select_gpus gpu_ids={args.gpu_ids!r} selected={selected_gpus!r} num_gpus={num_gpus}",
+  )
 
   # Set environment variables for all modes.
   if selected_gpus is None:
@@ -243,6 +287,10 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
   else:
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, selected_gpus))
   os.environ["MUJOCO_GL"] = "egl"
+  _bootstrap_debug(
+    log_dir,
+    f"post CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')!r} MUJOCO_GL={os.environ.get('MUJOCO_GL')!r}",
+  )
 
   if num_gpus <= 1:
     # CPU or single GPU: run directly without torchrunx.
@@ -263,13 +311,17 @@ def launch_training(task_id: str, args: TrainConfig | None = None):
       else:
         # Default: put logs in training directory.
         os.environ["TORCHRUNX_LOG_DIR"] = str(log_dir / "torchrunx")
+    _bootstrap_debug(
+      log_dir,
+      f"before torchrunx Launcher TORCHRUNX_LOG_DIR={os.environ.get('TORCHRUNX_LOG_DIR')!r}",
+    )
 
     print(f"[INFO] Launching training with {num_gpus} GPUs", flush=True)
     torchrunx.Launcher(
       hostnames=["localhost"],
       workers_per_host=num_gpus,
       backend=None,  # Let rsl_rl handle process group initialization.
-      copy_env_vars=torchrunx.DEFAULT_ENV_VARS_FOR_COPY + ("MUJOCO*",),
+      copy_env_vars=torchrunx.DEFAULT_ENV_VARS_FOR_COPY + ("MUJOCO*", "MJLAB*"),
     ).run(run_train, task_id, args, log_dir)
 
 

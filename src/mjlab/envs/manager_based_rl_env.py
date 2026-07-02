@@ -1,4 +1,6 @@
 import math
+import os
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,6 +48,27 @@ from mjlab.utils.spaces import Dict as DictSpace
 from mjlab.viewer.debug_visualizer import DebugVisualizer
 from mjlab.viewer.offscreen_renderer import OffscreenRenderer
 from mjlab.viewer.viewer_config import ViewerConfig
+
+
+def _bootstrap_debug(message: str) -> None:
+  debug_dir = os.environ.get("MJLAB_BOOTSTRAP_DEBUG_DIR", "")
+  if not debug_dir:
+    return
+  rank = os.environ.get("RANK", "unknown")
+  local_rank = os.environ.get("LOCAL_RANK", "unknown")
+  pid = os.getpid()
+  line = (
+    f"[BOOT][{time.strftime('%Y-%m-%d %H:%M:%S')}] "
+    f"rank={rank} local_rank={local_rank} pid={pid}: env: {message}"
+  )
+  try:
+    os.makedirs(debug_dir, exist_ok=True)
+    log_file = os.path.join(debug_dir, f"rank_{rank}_local_{local_rank}_pid_{pid}.log")
+    with open(log_file, "a", encoding="utf-8") as f:
+      f.write(line + "\n")
+      f.flush()
+  except Exception:
+    pass
 
 
 @dataclass(kw_only=True)
@@ -193,6 +216,7 @@ class ManagerBasedRlEnv:
     **kwargs,
   ) -> None:
     # Initialize base environment state.
+    _bootstrap_debug("enter ManagerBasedRlEnv.__init__")
     self.cfg = cfg
     if self.cfg.action_trunk_len < 1:
       raise ValueError("action_trunk_len must be >= 1.")
@@ -205,7 +229,9 @@ class ManagerBasedRlEnv:
         f"decimation={self.cfg.decimation}."
       )
     if self.cfg.seed is not None:
+      _bootstrap_debug(f"before seed seed={self.cfg.seed}")
       self.cfg.seed = self.seed(self.cfg.seed)
+      _bootstrap_debug(f"after seed resolved_seed={self.cfg.seed}")
     self._sim_step_counter = 0
     self.extras = {}
     self.obs_buf = {}
@@ -214,19 +240,25 @@ class ManagerBasedRlEnv:
     )
 
     # Initialize scene and simulation.
+    _bootstrap_debug("before Scene")
     self.scene = Scene(self.cfg.scene, device=device)
+    _bootstrap_debug("after Scene")
+    _bootstrap_debug("before Simulation")
     self.sim = Simulation(
       num_envs=self.scene.num_envs,
       cfg=self.cfg.sim,
       model=self.scene.compile(),
       device=device,
     )
+    _bootstrap_debug("after Simulation")
 
+    _bootstrap_debug("before scene.initialize")
     self.scene.initialize(
       mj_model=self.sim.mj_model,
       model=self.sim.model,
       data=self.sim.data,
     )
+    _bootstrap_debug("after scene.initialize")
 
     # Wire sensor context to simulation for sense_graph.
     if self.scene.sensor_context is not None:
@@ -263,8 +295,11 @@ class ManagerBasedRlEnv:
     self.metadata["render_fps"] = 1.0 / self.step_dt
 
     # Load all managers.
+    _bootstrap_debug("before load_managers")
     self.load_managers()
+    _bootstrap_debug("after load_managers")
     self.setup_manager_visualizers()
+    _bootstrap_debug("after setup_manager_visualizers")
 
   # Properties.
 
@@ -319,55 +354,79 @@ class ManagerBasedRlEnv:
     then action and observation managers, then other RL managers.
     """
     # Event manager (required before everything else for domain randomization).
+    _bootstrap_debug("before EventManager")
     self.event_manager = EventManager(self.cfg.events, self)
+    _bootstrap_debug("after EventManager")
     print_info(f"[INFO] {self.event_manager}")
 
+    _bootstrap_debug("before sim.expand_model_fields")
     self.sim.expand_model_fields(self.event_manager.domain_randomization_fields)
+    _bootstrap_debug("after sim.expand_model_fields")
 
     # Command manager (must be before observation manager since observations
     # may reference commands).
+    _bootstrap_debug("before CommandManager")
     if len(self.cfg.commands) > 0:
       self.command_manager = CommandManager(self.cfg.commands, self)
     else:
       self.command_manager = NullCommandManager()
+    _bootstrap_debug("after CommandManager")
     print_info(f"[INFO] {self.command_manager}")
 
     # Action and observation managers.
+    _bootstrap_debug("before ActionManager")
     self.action_manager = ActionManager(self.cfg.actions, self)
+    _bootstrap_debug("after ActionManager")
     print_info(f"[INFO] {self.action_manager}")
+    _bootstrap_debug("before ObservationManager")
     self.observation_manager = ObservationManager(self.cfg.observations, self)
+    _bootstrap_debug("after ObservationManager")
     print_info(f"[INFO] {self.observation_manager}")
 
     # Other RL-specific managers.
 
+    _bootstrap_debug("before TerminationManager")
     self.termination_manager = TerminationManager(self.cfg.terminations, self)
+    _bootstrap_debug("after TerminationManager")
     print_info(f"[INFO] {self.termination_manager}")
+    _bootstrap_debug("before RewardManager")
     self.reward_manager = RewardManager(
       self.cfg.rewards, self, scale_by_dt=self.cfg.scale_rewards_by_dt
     )
+    _bootstrap_debug("after RewardManager")
     print_info(f"[INFO] {self.reward_manager}")
+    _bootstrap_debug("before CurriculumManager")
     if len(self.cfg.curriculum) > 0:
       self.curriculum_manager = CurriculumManager(self.cfg.curriculum, self)
     else:
       self.curriculum_manager = NullCurriculumManager()
+    _bootstrap_debug("after CurriculumManager")
     print_info(f"[INFO] {self.curriculum_manager}")
+    _bootstrap_debug("before MetricsManager")
     if len(self.cfg.metrics) > 0:
       self.metrics_manager = MetricsManager(self.cfg.metrics, self)
     else:
       self.metrics_manager = NullMetricsManager()
+    _bootstrap_debug("after MetricsManager")
     print_info(f"[INFO] {self.metrics_manager}")
+    _bootstrap_debug("before RecorderManager")
     if len(self.cfg.recorders) > 0:
       self.recorder_manager = RecorderManager(self.cfg.recorders, self)
     else:
       self.recorder_manager = NullRecorderManager()
+    _bootstrap_debug("after RecorderManager")
     print_info(f"[INFO] {self.recorder_manager}")
 
     # Configure spaces for the environment.
+    _bootstrap_debug("before _configure_gym_env_spaces")
     self._configure_gym_env_spaces()
+    _bootstrap_debug("after _configure_gym_env_spaces")
 
     # Initialize startup events if defined.
     if "startup" in self.event_manager.available_modes:
+      _bootstrap_debug("before startup events")
       self.event_manager.apply(mode="startup")
+      _bootstrap_debug("after startup events")
 
   def reset(
     self,

@@ -26,6 +26,27 @@ from .multi_commands import (
 )
 
 
+def _bootstrap_debug(message: str) -> None:
+  debug_dir = os.environ.get("MJLAB_BOOTSTRAP_DEBUG_DIR", "")
+  if not debug_dir:
+    return
+  rank = os.environ.get("RANK", "unknown")
+  local_rank = os.environ.get("LOCAL_RANK", "unknown")
+  pid = os.getpid()
+  line = (
+    f"[BOOT][{time.strftime('%Y-%m-%d %H:%M:%S')}] "
+    f"rank={rank} local_rank={local_rank} pid={pid}: large_motion: {message}"
+  )
+  try:
+    os.makedirs(debug_dir, exist_ok=True)
+    log_file = os.path.join(debug_dir, f"rank_{rank}_local_{local_rank}_pid_{pid}.log")
+    with open(log_file, "a", encoding="utf-8") as f:
+      f.write(line + "\n")
+      f.flush()
+  except Exception:
+    pass
+
+
 @dataclass(frozen=True)
 class SubsetRefreshResult:
   replaced_slot_ids: torch.Tensor
@@ -328,6 +349,10 @@ class LargeDatasetMotionStore:
   ) -> None:
     if len(motion_files) == 0:
       raise ValueError("motion_files cannot be empty")
+    start = time.perf_counter()
+    _bootstrap_debug(
+      f"LargeDatasetMotionStore init start num_motion_files={len(motion_files)} device={device}"
+    )
     self.motion_files = list(motion_files)
     self.num_files = len(self.motion_files)
     self.device = torch.device(device)
@@ -343,17 +368,26 @@ class LargeDatasetMotionStore:
 
     file_lengths: list[int] = []
     fps_values: list[float] = []
-    for motion_file in self.motion_files:
+    for index, motion_file in enumerate(self.motion_files):
       if not os.path.isfile(motion_file):
         raise FileNotFoundError(f"Invalid motion file path: {motion_file}")
       with np.load(motion_file) as data:
         file_lengths.append(int(data["joint_pos"].shape[0]))
         fps_values.append(float(np.asarray(data["fps"]).item()))
+      if (index + 1) % 5000 == 0:
+        _bootstrap_debug(
+          f"LargeDatasetMotionStore metadata progress {index + 1}/{len(self.motion_files)}"
+        )
     self.file_lengths = torch.tensor(
       file_lengths, dtype=torch.long, device=self.device
     )
     self.fps_list = fps_values
     self.fps = fps_values[0]
+    _bootstrap_debug(
+      "LargeDatasetMotionStore init done "
+      f"num_files={self.num_files} total_frames={int(sum(file_lengths))} "
+      f"elapsed={time.perf_counter() - start:.3f}s"
+    )
 
   def load_motion_ids(self, motion_ids: torch.Tensor) -> LargeDatasetMotionBuffer:
     loaded = self.load_motion_chunks(motion_ids)
@@ -387,6 +421,7 @@ class LargeDatasetMotionStore:
     )
 
   def load_motion_chunks(self, motion_ids: torch.Tensor) -> dict[str, object]:
+    start = time.perf_counter()
     motion_ids = torch.as_tensor(motion_ids, dtype=torch.long, device=self.device)
     if motion_ids.ndim != 1:
       motion_ids = motion_ids.reshape(-1)
@@ -394,6 +429,12 @@ class LargeDatasetMotionStore:
       raise ValueError("motion_ids cannot be empty")
     if motion_ids.min() < 0 or motion_ids.max() >= self.num_files:
       raise IndexError("Motion id is outside the full dataset range")
+    should_log = motion_ids.numel() >= 100
+    if should_log:
+      _bootstrap_debug(
+        f"load_motion_chunks start count={int(motion_ids.numel())} "
+        f"first_ids={motion_ids[:5].detach().cpu().tolist()}"
+      )
 
     loaded: dict[str, object] = {
       "global_motion_ids": motion_ids.clone(),
@@ -402,10 +443,33 @@ class LargeDatasetMotionStore:
     for field_name in self._FIELD_NAMES:
       loaded[field_name] = []
 
-    for motion_id in motion_ids.detach().cpu().tolist():
+    motion_id_list = motion_ids.detach().cpu().tolist()
+    for offset, motion_id in enumerate(motion_id_list):
       fields = self._load_one_motion(motion_id)
       for field_name in self._FIELD_NAMES:
         loaded[field_name].append(fields[field_name])
+      if should_log and (offset + 1) % 1000 == 0:
+        _bootstrap_debug(
+          f"load_motion_chunks progress {offset + 1}/{len(motion_id_list)} "
+          f"elapsed={time.perf_counter() - start:.3f}s"
+        )
+    if should_log:
+      total_frames = int(self.file_lengths[motion_ids].sum().item())
+      allocated = (
+        torch.cuda.memory_allocated(self.device)
+        if self.device.type == "cuda"
+        else 0
+      )
+      reserved = (
+        torch.cuda.memory_reserved(self.device)
+        if self.device.type == "cuda"
+        else 0
+      )
+      _bootstrap_debug(
+        f"load_motion_chunks done count={int(motion_ids.numel())} "
+        f"total_frames={total_frames} elapsed={time.perf_counter() - start:.3f}s "
+        f"cuda_allocated={allocated} cuda_reserved={reserved}"
+      )
     return loaded
 
   def _load_one_motion(self, motion_id: int) -> dict[str, torch.Tensor]:
@@ -734,6 +798,7 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
   cfg: "LargeDatasetMultiMotionCommandCfg"
 
   def __init__(self, cfg: "LargeDatasetMultiMotionCommandCfg", env):
+    _bootstrap_debug("LargeDatasetMultiMotionCommand init start")
     CommandTerm.__init__(self, cfg, env)
 
     self.robot = env.scene[cfg.entity_name]
@@ -747,18 +812,31 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       device=self.device,
     )
 
+    _bootstrap_debug("before resolve motion files")
     motion_files = self._resolve_all_motion_files()
+    _bootstrap_debug(f"after resolve motion files count={len(motion_files)}")
+    store_start = time.perf_counter()
     self.motion_store = LargeDatasetMotionStore(
       motion_files,
       self.body_indexes,
       motion_type=self.cfg.motion_type,
       device=self.device,
     )
+    _bootstrap_debug(
+      f"after LargeDatasetMotionStore elapsed={time.perf_counter() - store_start:.3f}s"
+    )
     subset_size = min(self.cfg.active_subset_size, self.motion_store.num_files)
+    _bootstrap_debug(
+      f"initial active subset sampling start subset_size={subset_size} "
+      f"total_motion_count={self.motion_store.num_files}"
+    )
     initial_motion_ids = self._sample_unique_motion_ids(
       torch.arange(self.motion_store.num_files, dtype=torch.long, device=self.device),
       subset_size,
       probabilities=None,
+    )
+    _bootstrap_debug(
+      f"initial active subset sampled first_ids={initial_motion_ids[:5].detach().cpu().tolist()}"
     )
     self.active_subset = ActiveMotionSubset(
       total_motion_count=self.motion_store.num_files,
@@ -767,7 +845,12 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       device=self.device,
     )
     self.active_subset.initialize(initial_motion_ids, iteration=0)
+    load_start = time.perf_counter()
+    _bootstrap_debug("before initial active subset load_slot_buffer")
     self.motion = self.motion_store.load_slot_buffer(self.active_subset.active_motion_ids)
+    _bootstrap_debug(
+      f"after initial active subset load_slot_buffer elapsed={time.perf_counter() - load_start:.3f}s"
+    )
 
     self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
     self.motion_idx = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
@@ -789,11 +872,17 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       self.bin_width_steps = max(
         int(round(float(self.cfg.adaptive_bin_width_s) / env.step_dt)), 1
       )
+    bin_pool_start = time.perf_counter()
+    _bootstrap_debug("before GlobalAdaptiveBinPool")
     self.global_bin_pool = GlobalAdaptiveBinPool(
       self.motion_store.file_lengths,
       bin_width_steps=self.bin_width_steps,
       init_num_failures=self.cfg.adaptive_init_num_failures,
       device=self.device,
+    )
+    _bootstrap_debug(
+      f"after GlobalAdaptiveBinPool elapsed={time.perf_counter() - bin_pool_start:.3f}s "
+      f"bin_count={self.global_bin_pool.bin_count}"
     )
     self._bind_global_bin_pool_tensors()
     self._init_adaptive_sampling_window()
@@ -854,6 +943,7 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     )
     self._last_global_bin_update_time = 0.0
     self._last_subset_update_time = 0.0
+    _bootstrap_debug("LargeDatasetMultiMotionCommand init done")
 
   def _resolve_all_motion_files(self) -> list[str]:
     motion_path = os.fspath(self.cfg.motion_path)
