@@ -20,7 +20,13 @@ from mjlab.tasks.tracking.mdp.multi_command_largedataset import (
 )
 
 
-def _write_motion(path: Path, *, length: int, offset: float) -> None:
+def _write_motion(
+  path: Path,
+  *,
+  length: int,
+  offset: float,
+  fps: float | np.ndarray = 30.0,
+) -> None:
   joint_pos = np.arange(length * 2, dtype=np.float32).reshape(length, 2) + offset
   body_pos = np.zeros((length, 2, 3), dtype=np.float32)
   body_pos[..., 0] = offset
@@ -28,7 +34,7 @@ def _write_motion(path: Path, *, length: int, offset: float) -> None:
   body_quat[..., 0] = 1.0
   np.savez(
     path,
-    fps=np.array(30.0, dtype=np.float32),
+    fps=np.asarray(fps, dtype=np.float32),
     joint_pos=joint_pos,
     joint_vel=joint_pos + 0.5,
     body_pos_w=body_pos,
@@ -177,6 +183,26 @@ def test_motion_store_loads_metadata_and_selected_motions_only(tmp_path: Path) -
   assert buffer.joint_pos.shape == (7, 2)
   torch.testing.assert_close(buffer.joint_pos[0], torch.tensor([20.0, 21.0]))
   torch.testing.assert_close(buffer.body_pos_w[0, 0], torch.tensor([20.0, 0.0, 0.0]))
+
+
+def test_motion_store_accepts_non_scalar_fps_arrays(tmp_path: Path) -> None:
+  path = tmp_path / "motion_with_array_fps.npz"
+  _write_motion(
+    path,
+    length=3,
+    offset=0.0,
+    fps=np.array([30.0, 30.0], dtype=np.float32),
+  )
+
+  store = LargeDatasetMotionStore(
+    [str(path)],
+    body_indexes=torch.tensor([0], dtype=torch.long),
+    motion_type="mujoco",
+    device="cpu",
+  )
+
+  assert store.fps == pytest.approx(30.0)
+  assert store.fps_list == [pytest.approx(30.0)]
 
 
 def test_global_bin_pool_syncs_local_deltas_without_distributed() -> None:
