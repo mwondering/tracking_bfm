@@ -400,6 +400,8 @@ document.write(`
                   
   <h1>Source code for mjlab.envs.manager_based_rl_env</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
@@ -447,6 +449,27 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.viewer.debug_visualizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">DebugVisualizer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.viewer.offscreen_renderer</span><span class="w"> </span><span class="kn">import</span> <span class="n">OffscreenRenderer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.viewer.viewer_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ViewerConfig</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bootstrap_debug</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="n">debug_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MJLAB_BOOTSTRAP_DEBUG_DIR&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">debug_dir</span><span class="p">:</span>
+    <span class="k">return</span>
+  <span class="n">rank</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">)</span>
+  <span class="n">local_rank</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;LOCAL_RANK&quot;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">)</span>
+  <span class="n">pid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span>
+  <span class="n">line</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;[BOOT][</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">] &quot;</span>
+    <span class="sa">f</span><span class="s2">&quot;rank=</span><span class="si">{</span><span class="n">rank</span><span class="si">}</span><span class="s2"> local_rank=</span><span class="si">{</span><span class="n">local_rank</span><span class="si">}</span><span class="s2"> pid=</span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2">: env: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="p">)</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">debug_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">debug_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;rank_</span><span class="si">{</span><span class="n">rank</span><span class="si">}</span><span class="s2">_local_</span><span class="si">{</span><span class="n">local_rank</span><span class="si">}</span><span class="s2">_pid_</span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2">.log&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+      <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+      <span class="n">f</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+  <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="k">pass</span>
 
 
 <div class="viewcode-block" id="ManagerBasedRlEnvCfg">
@@ -601,6 +624,7 @@ document.write(`
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
   <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># Initialize base environment state.</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;enter ManagerBasedRlEnv.__init__&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span> <span class="o">=</span> <span class="n">cfg</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">action_trunk_len</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;action_trunk_len must be &gt;= 1.&quot;</span><span class="p">)</span>
@@ -613,7 +637,9 @@ document.write(`
         <span class="sa">f</span><span class="s2">&quot;decimation=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">decimation</span><span class="si">}</span><span class="s2">.&quot;</span>
       <span class="p">)</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;before seed seed=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+      <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;after seed resolved_seed=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_sim_step_counter</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">extras</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">obs_buf</span> <span class="o">=</span> <span class="p">{}</span>
@@ -622,19 +648,25 @@ document.write(`
     <span class="p">)</span>
 
     <span class="c1"># Initialize scene and simulation.</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before Scene&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">scene</span> <span class="o">=</span> <span class="n">Scene</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">scene</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after Scene&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before Simulation&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">sim</span> <span class="o">=</span> <span class="n">Simulation</span><span class="p">(</span>
       <span class="n">num_envs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span>
       <span class="n">cfg</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">sim</span><span class="p">,</span>
       <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">compile</span><span class="p">(),</span>
       <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after Simulation&quot;</span><span class="p">)</span>
 
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before scene.initialize&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
       <span class="n">mj_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">mj_model</span><span class="p">,</span>
       <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
       <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after scene.initialize&quot;</span><span class="p">)</span>
 
     <span class="c1"># Wire sensor context to simulation for sense_graph.</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">sensor_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -671,8 +703,11 @@ document.write(`
     <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;render_fps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_dt</span>
 
     <span class="c1"># Load all managers.</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before load_managers&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">load_managers</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">setup_manager_visualizers</span><span class="p">()</span></div>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after load_managers&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">setup_manager_visualizers</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after setup_manager_visualizers&quot;</span><span class="p">)</span></div>
 
 
   <span class="c1"># Properties.</span>
@@ -730,55 +765,79 @@ document.write(`
 <span class="sd">    then action and observation managers, then other RL managers.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Event manager (required before everything else for domain randomization).</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before EventManager&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span> <span class="o">=</span> <span class="n">EventManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">events</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after EventManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before sim.expand_model_fields&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">expand_model_fields</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">domain_randomization_fields</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after sim.expand_model_fields&quot;</span><span class="p">)</span>
 
     <span class="c1"># Command manager (must be before observation manager since observations</span>
     <span class="c1"># may reference commands).</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before CommandManager&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">command_manager</span> <span class="o">=</span> <span class="n">CommandManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">commands</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">command_manager</span> <span class="o">=</span> <span class="n">NullCommandManager</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after CommandManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">command_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="c1"># Action and observation managers.</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before ActionManager&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span> <span class="o">=</span> <span class="n">ActionManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">actions</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after ActionManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">action_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before ObservationManager&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">observation_manager</span> <span class="o">=</span> <span class="n">ObservationManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">observations</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after ObservationManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">observation_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="c1"># Other RL-specific managers.</span>
 
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before TerminationManager&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">termination_manager</span> <span class="o">=</span> <span class="n">TerminationManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">terminations</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after TerminationManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">termination_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before RewardManager&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">reward_manager</span> <span class="o">=</span> <span class="n">RewardManager</span><span class="p">(</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">rewards</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">scale_by_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">scale_rewards_by_dt</span>
     <span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after RewardManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">reward_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before CurriculumManager&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">curriculum</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">curriculum_manager</span> <span class="o">=</span> <span class="n">CurriculumManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">curriculum</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">curriculum_manager</span> <span class="o">=</span> <span class="n">NullCurriculumManager</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after CurriculumManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">curriculum_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before MetricsManager&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">metrics</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">metrics_manager</span> <span class="o">=</span> <span class="n">MetricsManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">metrics_manager</span> <span class="o">=</span> <span class="n">NullMetricsManager</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after MetricsManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">metrics_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before RecorderManager&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">recorders</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">recorder_manager</span> <span class="o">=</span> <span class="n">RecorderManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">recorders</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">recorder_manager</span> <span class="o">=</span> <span class="n">NullRecorderManager</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after RecorderManager&quot;</span><span class="p">)</span>
     <span class="n">print_info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">recorder_manager</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="c1"># Configure spaces for the environment.</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before _configure_gym_env_spaces&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_configure_gym_env_spaces</span><span class="p">()</span>
+    <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after _configure_gym_env_spaces&quot;</span><span class="p">)</span>
 
     <span class="c1"># Initialize startup events if defined.</span>
     <span class="k">if</span> <span class="s2">&quot;startup&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">available_modes</span><span class="p">:</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span></div>
+      <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;before startup events&quot;</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">event_manager</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span>
+      <span class="n">_bootstrap_debug</span><span class="p">(</span><span class="s2">&quot;after startup events&quot;</span><span class="p">)</span></div>
 
 
   <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span>
