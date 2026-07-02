@@ -66,6 +66,28 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     if callable(begin_iteration):
       begin_iteration(iteration)
 
+  def _log_large_dataset_timing(self, *, it: int) -> None:
+    unwrapped_env = getattr(self.env, "unwrapped", None)
+    command_manager = getattr(unwrapped_env, "command_manager", None)
+    if command_manager is None:
+      return
+    motion_cmd = command_manager.get_term("motion")
+    get_stats = getattr(motion_cmd, "get_large_dataset_timing_stats", None)
+    if not callable(get_stats):
+      return
+
+    stats = get_stats()
+    global_bin_update_time = float(stats.get("global_bin_update_time", 0.0))
+    subset_update_time = float(stats.get("subset_update_time", 0.0))
+    print(
+      f"Large dataset timing: global_bin_update_time: {global_bin_update_time:.4f}s, "
+      f"subset_update_time: {subset_update_time:.4f}s"
+    )
+    writer = getattr(self.logger, "writer", None)
+    if writer is not None:
+      writer.add_scalar("Perf/global_bin_update_time", global_bin_update_time, it)
+      writer.add_scalar("Perf/subset_update_time", subset_update_time, it)
+
   def learn(
     self, num_learning_iterations: int, init_at_random_ep_len: bool = False
   ) -> None:
@@ -129,6 +151,7 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
         action_std=self.alg.get_policy().output_std,
         rnd_weight=(self.alg.rnd.weight if self.cfg["algorithm"]["rnd_cfg"] else None),
       )
+      self._log_large_dataset_timing(it=it)
 
       if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
         self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))

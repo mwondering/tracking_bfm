@@ -85,6 +85,14 @@ class _FakeLogger:
     pass
 
 
+class _FakeWriter:
+  def __init__(self) -> None:
+    self.scalars: list[tuple[str, float, int]] = []
+
+  def add_scalar(self, name: str, value: float, iteration: int) -> None:
+    self.scalars.append((name, value, iteration))
+
+
 def test_tracking_runner_advances_adaptive_window_once_per_learning_iteration() -> None:
   motion = _FakeMotionCommand()
   runner = object.__new__(MotionTrackingOnPolicyRunner)
@@ -105,6 +113,44 @@ def test_tracking_runner_advances_adaptive_window_once_per_learning_iteration() 
   runner.learn(num_learning_iterations=3)
 
   assert motion.iterations == [0, 1, 2]
+
+
+def test_tracking_runner_prints_large_dataset_timing_when_hook_exists(capsys) -> None:
+  class _LargeDatasetMotionCommand(_FakeMotionCommand):
+    def get_large_dataset_timing_stats(self) -> dict[str, float]:
+      return {
+        "global_bin_update_time": 0.0123,
+        "subset_update_time": 0.0456,
+      }
+
+  motion = _LargeDatasetMotionCommand()
+  runner = object.__new__(MotionTrackingOnPolicyRunner)
+  runner.env = _FakeEnv(motion)
+  runner.logger = _FakeLogger()
+  runner.logger.writer = _FakeWriter()
+
+  runner._log_large_dataset_timing(it=7)
+
+  output = capsys.readouterr().out
+  assert "global_bin_update_time: 0.0123s" in output
+  assert "subset_update_time: 0.0456s" in output
+  assert runner.logger.writer.scalars == [
+    ("Perf/global_bin_update_time", 0.0123, 7),
+    ("Perf/subset_update_time", 0.0456, 7),
+  ]
+
+
+def test_tracking_runner_skips_large_dataset_timing_without_hook(capsys) -> None:
+  motion = _FakeMotionCommand()
+  runner = object.__new__(MotionTrackingOnPolicyRunner)
+  runner.env = _FakeEnv(motion)
+  runner.logger = _FakeLogger()
+  runner.logger.writer = _FakeWriter()
+
+  runner._log_large_dataset_timing(it=3)
+
+  assert capsys.readouterr().out == ""
+  assert runner.logger.writer.scalars == []
 
 
 def test_tracking_runner_save_skips_onnx_export_when_upload_disabled(

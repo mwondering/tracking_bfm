@@ -444,6 +444,29 @@ class _PureBcEnvProbe:
     return self.get_observations(), rewards, dones, extras
 
 
+class _LargeDatasetTimingCommandProbe:
+  def __init__(self):
+    self.iterations = []
+
+  def begin_adaptive_sampling_iteration(self, iteration):
+    self.iterations.append(iteration)
+
+  def get_large_dataset_timing_stats(self):
+    return {
+      "global_bin_update_time": 0.001,
+      "subset_update_time": 0.002,
+    }
+
+
+class _PureBcEnvWithCommandProbe(_PureBcEnvProbe):
+  def __init__(self):
+    super().__init__()
+    self.motion = _LargeDatasetTimingCommandProbe()
+    self.unwrapped = SimpleNamespace(
+      command_manager=SimpleNamespace(get_term=lambda name: self.motion)
+    )
+
+
 class _LoggerProbe:
   def __init__(self):
     self.writer = None
@@ -499,6 +522,28 @@ def test_wbteleop_pure_bc_learn_uses_adaptive_iteration_and_bc_update() -> None:
   assert runner.logger.logged_losses == [
     {"pure_bc_mse": 0.25, "pure_bc_loss": 0.25, "pure_bc_weight": 1.0}
   ]
+
+
+def test_wbteleop_pure_bc_logs_large_dataset_timing(capsys) -> None:
+  runner = WbTeleopTrackingRunner.__new__(WbTeleopTrackingRunner)
+  runner.env = _PureBcEnvWithCommandProbe()
+  runner.alg = _PureBcAlgProbe()
+  runner.logger = _LoggerProbe()
+  runner.device = torch.device("cpu")
+  runner.current_learning_iteration = 0
+  runner.is_distributed = False
+  runner.cfg = {
+    "num_steps_per_env": 1,
+    "save_interval": 100,
+    "algorithm": {"rnd_cfg": None},
+  }
+
+  runner._learn_pure_bc(num_learning_iterations=1, init_at_random_ep_len=False)
+
+  output = capsys.readouterr().out
+  assert "global_bin_update_time: 0.0010s" in output
+  assert "subset_update_time: 0.0020s" in output
+  assert runner.env.motion.iterations == [0]
 
 
 def test_wbteleop_scratch_initializes_actor_and_critic(tmp_path) -> None:

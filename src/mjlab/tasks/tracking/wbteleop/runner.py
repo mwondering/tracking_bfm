@@ -152,6 +152,7 @@ class WbTeleopTrackingRunner(MotionTrackingOnPolicyRunner):
         action_std=self.alg.get_policy().output_std,
         rnd_weight=(self.alg.rnd.weight if self.cfg["algorithm"].get("rnd_cfg") else None),
       )
+      self._log_large_dataset_timing(it=it)
 
       if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
         self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))
