@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import math
 import os
 import time
@@ -955,18 +956,14 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       )
 
     if motion_path:
-      if not os.path.exists(motion_path):
-        raise FileNotFoundError(f"Invalid motion path: {motion_path}")
-      if not os.path.isdir(motion_path):
-        raise ValueError(
-          f"motion_path must point to a directory containing .npz files: {motion_path}"
+      self._validate_motion_path(motion_path)
+      manifest_file = self._resolve_motion_manifest_file(motion_path)
+      if manifest_file:
+        resolved_motion_files = self._resolve_motion_files_with_manifest(
+          motion_path, manifest_file
         )
-      resolved_motion_files = []
-      for root, _, files in os.walk(motion_path):
-        for filename in files:
-          if filename.lower().endswith(".npz"):
-            resolved_motion_files.append(os.path.join(root, filename))
-      resolved_motion_files.sort()
+      else:
+        resolved_motion_files = self._scan_motion_path(motion_path)
     elif motion_file:
       if not os.path.exists(motion_file):
         raise FileNotFoundError(f"Invalid motion file: {motion_file}")
@@ -983,6 +980,151 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
         "  - motion_file: path to a single motion file"
       )
     return resolved_motion_files
+
+  def _validate_motion_path(self, motion_path: str) -> None:
+    if not os.path.exists(motion_path):
+      raise FileNotFoundError(f"Invalid motion path: {motion_path}")
+    if not os.path.isdir(motion_path):
+      raise ValueError(
+        f"motion_path must point to a directory containing .npz files: {motion_path}"
+      )
+
+  def _resolve_motion_manifest_file(self, motion_path: str) -> str:
+    configured_manifest = os.fspath(getattr(self.cfg, "motion_manifest_file", ""))
+    if configured_manifest:
+      return configured_manifest
+
+    _, world_size = self._runtime_rank_context()
+    debug_dir = os.environ.get("MJLAB_BOOTSTRAP_DEBUG_DIR", "")
+    if world_size <= 1 or not debug_dir:
+      return ""
+
+    motion_path_key = hashlib.sha1(
+      os.path.abspath(motion_path).encode("utf-8")
+    ).hexdigest()[:12]
+    return os.path.join(debug_dir, f"motion_manifest_{motion_path_key}.txt")
+
+  def _resolve_motion_files_with_manifest(
+    self, motion_path: str, manifest_file: str
+  ) -> list[str]:
+    rank, world_size = self._runtime_rank_context()
+    _bootstrap_debug(
+      "resolve motion files with manifest "
+      f"path={motion_path} manifest={manifest_file} rank={rank} world_size={world_size}"
+    )
+
+    if os.path.exists(manifest_file):
+      motion_files = self._read_motion_manifest(manifest_file)
+      _bootstrap_debug(
+        f"read existing motion manifest count={len(motion_files)} file={manifest_file}"
+      )
+      return motion_files
+
+    if world_size <= 1 or rank == 0:
+      motion_files = self._scan_motion_path(motion_path)
+      self._write_motion_manifest(manifest_file, motion_files)
+      _bootstrap_debug(
+        f"wrote motion manifest count={len(motion_files)} file={manifest_file}"
+      )
+      return motion_files
+
+    return self._wait_for_motion_manifest(manifest_file)
+
+  def _runtime_rank_context(self) -> tuple[int, int]:
+    try:
+      rank = int(os.environ.get("RANK", "0"))
+    except ValueError:
+      rank = 0
+    try:
+      world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    except ValueError:
+      world_size = 1
+    return rank, max(world_size, 1)
+
+  def _scan_motion_path(self, motion_path: str) -> list[str]:
+    start = time.perf_counter()
+    last_log_time = start
+    log_interval = float(getattr(self.cfg, "motion_scan_log_interval_s", 10.0))
+    resolved_motion_files: list[str] = []
+    scanned_dirs = 0
+    scanned_files = 0
+    _bootstrap_debug(f"scan motion path start path={motion_path}")
+    for root, _, files in os.walk(motion_path):
+      scanned_dirs += 1
+      scanned_files += len(files)
+      for filename in files:
+        if filename.lower().endswith(".npz"):
+          resolved_motion_files.append(os.path.join(root, filename))
+
+      now = time.perf_counter()
+      if log_interval > 0.0 and now - last_log_time >= log_interval:
+        _bootstrap_debug(
+          "scan motion path progress "
+          f"dirs={scanned_dirs} files={scanned_files} "
+          f"motions={len(resolved_motion_files)} elapsed={now - start:.3f}s "
+          f"root={root}"
+        )
+        last_log_time = now
+
+    resolved_motion_files.sort()
+    _bootstrap_debug(
+      "scan motion path done "
+      f"dirs={scanned_dirs} files={scanned_files} motions={len(resolved_motion_files)} "
+      f"elapsed={time.perf_counter() - start:.3f}s"
+    )
+    return resolved_motion_files
+
+  def _write_motion_manifest(self, manifest_file: str, motion_files: list[str]) -> None:
+    manifest_dir = os.path.dirname(manifest_file)
+    if manifest_dir:
+      os.makedirs(manifest_dir, exist_ok=True)
+    tmp_file = f"{manifest_file}.tmp.{os.getpid()}"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+      for motion_file in motion_files:
+        f.write(motion_file + "\n")
+      f.flush()
+      os.fsync(f.fileno())
+    os.replace(tmp_file, manifest_file)
+
+  def _read_motion_manifest(self, manifest_file: str) -> list[str]:
+    with open(manifest_file, encoding="utf-8") as f:
+      return [line.strip() for line in f if line.strip()]
+
+  def _wait_for_motion_manifest(self, manifest_file: str) -> list[str]:
+    timeout_s = float(getattr(self.cfg, "motion_manifest_wait_timeout_s", 600.0))
+    poll_interval_s = max(
+      float(getattr(self.cfg, "motion_manifest_poll_interval_s", 0.25)), 0.01
+    )
+    log_interval_s = max(
+      float(getattr(self.cfg, "motion_scan_log_interval_s", 10.0)), 1.0
+    )
+    start = time.perf_counter()
+    last_log_time = start
+    _bootstrap_debug(
+      f"waiting for motion manifest file={manifest_file} timeout={timeout_s:.1f}s"
+    )
+    while True:
+      if os.path.exists(manifest_file):
+        motion_files = self._read_motion_manifest(manifest_file)
+        _bootstrap_debug(
+          f"read motion manifest count={len(motion_files)} file={manifest_file}"
+        )
+        return motion_files
+
+      now = time.perf_counter()
+      elapsed = now - start
+      if elapsed >= timeout_s:
+        raise TimeoutError(
+          f"Timed out after {timeout_s:.1f}s waiting for motion manifest: "
+          f"{manifest_file}"
+        )
+      if now - last_log_time >= log_interval_s:
+        _bootstrap_debug(
+          f"still waiting for motion manifest elapsed={elapsed:.3f}s "
+          f"file={manifest_file}"
+        )
+        last_log_time = now
+      time.sleep(poll_interval_s)
 
   def _bind_global_bin_pool_tensors(self) -> None:
     self.bin_count = self.global_bin_pool.bin_count
@@ -1337,6 +1479,10 @@ class LargeDatasetMultiMotionCommandCfg(MultiMotionCommandCfg):
   subset_refresh_count: int = 10
   subset_min_resident_iterations: int = 50
   subset_adaptive_refresh_ratio: float = 0.5
+  motion_manifest_file: str = ""
+  motion_manifest_wait_timeout_s: float = 600.0
+  motion_manifest_poll_interval_s: float = 0.25
+  motion_scan_log_interval_s: float = 10.0
 
   def build(self, env) -> LargeDatasetMultiMotionCommand:
     return LargeDatasetMultiMotionCommand(self, env)

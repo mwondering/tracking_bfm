@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 import torch
 
+import mjlab.tasks.tracking.mdp.multi_command_largedataset as large_dataset_module
 from mjlab.tasks.tracking.mdp.multi_command_largedataset import (
   ActiveMotionSubset,
   GlobalAdaptiveBinPool,
@@ -35,6 +36,71 @@ def _write_motion(path: Path, *, length: int, offset: float) -> None:
     body_lin_vel_w=body_pos + 1.0,
     body_ang_vel_w=body_pos + 2.0,
   )
+
+
+def _make_motion_resolver_shell(
+  *,
+  motion_path: Path,
+  manifest_file: Path,
+) -> LargeDatasetMultiMotionCommand:
+  command = object.__new__(LargeDatasetMultiMotionCommand)
+  command.cfg = SimpleNamespace(
+    motion_path=str(motion_path),
+    motion_file="",
+    motion_manifest_file=str(manifest_file),
+    motion_manifest_wait_timeout_s=0.2,
+    motion_manifest_poll_interval_s=0.01,
+    motion_scan_log_interval_s=60.0,
+  )
+  return command
+
+
+def test_large_dataset_rank_zero_writes_motion_manifest(
+  tmp_path: Path, monkeypatch
+) -> None:
+  motion_root = tmp_path / "motions"
+  nested = motion_root / "nested"
+  nested.mkdir(parents=True)
+  _write_motion(motion_root / "b.npz", length=3, offset=0.0)
+  _write_motion(nested / "a.npz", length=3, offset=1.0)
+  (motion_root / "ignore.txt").write_text("not a motion", encoding="utf-8")
+  manifest_file = tmp_path / "manifest.txt"
+  command = _make_motion_resolver_shell(
+    motion_path=motion_root,
+    manifest_file=manifest_file,
+  )
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "0")
+
+  resolved = command._resolve_all_motion_files()
+
+  expected = sorted([str(nested / "a.npz"), str(motion_root / "b.npz")])
+  assert resolved == expected
+  assert manifest_file.read_text(encoding="utf-8").splitlines() == expected
+
+
+def test_large_dataset_nonzero_rank_reads_manifest_without_scanning(
+  tmp_path: Path, monkeypatch
+) -> None:
+  motion_root = tmp_path / "motions"
+  motion_root.mkdir()
+  manifest_file = tmp_path / "manifest.txt"
+  motion_file = motion_root / "motion.npz"
+  _write_motion(motion_file, length=3, offset=0.0)
+  manifest_file.write_text(str(motion_file) + "\n", encoding="utf-8")
+  command = _make_motion_resolver_shell(
+    motion_path=motion_root,
+    manifest_file=manifest_file,
+  )
+  monkeypatch.setenv("WORLD_SIZE", "2")
+  monkeypatch.setenv("RANK", "1")
+
+  def fail_if_scanned(*args, **kwargs):
+    raise AssertionError("nonzero ranks should read the manifest instead of scanning")
+
+  monkeypatch.setattr(large_dataset_module.os, "walk", fail_if_scanned)
+
+  assert command._resolve_all_motion_files() == [str(motion_file)]
 
 
 def test_active_subset_tracks_unique_active_and_pending_motion_ids() -> None:
