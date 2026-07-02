@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import abc
+import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Sequence
@@ -17,6 +19,27 @@ if TYPE_CHECKING:
 
   from mjlab.envs.manager_based_rl_env import ManagerBasedRlEnv
   from mjlab.viewer.debug_visualizer import DebugVisualizer
+
+
+def _bootstrap_debug(message: str) -> None:
+  debug_dir = os.environ.get("MJLAB_BOOTSTRAP_DEBUG_DIR", "")
+  if not debug_dir:
+    return
+  rank = os.environ.get("RANK", "unknown")
+  local_rank = os.environ.get("LOCAL_RANK", "unknown")
+  pid = os.getpid()
+  line = (
+    f"[BOOT][{time.strftime('%Y-%m-%d %H:%M:%S')}] "
+    f"rank={rank} local_rank={local_rank} pid={pid}: command_manager: {message}"
+  )
+  try:
+    os.makedirs(debug_dir, exist_ok=True)
+    log_file = os.path.join(debug_dir, f"rank_{rank}_local_{local_rank}_pid_{pid}.log")
+    with open(log_file, "a", encoding="utf-8") as f:
+      f.write(line + "\n")
+      f.flush()
+  except Exception:
+    pass
 
 
 @dataclass(kw_only=True)
@@ -265,7 +288,13 @@ class CommandManager(ManagerBase):
       if term_cfg is None:
         print(f"term: {term_name} set to None, skipping...")
         continue
+      _bootstrap_debug(
+        f"before build term={term_name} cfg_type={term_cfg.__class__.__module__}.{term_cfg.__class__.__name__}"
+      )
       term = term_cfg.build(self._env)
+      _bootstrap_debug(
+        f"after build term={term_name} term_type={term.__class__.__module__}.{term.__class__.__name__}"
+      )
       if not isinstance(term, CommandTerm):
         raise TypeError(
           f"Returned object for the term {term_name} is not of type CommandType."

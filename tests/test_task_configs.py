@@ -5,6 +5,9 @@ import pytest
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg
 from mjlab.tasks.registry import list_tasks, load_env_cfg
+from mjlab.tasks.tracking.mdp.multi_command_largedataset import (
+  LargeDatasetMultiMotionCommandCfg,
+)
 
 
 @pytest.fixture(scope="module")
@@ -23,6 +26,15 @@ def test_all_tasks_loadable(all_task_ids: list[str]) -> None:
       )
     except Exception as e:
       pytest.fail(f"Failed to load task '{task_id}': {e}")
+
+
+def test_large_dataset_tracking_task_uses_large_dataset_motion_command() -> None:
+  task_id = "Mjlab-Trackingbfm-Flat-Unitree-G1-LargeDataset"
+
+  assert task_id in list_tasks()
+  cfg = load_env_cfg(task_id)
+
+  assert isinstance(cfg.commands["motion"], LargeDatasetMultiMotionCommandCfg)
 
 
 def test_all_tasks_have_play_config(all_task_ids: list[str]) -> None:

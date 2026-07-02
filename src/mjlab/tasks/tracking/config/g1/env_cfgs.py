@@ -20,6 +20,9 @@ from mjlab.tasks.tracking.mdp import MotionCommandCfg as SingleMotionCommandCfg
 from mjlab.tasks.tracking.mdp.multi_commands import (
   MotionCommandCfg as MultiMotionCommandCfg,
 )
+from mjlab.tasks.tracking.mdp.multi_command_largedataset import (
+  MotionCommandCfg as LargeDatasetMotionCommandCfg,
+)
 from mjlab.tasks.tracking.tracking_env_cfg import make_tracking_env_cfg
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 
@@ -310,6 +313,19 @@ def unitree_g1_flat_tracking_bfm_env_cfg(
   # Keep torso COM randomization from the base G1 config. Mass and inertia
   # randomization are disabled for now.
   # add_body_inertia_randomization(cfg)
+  return cfg
+
+
+def unitree_g1_flat_tracking_bfm_largedataset_env_cfg(
+  has_state_estimation: bool = True,
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  """Create the multi-motion G1 tracking task with large-dataset motion loading."""
+  cfg = _unitree_g1_flat_tracking_env_cfg(
+    LargeDatasetMotionCommandCfg,
+    has_state_estimation=has_state_estimation,
+    play=play,
+  )
   return cfg
 
 
