@@ -203,6 +203,30 @@ def test_motion_store_accepts_non_scalar_fps_arrays(tmp_path: Path) -> None:
 
   assert store.fps == pytest.approx(30.0)
   assert store.fps_list == [pytest.approx(30.0)]
+  assert store.non_scalar_fps_count == 1
+  assert store.empty_fps_count == 0
+
+
+def test_motion_store_uses_default_fps_for_empty_fps_arrays(tmp_path: Path) -> None:
+  path = tmp_path / "motion_with_empty_fps.npz"
+  _write_motion(
+    path,
+    length=3,
+    offset=0.0,
+    fps=np.array([], dtype=np.float32),
+  )
+
+  store = LargeDatasetMotionStore(
+    [str(path)],
+    body_indexes=torch.tensor([0], dtype=torch.long),
+    motion_type="mujoco",
+    device="cpu",
+  )
+
+  assert store.fps == pytest.approx(30.0)
+  assert store.fps_list == [pytest.approx(30.0)]
+  assert store.non_scalar_fps_count == 0
+  assert store.empty_fps_count == 1
 
 
 def test_global_bin_pool_syncs_local_deltas_without_distributed() -> None:

@@ -340,6 +340,7 @@ class LargeDatasetMotionStore:
   """CPU/disk-side motion store that only stages requested motions on device."""
 
   _FIELD_NAMES = LargeDatasetMotionSlotBuffer._FIELD_NAMES
+  _DEFAULT_FPS = 30.0
 
   def __init__(
     self,
@@ -370,15 +371,18 @@ class LargeDatasetMotionStore:
     file_lengths: list[int] = []
     fps_values: list[float] = []
     non_scalar_fps_count = 0
+    empty_fps_count = 0
     for index, motion_file in enumerate(self.motion_files):
       if not os.path.isfile(motion_file):
         raise FileNotFoundError(f"Invalid motion file path: {motion_file}")
       with np.load(motion_file) as data:
         file_lengths.append(int(data["joint_pos"].shape[0]))
-        fps_value, is_scalar_fps = self._extract_fps_value(data["fps"], motion_file)
+        fps_value, is_non_scalar_fps, is_empty_fps = self._extract_fps_value(data["fps"])
         fps_values.append(fps_value)
-        if not is_scalar_fps:
+        if is_non_scalar_fps:
           non_scalar_fps_count += 1
+        if is_empty_fps:
+          empty_fps_count += 1
       if (index + 1) % 5000 == 0:
         _bootstrap_debug(
           f"LargeDatasetMotionStore metadata progress {index + 1}/{len(self.motion_files)}"
@@ -388,19 +392,22 @@ class LargeDatasetMotionStore:
     )
     self.fps_list = fps_values
     self.fps = fps_values[0]
+    self.non_scalar_fps_count = non_scalar_fps_count
+    self.empty_fps_count = empty_fps_count
     _bootstrap_debug(
       "LargeDatasetMotionStore init done "
       f"num_files={self.num_files} total_frames={int(sum(file_lengths))} "
       f"non_scalar_fps_count={non_scalar_fps_count} "
+      f"empty_fps_count={empty_fps_count} "
       f"elapsed={time.perf_counter() - start:.3f}s"
     )
 
   @staticmethod
-  def _extract_fps_value(fps_data: np.ndarray, motion_file: str) -> tuple[float, bool]:
+  def _extract_fps_value(fps_data: np.ndarray) -> tuple[float, bool, bool]:
     fps_array = np.asarray(fps_data, dtype=np.float32)
     if fps_array.size == 0:
-      raise ValueError(f"Motion file has an empty fps array: {motion_file}")
-    return float(fps_array.reshape(-1)[0]), fps_array.size == 1
+      return LargeDatasetMotionStore._DEFAULT_FPS, False, True
+    return float(fps_array.reshape(-1)[0]), fps_array.size > 1, False
 
   def load_motion_ids(self, motion_ids: torch.Tensor) -> LargeDatasetMotionBuffer:
     loaded = self.load_motion_chunks(motion_ids)
