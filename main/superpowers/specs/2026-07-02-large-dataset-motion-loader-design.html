@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Latent Distillation G1 Design &#8212; mjlab Documentation</title>
+    <title>Large Dataset Motion Loader Design &#8212; mjlab Documentation</title>
   
   
   
@@ -51,7 +51,7 @@
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-05-22-latent-distillation-g1-design';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'superpowers/specs/2026-07-02-large-dataset-motion-loader-design';</script>
     <link rel="icon" href="../../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -169,7 +169,7 @@
 <div class="sidebar-version-switcher">
   <label class="sidebar-version-label" for="version-select">Version</label>
   <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
-    <option value="2026-05-22-latent-distillation-g1-design.html" selected>main</option>
+    <option value="2026-07-02-large-dataset-motion-loader-design.html" selected>main</option>
   </select>
 </div>
 </div>
@@ -321,7 +321,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-05-22-latent-distillation-g1-design.md" target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/superpowers/specs/2026-07-02-large-dataset-motion-loader-design.md" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -338,7 +338,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-05-22-latent-distillation-g1-design.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsuperpowers/specs/2026-07-02-large-dataset-motion-loader-design.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -368,7 +368,7 @@
       
       
       
-      <li><a href="../../_sources/superpowers/specs/2026-05-22-latent-distillation-g1-design.md" target="_blank"
+      <li><a href="../../_sources/superpowers/specs/2026-07-02-large-dataset-motion-loader-design.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -452,7 +452,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Latent Distillation G1 Design</h1>
+    <h1>Large Dataset Motion Loader Design</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -463,13 +463,15 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-problem">Current Problem</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observations">Observations</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-format">Checkpoint Format</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#active-subset-policy">Active Subset Policy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adaptive-sampling">Adaptive Sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multi-gpu-synchronization">Multi-GPU Synchronization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#timing-output">Timing Output</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#files">Files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#non-goals">Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#verification">Verification</a></li>
 </ul>
             </nav>
         </div>
@@ -481,145 +483,156 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="latent-distillation-g1-design">
-<h1>Latent Distillation G1 Design<a class="headerlink" href="#latent-distillation-g1-design" title="Link to this heading">#</a></h1>
+  <section id="large-dataset-motion-loader-design">
+<h1>Large Dataset Motion Loader Design<a class="headerlink" href="#large-dataset-motion-loader-design" title="Link to this heading">#</a></h1>
 <section id="goal">
 <h2>Goal<a class="headerlink" href="#goal" title="Link to this heading">#</a></h2>
-<p>Add a first-stage latent distillation task for Unitree G1:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Mjlab-LatentDistillation-Flat-Unitree-G1
-</pre></div>
-</div>
-<p>The task distills the existing whole-body tracking teacher
-<code class="docutils literal notranslate"><span class="pre">Mjlab-Trackingbfm-Flat-Unitree-G1</span></code> into a reusable motor decoder:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>encoder(teacher_actor_obs) -&gt; latent distribution
-decoder(proprio_actor_obs, latent) -&gt; joint action
-</pre></div>
-</div>
-<p>This stage does not implement the second-stage velocity-conditioned RL encoder.</p>
+<p>Add an opt-in tracking motion command that can train on motion datasets larger than GPU memory by keeping the full motion dataset on CPU/disk and staging only an active per-rank subset on GPU. The original <code class="docutils literal notranslate"><span class="pre">multi_commands.py</span></code> path must keep its current behavior and adaptive sampling semantics.</p>
 </section>
-<section id="scope">
-<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading">#</a></h2>
-<p>In scope:</p>
+<section id="current-problem">
+<h2>Current Problem<a class="headerlink" href="#current-problem" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code> constructs <code class="docutils literal notranslate"><span class="pre">MultiMotionLoader</span></code> by loading every motion field from every <code class="docutils literal notranslate"><span class="pre">.npz</span></code> directly onto <code class="docutils literal notranslate"><span class="pre">self.device</span></code>, then concatenates all frames into large GPU tensors. This is fast for small datasets, but it makes GPU memory scale with the full dataset size.</p>
+<p>The existing adaptive sampling logic is valuable and should be preserved:</p>
 <ul class="simple">
-<li><p>Register a new task ID for latent distillation.</p></li>
-<li><p>Add a pure proprioception observation group for the decoder.</p></li>
-<li><p>Add a latent distillation model with encoder, reparameterized latent, and decoder.</p></li>
-<li><p>Add a latent action distillation algorithm with action reconstruction, KL, and latent smoothness losses.</p></li>
-<li><p>Extend the existing distillation runner to select either the original MLP student or the new latent student from config.</p></li>
-<li><p>Save latent checkpoints with both full policy state and explicit encoder/decoder state dictionaries.</p></li>
-<li><p>Preserve the existing <code class="docutils literal notranslate"><span class="pre">Mjlab-Distillation-Flat-Unitree-G1</span></code> behavior.</p></li>
-</ul>
-<p>Out of scope:</p>
-<ul class="simple">
-<li><p>Second-stage velocity latent PPO.</p></li>
-<li><p>Frozen decoder policy wrappers.</p></li>
-<li><p>Learned prior, mixture prior, flow prior, or VQ latent.</p></li>
-<li><p>ONNX export for latent policies.</p></li>
-<li><p>Training script changes beyond task registration and config support.</p></li>
+<li><p>Bin statistics are tracked by motion id and bin id.</p></li>
+<li><p>Resets sample motion/bin pairs from failure-rate-weighted probabilities mixed with uniform sampling.</p></li>
+<li><p>Failures observed during environment resets update the corresponding bin.</p></li>
+<li><p>Windowed failure-rate state, probability clipping, bin weights, and per-motion probability caps should keep the same semantics where possible.</p></li>
 </ul>
 </section>
 <section id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading">#</a></h2>
-<p>The existing distillation stack remains the owner of first-stage distillation. The new task reuses <code class="docutils literal notranslate"><span class="pre">DistillationRunner</span></code>, but the runner switches implementation based on a config field:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>student_model_type = &quot;mlp&quot; | &quot;latent&quot;
-</pre></div>
-</div>
-<p>The original task keeps <code class="docutils literal notranslate"><span class="pre">student_model_type=&quot;mlp&quot;</span></code>. The new latent task uses:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>student_model_type=&quot;latent&quot;
-encoder_obs_group=&quot;teacher_actor&quot;
-decoder_obs_group=&quot;proprio_actor&quot;
-latent_dim=64
-</pre></div>
-</div>
-<p>During rollout, the latent policy samples <code class="docutils literal notranslate"><span class="pre">z</span></code> from the encoder and decodes actions from proprioception. Teacher/student action mixing is unchanged. During update, batches contain both encoder and decoder observations.</p>
-</section>
-<section id="observations">
-<h2>Observations<a class="headerlink" href="#observations" title="Link to this heading">#</a></h2>
-<p>The environment config will expose three observation groups:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>teacher_actor: original tracking actor observation
-student_actor: existing sparse-command student observation
-proprio_actor: decoder-only proprioception observation
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> contains robot state only:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>projected_gravity
-base_ang_vel
-joint_pos
-joint_vel
-actions
-</pre></div>
-</div>
-<p>It intentionally excludes motion reference, sparse end-effector command, future command, target body pose, and command-derived base velocity terms. This keeps the decoder interface compatible with the second-stage plan:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>decoder(proprio, z) -&gt; action
-</pre></div>
-</div>
-</section>
-<section id="model">
-<h2>Model<a class="headerlink" href="#model" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">LatentDistillationModel</span></code> owns:</p>
+<p>The new command lives in <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_command_largedataset.py</span></code> and is opt-in through its own config class. It reuses the public command API expected by observations, rewards, terminations, and visualization, but changes the motion storage layer.</p>
+<p>Storage is split into three layers:</p>
+<ol class="arabic simple">
+<li><p>Full dataset metadata:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">encoder</span></code>: normalized MLP over <code class="docutils literal notranslate"><span class="pre">encoder_obs_group</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mu_head</span></code>: latent mean projection.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">log_std_head</span></code>: latent log-standard-deviation projection.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">decoder</span></code>: normalized MLP over <code class="docutils literal notranslate"><span class="pre">decoder_obs_group</span> <span class="pre">+</span> <span class="pre">z</span></code>.</p></li>
+<li><p>Motion file paths.</p></li>
+<li><p>Per-motion lengths and fps.</p></li>
+<li><p>Global bin counts, valid bin ids, bin lengths, and bin weights.</p></li>
+<li><p>These are small and can live on GPU as tensors.</p></li>
 </ul>
-<p>The model clamps <code class="docutils literal notranslate"><span class="pre">log_std</span></code> to a configured range before sampling. It exposes:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">encode</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]</span>
-<span class="n">sample</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">log_std</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span>
-<span class="n">decode</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span>
-<span class="n">forward</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">deterministic</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tensor</span><span class="p">]]</span>
-</pre></div>
-</div>
-<p>Inference uses deterministic <code class="docutils literal notranslate"><span class="pre">z=mu</span></code> unless stochastic sampling is explicitly requested.</p>
-</section>
-<section id="losses">
-<h2>Losses<a class="headerlink" href="#losses" title="Link to this heading">#</a></h2>
-<p>The latent algorithm optimizes:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>total_loss = action_mse
-           + effective_kl_weight * free-bits KL
-           + latent_smooth_weight * latent_smooth_loss
-</pre></div>
-</div>
-<p>KL is against a fixed standard normal:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>KL(q(z | teacher_actor) || N(0, I))
-</pre></div>
-</div>
-<p>The KL weight warms up linearly over <code class="docutils literal notranslate"><span class="pre">kl_warmup_iterations</span></code>. Free bits are applied per dimension to avoid posterior collapse while keeping the latent distribution regularized.</p>
-<p>Latent smoothness is computed over the flattened rollout order by penalizing adjacent latent mean differences within each mini-batch. It is a light regularizer and does not require recurrent state.</p>
-</section>
-<section id="checkpoint-format">
-<h2>Checkpoint Format<a class="headerlink" href="#checkpoint-format" title="Link to this heading">#</a></h2>
-<p>MLP checkpoints remain unchanged.</p>
-<p>Latent checkpoints include:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>model_type = &quot;latent&quot;
-policy_state_dict
-encoder_state_dict
-decoder_state_dict
-optimizer_state_dict
-latent_cfg
-iter
-infos.env_state
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">policy_state_dict</span></code> keeps runner load/play behavior simple. <code class="docutils literal notranslate"><span class="pre">decoder_state_dict</span></code> makes the later second-stage implementation straightforward.</p>
-</section>
-<section id="testing">
-<h2>Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
-<p>Focused tests cover:</p>
+</li>
+<li><p>Full dataset frame data:</p>
 <ul class="simple">
-<li><p>New task registration and config fields.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">proprio_actor</span></code> exists and excludes sparse command terms.</p></li>
-<li><p>Latent model forward shape and latent stats.</p></li>
-<li><p>Latent algorithm update changes parameters and reports KL metrics.</p></li>
-<li><p>Distillation runner latent smoke learning with injected teacher adapter.</p></li>
-<li><p>Latent save/load round trip.</p></li>
-<li><p>Existing plain distillation tests continue to pass.</p></li>
+<li><p>Loaded lazily from <code class="docutils literal notranslate"><span class="pre">.npz</span></code> files into CPU tensors or memory-mapped arrays.</p></li>
+<li><p>This data is not concatenated into a full GPU tensor.</p></li>
 </ul>
-<p>Verification commands:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation_task.py<span class="w"> </span>tests/test_distillation_algorithm.py<span class="w"> </span>tests/test_distillation_runner_smoke.py
-uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_distillation*.py
+</li>
+<li><p>Active GPU subset:</p>
+<ul class="simple">
+<li><p>A per-rank set of unique active global motion ids.</p></li>
+<li><p>Default size: <code class="docutils literal notranslate"><span class="pre">active_subset_size=20000</span></code>.</p></li>
+<li><p>Reset and per-step reference gathering only read from active subset GPU tensors.</p></li>
+<li><p>Subset refresh defaults to <code class="docutils literal notranslate"><span class="pre">subset_refresh_count=10</span></code> motions per learning iteration.</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="active-subset-policy">
+<h2>Active Subset Policy<a class="headerlink" href="#active-subset-policy" title="Link to this heading">#</a></h2>
+<p>Each active subset slot maps one local slot id to one global motion id. Within one rank, active global motion ids must be unique. Cross-rank duplicates are allowed.</p>
+<p>Each iteration may refresh a small number of slots. A slot can be evicted only when:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">slot_ref_count</span> <span class="pre">==</span> <span class="pre">0</span></code>: no environment currently uses this motion.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">slot_ready</span> <span class="pre">==</span> <span class="pre">True</span></code>: slot is not mid-load.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">iteration</span> <span class="pre">-</span> <span class="pre">slot_loaded_iteration</span> <span class="pre">&gt;=</span> <span class="pre">subset_min_resident_iterations</span></code>.</p></li>
+</ul>
+<p>The default <code class="docutils literal notranslate"><span class="pre">subset_min_resident_iterations</span></code> is 50. This intentionally lets hard or frequently used motions stay resident longer.</p>
+<p>Incoming motion ids are sampled from the full dataset excluding active and pending ids. Sampling uses a global motion-level score derived from the full bin failure statistics, mixed with uniform probability so cold or easy motions can still enter the subset.</p>
+</section>
+<section id="adaptive-sampling">
+<h2>Adaptive Sampling<a class="headerlink" href="#adaptive-sampling" title="Link to this heading">#</a></h2>
+<p>The adaptive sampling reset domain is the active ready subset, not the full dataset. The statistics domain remains the full dataset.</p>
+<p>At reset time:</p>
+<ul class="simple">
+<li><p>Build active valid <code class="docutils literal notranslate"><span class="pre">(global_motion_id,</span> <span class="pre">global_bin_id)</span></code> pairs from active ready motions.</p></li>
+<li><p>Use the same probability recipe as the original command:</p>
+<ul>
+<li><p>failure rate = <code class="docutils literal notranslate"><span class="pre">bin_failure_count</span> <span class="pre">/</span> <span class="pre">bin_episode_count</span></code></p></li>
+<li><p>clip by <code class="docutils literal notranslate"><span class="pre">mean</span> <span class="pre">*</span> <span class="pre">adaptive_failure_rate_max_over_mean</span></code></p></li>
+<li><p>normalize failure-based probability</p></li>
+<li><p>mix with uniform by <code class="docutils literal notranslate"><span class="pre">adaptive_uniform_ratio</span></code></p></li>
+<li><p>multiply by bin weights</p></li>
+<li><p>apply max-probability constraints</p></li>
+</ul>
+</li>
+<li><p>Store sampled global motion ids in <code class="docutils literal notranslate"><span class="pre">motion_idx</span></code>.</p></li>
+<li><p>Store sampled local subset slot ids in a separate lookup for fast frame gather.</p></li>
+</ul>
+<p>When collecting statistics:</p>
+<ul class="simple">
+<li><p>Local rollout deltas are accumulated by global motion id and global bin id.</p></li>
+<li><p>Counts are not subset-local.</p></li>
+<li><p>Windowed adaptive sampling increments are tracked in the same global bin coordinate system.</p></li>
+</ul>
+</section>
+<section id="multi-gpu-synchronization">
+<h2>Multi-GPU Synchronization<a class="headerlink" href="#multi-gpu-synchronization" title="Link to this heading">#</a></h2>
+<p>For distributed training, each rank maintains local bin deltas during rollout. At the beginning of each learning iteration, the command:</p>
+<ol class="arabic simple">
+<li><p>Advances adaptive sampling windows.</p></li>
+<li><p>Synchronizes local episode/failure deltas across ranks with <code class="docutils literal notranslate"><span class="pre">torch.distributed.all_reduce(SUM)</span></code>.</p></li>
+<li><p>Applies the reduced deltas to every rank’s global bin statistics.</p></li>
+<li><p>Clears local deltas.</p></li>
+<li><p>Refreshes the active subset.</p></li>
+</ol>
+<p>When distributed is not initialized, synchronization is a local no-op and the same local deltas are applied.</p>
+</section>
+<section id="timing-output">
+<h2>Timing Output<a class="headerlink" href="#timing-output" title="Link to this heading">#</a></h2>
+<p>The new command exposes a timing hook:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_large_dataset_timing_stats()</span> <span class="pre">-&gt;</span> <span class="pre">dict[str,</span> <span class="pre">float]</span></code></p></li>
+</ul>
+<p>The tracking runner keeps its existing <code class="docutils literal notranslate"><span class="pre">logger.log(...)</span></code> call unchanged. After that call, it checks whether the motion command exposes the timing hook. If present, it prints one extra line beside the existing <code class="docutils literal notranslate"><span class="pre">collect_time</span></code> and <code class="docutils literal notranslate"><span class="pre">learn_time</span></code> output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[LargeDatasetMotion] iter=123 collect_time=3.812s learning_time=1.044s global_bin_update=0.006s subset_update=0.018s
 </pre></div>
 </div>
+<p>If a writer exists, the runner also writes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Perf/global_bin_update_time</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Perf/subset_update_time</span></code></p></li>
+</ul>
+<p>This avoids changing the fixed <code class="docutils literal notranslate"><span class="pre">rsl_rl</span></code> logger signature and keeps old commands unaffected.</p>
+</section>
+<section id="files">
+<h2>Files<a class="headerlink" href="#files" title="Link to this heading">#</a></h2>
+<p>New:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_command_largedataset.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_large_dataset_motion_command.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/superpowers/specs/2026-07-02-large-dataset-motion-loader-design.md</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/superpowers/plans/2026-07-02-large-dataset-motion-loader.md</span></code></p></li>
+</ul>
+<p>Modified:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/rl/runner.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/wbteleop/runner.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_tracking_runner_adaptive_window.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tests/test_wbteleop_task.py</span></code></p></li>
+</ul>
+<p>The original <code class="docutils literal notranslate"><span class="pre">src/mjlab/tasks/tracking/mdp/multi_commands.py</span></code> is not modified for behavior.</p>
+</section>
+<section id="non-goals">
+<h2>Non-Goals<a class="headerlink" href="#non-goals" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>No cross-rank uniqueness for active subset motions.</p></li>
+<li><p>No async disk prefetch thread in the first implementation.</p></li>
+<li><p>No change to existing <code class="docutils literal notranslate"><span class="pre">multi_commands.py</span></code> or its config defaults.</p></li>
+<li><p>No automatic migration of existing configs to the large-dataset command.</p></li>
+</ul>
+</section>
+<section id="verification">
+<h2>Verification<a class="headerlink" href="#verification" title="Link to this heading">#</a></h2>
+<p>The implementation is complete when:</p>
+<ul class="simple">
+<li><p>Unit tests prove active subset uniqueness, eviction constraints, min residence, and no duplicate pending/active ids.</p></li>
+<li><p>Unit tests prove active adaptive sampling uses only active ready motions but updates global bin ids.</p></li>
+<li><p>Unit tests prove distributed sync is a no-op without distributed initialization and uses all-reduce when distributed is available.</p></li>
+<li><p>Runner tests prove the optional timing hook prints and logs only when present.</p></li>
+<li><p>Existing adaptive sampling tests for <code class="docutils literal notranslate"><span class="pre">multi_commands.py</span></code> still pass.</p></li>
+</ul>
 </section>
 </section>
 
@@ -651,13 +664,15 @@ uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </sp
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#goal">Goal</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scope">Scope</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#current-problem">Current Problem</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#architecture">Architecture</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#observations">Observations</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#losses">Losses</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checkpoint-format">Checkpoint Format</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#active-subset-policy">Active Subset Policy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adaptive-sampling">Adaptive Sampling</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multi-gpu-synchronization">Multi-GPU Synchronization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#timing-output">Timing Output</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#files">Files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#non-goals">Non-Goals</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#verification">Verification</a></li>
 </ul>
   </nav></div>
 
