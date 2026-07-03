@@ -267,6 +267,7 @@ class LargeDatasetMotionSlotBuffer:
     self.file_lengths = file_lengths
     self.fps = fps
     self._refresh_length_starts()
+    self._refresh_flat_cache()
 
   @property
   def num_files(self) -> int:
@@ -282,20 +283,13 @@ class LargeDatasetMotionSlotBuffer:
     slot_ids: torch.Tensor,
     time_steps: torch.Tensor,
   ) -> torch.Tensor:
-    chunks = self._chunks[field_name]
     flat_slot_ids, flat_time_steps, output_shape = self._flatten_indices(
       slot_ids, time_steps
     )
-    tail_shape = chunks[0].shape[1:]
-    output = torch.empty(
-      (*flat_time_steps.shape, *tail_shape),
-      dtype=chunks[0].dtype,
-      device=chunks[0].device,
-    )
-    for slot in torch.unique(flat_slot_ids):
-      slot_int = int(slot.item())
-      mask = flat_slot_ids == slot
-      output[mask] = chunks[slot_int][flat_time_steps[mask]]
+    flat_indices = self._length_starts[flat_slot_ids] + flat_time_steps
+    flat_field = self._flat_cache[field_name]
+    output = flat_field[flat_indices]
+    tail_shape = flat_field.shape[1:]
     return output.reshape(*output_shape, *tail_shape)
 
   def replace_slots(
@@ -313,6 +307,7 @@ class LargeDatasetMotionSlotBuffer:
       for field_name in self._FIELD_NAMES:
         self._chunks[field_name][slot] = loaded[field_name][offset]
     self._refresh_length_starts()
+    self._refresh_flat_cache()
 
   def _flatten_indices(
     self, slot_ids: torch.Tensor, time_steps: torch.Tensor
@@ -330,9 +325,19 @@ class LargeDatasetMotionSlotBuffer:
       ]
     )
 
+  def _refresh_flat_cache(self) -> None:
+    lengths = [int(length) for length in self.file_lengths.detach().cpu().tolist()]
+    self._flat_cache = {}
+    view_chunks: dict[str, list[torch.Tensor]] = {}
+    for field_name in self._FIELD_NAMES:
+      flat_field = torch.cat(self._chunks[field_name], dim=0)
+      self._flat_cache[field_name] = flat_field
+      view_chunks[field_name] = list(torch.split(flat_field, lengths, dim=0))
+    self._chunks = view_chunks
+
   def __getattr__(self, name: str) -> torch.Tensor:
     if name in self._FIELD_NAMES:
-      return torch.cat(self._chunks[name], dim=0)
+      return self._flat_cache[name]
     raise AttributeError(name)
 
 
@@ -615,22 +620,28 @@ class GlobalAdaptiveBinPool:
     time_steps = torch.as_tensor(time_steps, dtype=torch.long, device=self.device)
     current_bin_indices = self.compute_motion_bin_indices(time_steps, motion_ids)
     linear_indices = motion_ids * self.bin_count + current_bin_indices
-    current_counts = torch.bincount(
-      linear_indices, minlength=self.num_files * self.bin_count
-    ).view(self.num_files, self.bin_count)
-    episode_increments = current_counts.float() / torch.clamp(
-      self.bin_lengths.float(), min=1.0
+    episode_values = torch.ones(
+      linear_indices.shape, dtype=self.pending_episode_delta.dtype, device=self.device
+    ) / torch.clamp(
+      self.bin_lengths[motion_ids, current_bin_indices].to(
+        dtype=self.pending_episode_delta.dtype
+      ),
+      min=1.0,
     )
-    self.pending_episode_delta += episode_increments
+    self.pending_episode_delta.view(-1).index_add_(0, linear_indices, episode_values)
 
-    if failure_mask is None or not failure_mask.any():
+    if failure_mask is None:
       return
     failure_mask = torch.as_tensor(failure_mask, dtype=torch.bool, device=self.device)
     failed_linear_indices = linear_indices[failure_mask]
-    failed_counts = torch.bincount(
-      failed_linear_indices, minlength=self.num_files * self.bin_count
-    ).view(self.num_files, self.bin_count)
-    self.pending_failure_delta += failed_counts.float()
+    failure_values = torch.ones(
+      failed_linear_indices.shape,
+      dtype=self.pending_failure_delta.dtype,
+      device=self.device,
+    )
+    self.pending_failure_delta.view(-1).index_add_(
+      0, failed_linear_indices, failure_values
+    )
 
   def synchronize(self) -> float:
     start = time.perf_counter()

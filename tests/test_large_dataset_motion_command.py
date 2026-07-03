@@ -13,6 +13,7 @@ import mjlab.tasks.tracking.mdp.multi_command_largedataset as large_dataset_modu
 from mjlab.tasks.tracking.mdp.multi_command_largedataset import (
   ActiveMotionSubset,
   GlobalAdaptiveBinPool,
+  LargeDatasetMotionSlotBuffer,
   LargeDatasetMotionStore,
   LargeDatasetMultiMotionCommand,
   MotionCommand,
@@ -185,6 +186,42 @@ def test_motion_store_loads_metadata_and_selected_motions_only(tmp_path: Path) -
   torch.testing.assert_close(buffer.body_pos_w[0, 0], torch.tensor([20.0, 0.0, 0.0]))
 
 
+def test_slot_buffer_gather_uses_vectorized_flat_indices(monkeypatch) -> None:
+  chunks = {}
+  for field_name in LargeDatasetMotionSlotBuffer._FIELD_NAMES:
+    chunks[field_name] = [
+      torch.tensor([[0.0], [1.0]], dtype=torch.float32),
+      torch.tensor([[10.0], [11.0], [12.0]], dtype=torch.float32),
+      torch.tensor([[20.0], [21.0]], dtype=torch.float32),
+    ]
+  buffer = LargeDatasetMotionSlotBuffer(
+    global_motion_ids=torch.tensor([0, 1, 2], dtype=torch.long),
+    chunks=chunks,
+    file_lengths=torch.tensor([2, 3, 2], dtype=torch.long),
+    fps=30.0,
+  )
+
+  def fail_unique(*args, **kwargs):
+    raise AssertionError("gather should not loop over unique slot ids")
+
+  monkeypatch.setattr(large_dataset_module.torch, "unique", fail_unique)
+
+  gathered = buffer.gather(
+    "joint_pos",
+    torch.tensor([2, 0, 1, 2], dtype=torch.long),
+    torch.tensor([0, 1, 2, 1], dtype=torch.long),
+  )
+
+  torch.testing.assert_close(
+    gathered.squeeze(-1), torch.tensor([20.0, 1.0, 12.0, 21.0])
+  )
+  flat_storage_ptr = buffer.joint_pos.untyped_storage().data_ptr()
+  assert all(
+    chunk.untyped_storage().data_ptr() == flat_storage_ptr
+    for chunk in buffer._chunks["joint_pos"]
+  )
+
+
 def test_motion_store_accepts_non_scalar_fps_arrays(tmp_path: Path) -> None:
   path = tmp_path / "motion_with_array_fps.npz"
   _write_motion(
@@ -251,6 +288,47 @@ def test_global_bin_pool_syncs_local_deltas_without_distributed() -> None:
   assert pool.bin_failure_count[0, 1].item() == pytest.approx(2.0)
   assert pool.bin_episode_count[1, 0].item() == pytest.approx(1.2)
   assert pool.bin_failure_count[1, 0].item() == pytest.approx(1.0)
+
+
+def test_global_bin_pool_accumulate_updates_only_touched_bins(monkeypatch) -> None:
+  pool = GlobalAdaptiveBinPool(
+    torch.tensor([10, 6], dtype=torch.long),
+    bin_width_steps=5,
+    init_num_failures=1.0,
+    device="cpu",
+  )
+
+  def fail_bincount(*args, **kwargs):
+    raise AssertionError("accumulate should use sparse touched-bin updates")
+
+  monkeypatch.setattr(large_dataset_module.torch, "bincount", fail_bincount)
+
+  pool.accumulate(
+    torch.tensor([0, 0, 0, 1], dtype=torch.long),
+    torch.tensor([0, 3, 7, 5], dtype=torch.long),
+    torch.tensor([True, False, True, True], dtype=torch.bool),
+  )
+
+  torch.testing.assert_close(
+    pool.pending_episode_delta,
+    torch.tensor(
+      [
+        [0.4, 0.2, 0.0],
+        [0.0, 1.0, 0.0],
+      ],
+      dtype=torch.float32,
+    ),
+  )
+  torch.testing.assert_close(
+    pool.pending_failure_delta,
+    torch.tensor(
+      [
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+      ],
+      dtype=torch.float32,
+    ),
+  )
 
 
 def test_global_bin_pool_probabilities_are_limited_to_active_subset() -> None:
