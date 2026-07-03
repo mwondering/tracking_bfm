@@ -17,6 +17,28 @@ from mjlab.rl.runner import MjlabOnPolicyRunner
 from mjlab.tasks.tracking.mdp import MotionCommand
 
 
+def _bootstrap_debug(message: str) -> None:
+  debug_dir = os.environ.get("MJLAB_BOOTSTRAP_DEBUG_DIR", "")
+  if not debug_dir:
+    return
+  rank = os.environ.get("RANK", "unknown")
+  local_rank = os.environ.get("LOCAL_RANK", "unknown")
+  pid = os.getpid()
+  line = (
+    f"[BOOT][{time.strftime('%Y-%m-%d %H:%M:%S')}] "
+    f"rank={rank} local_rank={local_rank} pid={pid}: tracking_runner: {message}"
+  )
+  print(line, flush=True)
+  try:
+    os.makedirs(debug_dir, exist_ok=True)
+    log_file = os.path.join(debug_dir, f"rank_{rank}_local_{local_rank}_pid_{pid}.log")
+    with open(log_file, "a", encoding="utf-8") as f:
+      f.write(line + "\n")
+      f.flush()
+  except Exception:
+    pass
+
+
 class _OnnxMotionModel(nn.Module):
   """ONNX-exportable model that wraps the policy and bundles motion reference data."""
 
@@ -61,10 +83,12 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     self.registry_name = registry_name
 
   def _begin_adaptive_sampling_iteration(self, iteration: int) -> None:
+    _bootstrap_debug(f"before begin_adaptive_sampling_iteration iteration={iteration}")
     motion_cmd = self.env.unwrapped.command_manager.get_term("motion")
     begin_iteration = getattr(motion_cmd, "begin_adaptive_sampling_iteration", None)
     if callable(begin_iteration):
       begin_iteration(iteration)
+    _bootstrap_debug(f"after begin_adaptive_sampling_iteration iteration={iteration}")
 
   def _log_large_dataset_timing(self, *, it: int) -> None:
     unwrapped_env = getattr(self.env, "unwrapped", None)
@@ -92,29 +116,55 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     self, num_learning_iterations: int, init_at_random_ep_len: bool = False
   ) -> None:
     """Run learning and advance adaptive sampling windows by PPO iteration."""
+    _bootstrap_debug(
+      "learn enter "
+      f"num_learning_iterations={num_learning_iterations} "
+      f"init_at_random_ep_len={init_at_random_ep_len} "
+      f"is_distributed={self.is_distributed} "
+      f"rank={getattr(self, 'gpu_global_rank', 'unknown')}"
+    )
     if init_at_random_ep_len:
+      _bootstrap_debug("before init random episode length")
       self.env.episode_length_buf = torch.randint_like(
         self.env.episode_length_buf, high=int(self.env.max_episode_length)
       )
+      _bootstrap_debug("after init random episode length")
 
+    _bootstrap_debug("before learn get_observations")
     obs = self.env.get_observations().to(self.device)
+    _bootstrap_debug("after learn get_observations")
+    _bootstrap_debug("before alg.train_mode")
     self.alg.train_mode()
+    _bootstrap_debug("after alg.train_mode")
 
     if self.is_distributed:
+      _bootstrap_debug(f"before broadcast_parameters rank={self.gpu_global_rank}")
       print(f"Synchronizing parameters for rank {self.gpu_global_rank}...")
       self.alg.broadcast_parameters()
+      _bootstrap_debug(f"after broadcast_parameters rank={self.gpu_global_rank}")
 
+    _bootstrap_debug("before logger.init_logging_writer")
     self.logger.init_logging_writer()
+    _bootstrap_debug("after logger.init_logging_writer")
 
     start_it = self.current_learning_iteration
     total_it = start_it + num_learning_iterations
     for it in range(start_it, total_it):
+      _bootstrap_debug(f"iteration {it}: start")
       self._begin_adaptive_sampling_iteration(it)
       start = time.time()
       with torch.inference_mode():
-        for _ in range(self.cfg["num_steps_per_env"]):
+        num_steps_per_env = int(self.cfg["num_steps_per_env"])
+        _bootstrap_debug(f"iteration {it}: before rollout steps={num_steps_per_env}")
+        for step_idx in range(num_steps_per_env):
+          if step_idx == 0 or step_idx == num_steps_per_env - 1:
+            _bootstrap_debug(f"iteration {it}: before alg.act step={step_idx}")
           actions = self.alg.act(obs)
+          if step_idx == 0 or step_idx == num_steps_per_env - 1:
+            _bootstrap_debug(f"iteration {it}: before env.step step={step_idx}")
           obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
+          if step_idx == 0 or step_idx == num_steps_per_env - 1:
+            _bootstrap_debug(f"iteration {it}: after env.step step={step_idx}")
           if self.cfg.get("check_for_nan", True):
             check_nan(obs, rewards, dones)
           obs, rewards, dones = (
@@ -127,19 +177,26 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
             self.alg.intrinsic_rewards if self.cfg["algorithm"]["rnd_cfg"] else None
           )
           self.logger.process_env_step(rewards, dones, extras, intrinsic_rewards)
+          if step_idx == 0 or step_idx == num_steps_per_env - 1:
+            _bootstrap_debug(f"iteration {it}: after process_env_step step={step_idx}")
 
         stop = time.time()
         collect_time = stop - start
         start = stop
 
+        _bootstrap_debug(f"iteration {it}: before compute_returns")
         self.alg.compute_returns(obs)
+        _bootstrap_debug(f"iteration {it}: after compute_returns")
 
+      _bootstrap_debug(f"iteration {it}: before alg.update")
       loss_dict = self.alg.update()
+      _bootstrap_debug(f"iteration {it}: after alg.update")
 
       stop = time.time()
       learn_time = stop - start
       self.current_learning_iteration = it
 
+      _bootstrap_debug(f"iteration {it}: before logger.log")
       self.logger.log(
         it=it,
         start_it=start_it,
@@ -151,16 +208,22 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
         action_std=self.alg.get_policy().output_std,
         rnd_weight=(self.alg.rnd.weight if self.cfg["algorithm"]["rnd_cfg"] else None),
       )
+      _bootstrap_debug(f"iteration {it}: after logger.log")
       self._log_large_dataset_timing(it=it)
 
       if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
+        _bootstrap_debug(f"iteration {it}: before save")
         self.save(os.path.join(self.logger.log_dir, f"model_{it}.pt"))
+        _bootstrap_debug(f"iteration {it}: after save")
 
     if self.logger.writer is not None:
+      _bootstrap_debug("before final save")
       self.save(
         os.path.join(self.logger.log_dir, f"model_{self.current_learning_iteration}.pt")
       )
       self.logger.stop_logging_writer()
+      _bootstrap_debug("after final save")
+    _bootstrap_debug("learn done")
 
   def export_policy_to_onnx(
     self, path: str, filename: str = "policy.onnx", verbose: bool = False
