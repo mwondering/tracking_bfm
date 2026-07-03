@@ -186,40 +186,83 @@ def test_motion_store_loads_metadata_and_selected_motions_only(tmp_path: Path) -
   torch.testing.assert_close(buffer.body_pos_w[0, 0], torch.tensor([20.0, 0.0, 0.0]))
 
 
-def test_slot_buffer_gather_uses_vectorized_flat_indices(monkeypatch) -> None:
+def test_slot_buffer_gather_uses_bucketed_slots() -> None:
+  chunks = {}
+  for field_name in LargeDatasetMotionSlotBuffer._FIELD_NAMES:
+    chunks[field_name] = [
+      torch.tensor([[0.0], [1.0]], dtype=torch.float32),
+      torch.tensor(
+        [[10.0], [11.0], [12.0], [13.0], [14.0]], dtype=torch.float32
+      ),
+      torch.tensor([[20.0], [21.0], [22.0]], dtype=torch.float32),
+    ]
+  buffer = LargeDatasetMotionSlotBuffer(
+    global_motion_ids=torch.tensor([0, 1, 2], dtype=torch.long),
+    chunks=chunks,
+    file_lengths=torch.tensor([2, 5, 3], dtype=torch.long),
+    fps=30.0,
+  )
+
+  gathered = buffer.gather(
+    "joint_pos",
+    torch.tensor([2, 0, 1, 2], dtype=torch.long),
+    torch.tensor([0, 1, 4, 2], dtype=torch.long),
+  )
+
+  torch.testing.assert_close(
+    gathered.squeeze(-1), torch.tensor([20.0, 1.0, 14.0, 22.0])
+  )
+  torch.testing.assert_close(
+    buffer.joint_pos.squeeze(-1),
+    torch.tensor([0.0, 1.0, 10.0, 11.0, 12.0, 13.0, 14.0, 20.0, 21.0, 22.0]),
+  )
+  assert sorted(buffer._bucket_capacities) == [2, 4, 8]
+
+
+def test_slot_buffer_replace_slots_does_not_rebuild_flat_cache(monkeypatch) -> None:
   chunks = {}
   for field_name in LargeDatasetMotionSlotBuffer._FIELD_NAMES:
     chunks[field_name] = [
       torch.tensor([[0.0], [1.0]], dtype=torch.float32),
       torch.tensor([[10.0], [11.0], [12.0]], dtype=torch.float32),
-      torch.tensor([[20.0], [21.0]], dtype=torch.float32),
     ]
   buffer = LargeDatasetMotionSlotBuffer(
-    global_motion_ids=torch.tensor([0, 1, 2], dtype=torch.long),
+    global_motion_ids=torch.tensor([0, 1], dtype=torch.long),
     chunks=chunks,
-    file_lengths=torch.tensor([2, 3, 2], dtype=torch.long),
+    file_lengths=torch.tensor([2, 3], dtype=torch.long),
     fps=30.0,
   )
 
-  def fail_unique(*args, **kwargs):
-    raise AssertionError("gather should not loop over unique slot ids")
+  class _FakeStore:
+    def load_motion_chunks(self, motion_ids):
+      assert motion_ids.tolist() == [9]
+      loaded = {
+        "global_motion_ids": torch.tensor([9], dtype=torch.long),
+        "file_lengths": torch.tensor([5], dtype=torch.long),
+      }
+      for field_name in LargeDatasetMotionSlotBuffer._FIELD_NAMES:
+        loaded[field_name] = [torch.arange(5, dtype=torch.float32).unsqueeze(-1) + 90.0]
+      return loaded
 
-  monkeypatch.setattr(large_dataset_module.torch, "unique", fail_unique)
+  def fail_cat(*args, **kwargs):
+    raise AssertionError("replace_slots should not rebuild a full flat cache")
 
+  monkeypatch.setattr(large_dataset_module.torch, "cat", fail_cat)
+
+  buffer.replace_slots(
+    torch.tensor([0], dtype=torch.long),
+    torch.tensor([9], dtype=torch.long),
+    _FakeStore(),
+  )
+
+  assert buffer.global_motion_ids.tolist() == [9, 1]
+  assert buffer.file_lengths.tolist() == [5, 3]
   gathered = buffer.gather(
     "joint_pos",
-    torch.tensor([2, 0, 1, 2], dtype=torch.long),
-    torch.tensor([0, 1, 2, 1], dtype=torch.long),
+    torch.tensor([0, 1], dtype=torch.long),
+    torch.tensor([4, 2], dtype=torch.long),
   )
-
-  torch.testing.assert_close(
-    gathered.squeeze(-1), torch.tensor([20.0, 1.0, 12.0, 21.0])
-  )
-  flat_storage_ptr = buffer.joint_pos.untyped_storage().data_ptr()
-  assert all(
-    chunk.untyped_storage().data_ptr() == flat_storage_ptr
-    for chunk in buffer._chunks["joint_pos"]
-  )
+  torch.testing.assert_close(gathered.squeeze(-1), torch.tensor([94.0, 12.0]))
 
 
 def test_motion_store_accepts_non_scalar_fps_arrays(tmp_path: Path) -> None:

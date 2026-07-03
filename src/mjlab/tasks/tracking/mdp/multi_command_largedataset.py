@@ -263,11 +263,21 @@ class LargeDatasetMotionSlotBuffer:
     fps: float,
   ) -> None:
     self.global_motion_ids = global_motion_ids
-    self._chunks = chunks
     self.file_lengths = file_lengths
     self.fps = fps
+    self._bucket_capacities: list[int] = []
+    self._bucket_id_by_capacity: dict[int, int] = {}
+    self._bucket_fields: dict[str, list[torch.Tensor]] = {
+      field_name: [] for field_name in self._FIELD_NAMES
+    }
+    self._bucket_free_local_ids: list[list[int]] = []
+    self._field_tail_shapes: dict[str, torch.Size] = {}
+    self._field_dtypes: dict[str, torch.dtype] = {}
+    self._field_devices: dict[str, torch.device] = {}
+    self.slot_bucket_ids = torch.empty_like(self.file_lengths)
+    self.slot_bucket_local_ids = torch.empty_like(self.file_lengths)
     self._refresh_length_starts()
-    self._refresh_flat_cache()
+    self._build_bucket_storage(chunks)
 
   @property
   def num_files(self) -> int:
@@ -286,10 +296,25 @@ class LargeDatasetMotionSlotBuffer:
     flat_slot_ids, flat_time_steps, output_shape = self._flatten_indices(
       slot_ids, time_steps
     )
-    flat_indices = self._length_starts[flat_slot_ids] + flat_time_steps
-    flat_field = self._flat_cache[field_name]
-    output = flat_field[flat_indices]
-    tail_shape = flat_field.shape[1:]
+    tail_shape = self._field_tail_shapes[field_name]
+    output = torch.empty(
+      (*flat_time_steps.shape, *tail_shape),
+      dtype=self._field_dtypes[field_name],
+      device=self._field_devices[field_name],
+    )
+    if flat_time_steps.numel() == 0:
+      return output.reshape(*output_shape, *tail_shape)
+
+    bucket_ids = self.slot_bucket_ids[flat_slot_ids]
+    bucket_local_ids = self.slot_bucket_local_ids[flat_slot_ids]
+    field_buckets = self._bucket_fields[field_name]
+    for bucket_id in range(len(self._bucket_capacities)):
+      output_indices = torch.where(bucket_ids == bucket_id)[0]
+      if output_indices.numel() == 0:
+        continue
+      output[output_indices] = field_buckets[bucket_id][
+        bucket_local_ids[output_indices], flat_time_steps[output_indices]
+      ]
     return output.reshape(*output_shape, *tail_shape)
 
   def replace_slots(
@@ -304,10 +329,12 @@ class LargeDatasetMotionSlotBuffer:
     for offset, slot in enumerate(slot_ids.tolist()):
       self.global_motion_ids[slot] = loaded["global_motion_ids"][offset]
       self.file_lengths[slot] = loaded["file_lengths"][offset]
-      for field_name in self._FIELD_NAMES:
-        self._chunks[field_name][slot] = loaded[field_name][offset]
+      self._replace_slot_storage(
+        slot,
+        int(loaded["file_lengths"][offset].item()),
+        {field_name: loaded[field_name][offset] for field_name in self._FIELD_NAMES},
+      )
     self._refresh_length_starts()
-    self._refresh_flat_cache()
 
   def _flatten_indices(
     self, slot_ids: torch.Tensor, time_steps: torch.Tensor
@@ -318,26 +345,156 @@ class LargeDatasetMotionSlotBuffer:
     return expanded_slots.reshape(-1), time_steps.reshape(-1), time_steps.shape
 
   def _refresh_length_starts(self) -> None:
-    self._length_starts = torch.cat(
-      [
-        torch.zeros(1, dtype=torch.long, device=self.file_lengths.device),
-        self.file_lengths[:-1].cumsum(dim=0),
-      ]
+    self._length_starts = torch.empty_like(self.file_lengths)
+    if self.file_lengths.numel() == 0:
+      return
+    self._length_starts[0] = 0
+    if self.file_lengths.numel() > 1:
+      self._length_starts[1:] = self.file_lengths[:-1].cumsum(dim=0)
+
+  def _build_bucket_storage(self, chunks: dict[str, list[torch.Tensor]]) -> None:
+    if self.num_files == 0:
+      raise ValueError("Slot buffer requires at least one motion")
+    lengths = [int(length) for length in self.file_lengths.detach().cpu().tolist()]
+    capacities = [self._bucket_capacity_for_length(length) for length in lengths]
+    for field_name in self._FIELD_NAMES:
+      prototype = chunks[field_name][0]
+      self._field_tail_shapes[field_name] = prototype.shape[1:]
+      self._field_dtypes[field_name] = prototype.dtype
+      self._field_devices[field_name] = prototype.device
+
+    for capacity in sorted(set(capacities)):
+      self._add_bucket(capacity)
+
+    bucket_slots: dict[int, list[int]] = {
+      bucket_id: [] for bucket_id in range(len(self._bucket_capacities))
+    }
+    for slot, capacity in enumerate(capacities):
+      bucket_id = self._bucket_id_by_capacity[capacity]
+      local_id = len(bucket_slots[bucket_id])
+      bucket_slots[bucket_id].append(slot)
+      self.slot_bucket_ids[slot] = bucket_id
+      self.slot_bucket_local_ids[slot] = local_id
+
+    for bucket_id, slot_list in bucket_slots.items():
+      self._allocate_bucket_storage(bucket_id, len(slot_list))
+
+    for slot, length in enumerate(lengths):
+      self._copy_slot_fields(
+        int(self.slot_bucket_ids[slot].item()),
+        int(self.slot_bucket_local_ids[slot].item()),
+        length,
+        {field_name: chunks[field_name][slot] for field_name in self._FIELD_NAMES},
+      )
+
+    padded_frames = sum(
+      len(bucket_slots[bucket_id]) * capacity
+      for bucket_id, capacity in enumerate(self._bucket_capacities)
+    )
+    active_frames = max(sum(lengths), 1)
+    _bootstrap_debug(
+      "slot bucket storage built "
+      f"buckets={list(zip(self._bucket_capacities, [len(bucket_slots[i]) for i in range(len(self._bucket_capacities))]))} "
+      f"padding_overhead={padded_frames / active_frames:.3f}x"
     )
 
-  def _refresh_flat_cache(self) -> None:
-    lengths = [int(length) for length in self.file_lengths.detach().cpu().tolist()]
-    self._flat_cache = {}
-    view_chunks: dict[str, list[torch.Tensor]] = {}
+  @staticmethod
+  def _bucket_capacity_for_length(length: int) -> int:
+    return 1 << (max(int(length), 1) - 1).bit_length()
+
+  def _add_bucket(self, capacity: int) -> int:
+    bucket_id = len(self._bucket_capacities)
+    self._bucket_capacities.append(int(capacity))
+    self._bucket_id_by_capacity[int(capacity)] = bucket_id
+    self._bucket_free_local_ids.append([])
     for field_name in self._FIELD_NAMES:
-      flat_field = torch.cat(self._chunks[field_name], dim=0)
-      self._flat_cache[field_name] = flat_field
-      view_chunks[field_name] = list(torch.split(flat_field, lengths, dim=0))
-    self._chunks = view_chunks
+      if field_name in self._field_tail_shapes:
+        empty = torch.empty(
+          (0, int(capacity), *self._field_tail_shapes[field_name]),
+          dtype=self._field_dtypes[field_name],
+          device=self._field_devices[field_name],
+        )
+        self._bucket_fields[field_name].append(empty)
+    return bucket_id
+
+  def _bucket_id_for_length(self, length: int) -> int:
+    capacity = self._bucket_capacity_for_length(length)
+    bucket_id = self._bucket_id_by_capacity.get(capacity)
+    if bucket_id is not None:
+      return bucket_id
+    return self._add_bucket(capacity)
+
+  def _allocate_bucket_storage(self, bucket_id: int, size: int) -> None:
+    capacity = self._bucket_capacities[bucket_id]
+    for field_name in self._FIELD_NAMES:
+      self._bucket_fields[field_name][bucket_id] = torch.empty(
+        (size, capacity, *self._field_tail_shapes[field_name]),
+        dtype=self._field_dtypes[field_name],
+        device=self._field_devices[field_name],
+      )
+
+  def _grow_bucket(self, bucket_id: int) -> int:
+    old_size = int(self._bucket_fields[self._FIELD_NAMES[0]][bucket_id].shape[0])
+    grow_by = max(1, min(64, old_size // 8 if old_size > 0 else 1))
+    new_size = old_size + grow_by
+    capacity = self._bucket_capacities[bucket_id]
+    for field_name in self._FIELD_NAMES:
+      old_bucket = self._bucket_fields[field_name][bucket_id]
+      new_bucket = torch.empty(
+        (new_size, capacity, *self._field_tail_shapes[field_name]),
+        dtype=self._field_dtypes[field_name],
+        device=self._field_devices[field_name],
+      )
+      if old_size > 0:
+        new_bucket[:old_size].copy_(old_bucket)
+      self._bucket_fields[field_name][bucket_id] = new_bucket
+    self._bucket_free_local_ids[bucket_id].extend(range(old_size + 1, new_size))
+    return old_size
+
+  def _allocate_bucket_local_id(self, bucket_id: int) -> int:
+    free_ids = self._bucket_free_local_ids[bucket_id]
+    if free_ids:
+      return free_ids.pop()
+    return self._grow_bucket(bucket_id)
+
+  def _replace_slot_storage(
+    self, slot: int, length: int, fields: dict[str, torch.Tensor]
+  ) -> None:
+    old_bucket_id = int(self.slot_bucket_ids[slot].item())
+    old_local_id = int(self.slot_bucket_local_ids[slot].item())
+    new_bucket_id = self._bucket_id_for_length(length)
+    if new_bucket_id == old_bucket_id:
+      new_local_id = old_local_id
+    else:
+      self._bucket_free_local_ids[old_bucket_id].append(old_local_id)
+      new_local_id = self._allocate_bucket_local_id(new_bucket_id)
+      self.slot_bucket_ids[slot] = new_bucket_id
+      self.slot_bucket_local_ids[slot] = new_local_id
+    self._copy_slot_fields(new_bucket_id, new_local_id, length, fields)
+
+  def _copy_slot_fields(
+    self,
+    bucket_id: int,
+    local_id: int,
+    length: int,
+    fields: dict[str, torch.Tensor],
+  ) -> None:
+    for field_name in self._FIELD_NAMES:
+      target = self._bucket_fields[field_name][bucket_id][local_id]
+      target[:length].copy_(fields[field_name])
+
+  def _as_flat_field(self, field_name: str) -> torch.Tensor:
+    pieces = []
+    for slot in range(self.num_files):
+      length = int(self.file_lengths[slot].item())
+      bucket_id = int(self.slot_bucket_ids[slot].item())
+      local_id = int(self.slot_bucket_local_ids[slot].item())
+      pieces.append(self._bucket_fields[field_name][bucket_id][local_id, :length])
+    return torch.cat(pieces, dim=0)
 
   def __getattr__(self, name: str) -> torch.Tensor:
     if name in self._FIELD_NAMES:
-      return self._flat_cache[name]
+      return self._as_flat_field(name)
     raise AttributeError(name)
 
 
