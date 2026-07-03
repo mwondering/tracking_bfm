@@ -974,6 +974,8 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     )
     self._last_global_bin_update_time = 0.0
     self._last_subset_update_time = 0.0
+    self._motion_gather_time_accum = 0.0
+    self._motion_gather_call_count = 0
     _bootstrap_debug("LargeDatasetMultiMotionCommand init done")
 
   def _resolve_all_motion_files(self) -> list[str]:
@@ -1188,11 +1190,17 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     self._refresh_active_subset(iteration)
     self._last_subset_update_time = time.perf_counter() - start
 
-  def get_large_dataset_timing_stats(self) -> dict[str, float]:
-    return {
+  def get_large_dataset_timing_stats(self, *, reset: bool = False) -> dict[str, float]:
+    stats = {
       "global_bin_update_time": float(self._last_global_bin_update_time),
       "subset_update_time": float(self._last_subset_update_time),
+      "motion_gather_time": float(self._motion_gather_time_accum),
+      "motion_gather_call_count": float(self._motion_gather_call_count),
     }
+    if reset:
+      self._motion_gather_time_accum = 0.0
+      self._motion_gather_call_count = 0
+    return stats
 
   def _compute_failure_rate(self) -> torch.Tensor:
     return self.global_bin_pool.compute_failure_rate()
@@ -1230,7 +1238,11 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
         f"{missing_motion_ids.detach().cpu().tolist()}"
       )
     clamped_time_steps = self._clamp_motion_time_steps(motion_ids, time_steps)
-    return self.motion.gather(field_name, slot_ids, clamped_time_steps)
+    start = time.perf_counter()
+    gathered = self.motion.gather(field_name, slot_ids, clamped_time_steps)
+    self._motion_gather_time_accum += time.perf_counter() - start
+    self._motion_gather_call_count += 1
+    return gathered
 
   def _uniform_baseline_probabilities(
     self, motion_indices: torch.Tensor

@@ -407,6 +407,10 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
   command.motion_length = torch.zeros(command.num_envs, dtype=torch.long)
   command.time_steps = torch.zeros(command.num_envs, dtype=torch.long)
   command.metrics = {}
+  command._last_global_bin_update_time = 0.0
+  command._last_subset_update_time = 0.0
+  command._motion_gather_time_accum = 0.0
+  command._motion_gather_call_count = 0
   return command
 
 
@@ -442,6 +446,25 @@ def test_large_dataset_command_gathers_by_global_motion_id_through_active_slots(
   )
 
   torch.testing.assert_close(gathered.squeeze(-1), torch.tensor([11.0, 2.0]))
+  assert command._motion_gather_call_count == 1
+  assert command._motion_gather_time_accum >= 0.0
+
+
+def test_large_dataset_timing_stats_report_and_reset_gather_accumulators() -> None:
+  command = _make_large_dataset_command_shell()
+  command._last_global_bin_update_time = 0.25
+  command._last_subset_update_time = 0.5
+  command._motion_gather_time_accum = 0.75
+  command._motion_gather_call_count = 3
+
+  stats = command.get_large_dataset_timing_stats(reset=True)
+
+  assert stats["global_bin_update_time"] == pytest.approx(0.25)
+  assert stats["subset_update_time"] == pytest.approx(0.5)
+  assert stats["motion_gather_time"] == pytest.approx(0.75)
+  assert stats["motion_gather_call_count"] == pytest.approx(3.0)
+  assert command._motion_gather_time_accum == pytest.approx(0.0)
+  assert command._motion_gather_call_count == 0
 
 
 def test_large_dataset_command_records_synced_delta_before_advancing_window() -> None:

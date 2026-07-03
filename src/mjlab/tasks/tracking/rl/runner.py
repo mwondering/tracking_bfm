@@ -90,7 +90,9 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
       begin_iteration(iteration)
     _bootstrap_debug(f"after begin_adaptive_sampling_iteration iteration={iteration}")
 
-  def _log_large_dataset_timing(self, *, it: int) -> None:
+  def _log_large_dataset_timing(
+    self, *, it: int, collect_time: float, learn_time: float
+  ) -> None:
     unwrapped_env = getattr(self.env, "unwrapped", None)
     command_manager = getattr(unwrapped_env, "command_manager", None)
     if command_manager is None:
@@ -100,17 +102,29 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     if not callable(get_stats):
       return
 
-    stats = get_stats()
+    try:
+      stats = get_stats(reset=True)
+    except TypeError:
+      stats = get_stats()
     global_bin_update_time = float(stats.get("global_bin_update_time", 0.0))
     subset_update_time = float(stats.get("subset_update_time", 0.0))
+    motion_gather_time = float(stats.get("motion_gather_time", 0.0))
+    motion_gather_call_count = float(stats.get("motion_gather_call_count", 0.0))
     print(
-      f"Large dataset timing: global_bin_update_time: {global_bin_update_time:.4f}s, "
-      f"subset_update_time: {subset_update_time:.4f}s"
+      "Large dataset timing: "
+      f"collect_time: {collect_time:.4f}s, "
+      f"learn_time: {learn_time:.4f}s, "
+      f"global_bin_update_time: {global_bin_update_time:.4f}s, "
+      f"subset_update_time: {subset_update_time:.4f}s, "
+      f"motion_gather_time: {motion_gather_time:.4f}s, "
+      f"motion_gather_call_count: {motion_gather_call_count:.0f}"
     )
     writer = getattr(self.logger, "writer", None)
     if writer is not None:
       writer.add_scalar("Perf/global_bin_update_time", global_bin_update_time, it)
       writer.add_scalar("Perf/subset_update_time", subset_update_time, it)
+      writer.add_scalar("Perf/motion_gather_time", motion_gather_time, it)
+      writer.add_scalar("Perf/motion_gather_call_count", motion_gather_call_count, it)
 
   def learn(
     self, num_learning_iterations: int, init_at_random_ep_len: bool = False
@@ -209,7 +223,9 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
         rnd_weight=(self.alg.rnd.weight if self.cfg["algorithm"]["rnd_cfg"] else None),
       )
       _bootstrap_debug(f"iteration {it}: after logger.log")
-      self._log_large_dataset_timing(it=it)
+      self._log_large_dataset_timing(
+        it=it, collect_time=collect_time, learn_time=learn_time
+      )
 
       if self.logger.writer is not None and it % self.cfg["save_interval"] == 0:
         _bootstrap_debug(f"iteration {it}: before save")
