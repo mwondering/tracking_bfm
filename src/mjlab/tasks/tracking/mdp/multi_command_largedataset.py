@@ -510,6 +510,9 @@ class LargeDatasetMotionStore:
     body_indexes: torch.Tensor,
     motion_type: Literal["isaaclab", "mujoco"] = "isaaclab",
     device: str | torch.device = "cpu",
+    metadata_cache_file: str = "",
+    metadata_cache_wait_timeout_s: float = 7200.0,
+    metadata_cache_poll_interval_s: float = 0.25,
   ) -> None:
     if len(motion_files) == 0:
       raise ValueError("motion_files cannot be empty")
@@ -530,6 +533,44 @@ class LargeDatasetMotionStore:
     elif motion_type != "mujoco":
       raise ValueError(f"Unsupported motion_type: {motion_type}")
 
+    metadata_cache_file = os.fspath(metadata_cache_file)
+    cached_metadata = self._try_load_metadata_cache(metadata_cache_file)
+    rank, world_size = self._runtime_rank_context()
+    if cached_metadata is None and metadata_cache_file and world_size > 1 and rank != 0:
+      cached_metadata = self._wait_for_metadata_cache(
+        metadata_cache_file,
+        timeout_s=float(metadata_cache_wait_timeout_s),
+        poll_interval_s=float(metadata_cache_poll_interval_s),
+      )
+    if cached_metadata is None:
+      file_lengths, fps_values, non_scalar_fps_count, empty_fps_count = (
+        self._read_motion_metadata_from_files()
+      )
+      self._write_metadata_cache(
+        metadata_cache_file,
+        file_lengths=file_lengths,
+        fps_values=fps_values,
+        non_scalar_fps_count=non_scalar_fps_count,
+        empty_fps_count=empty_fps_count,
+      )
+    else:
+      file_lengths, fps_values, non_scalar_fps_count, empty_fps_count = cached_metadata
+    self.file_lengths = torch.tensor(
+      file_lengths, dtype=torch.long, device=self.device
+    )
+    self.fps_list = fps_values
+    self.fps = fps_values[0]
+    self.non_scalar_fps_count = non_scalar_fps_count
+    self.empty_fps_count = empty_fps_count
+    _bootstrap_debug(
+      "LargeDatasetMotionStore init done "
+      f"num_files={self.num_files} total_frames={int(sum(file_lengths))} "
+      f"non_scalar_fps_count={non_scalar_fps_count} "
+      f"empty_fps_count={empty_fps_count} "
+      f"elapsed={time.perf_counter() - start:.3f}s"
+    )
+
+  def _read_motion_metadata_from_files(self) -> tuple[list[int], list[float], int, int]:
     file_lengths: list[int] = []
     fps_values: list[float] = []
     non_scalar_fps_count = 0
@@ -549,20 +590,111 @@ class LargeDatasetMotionStore:
         _bootstrap_debug(
           f"LargeDatasetMotionStore metadata progress {index + 1}/{len(self.motion_files)}"
         )
-    self.file_lengths = torch.tensor(
-      file_lengths, dtype=torch.long, device=self.device
-    )
-    self.fps_list = fps_values
-    self.fps = fps_values[0]
-    self.non_scalar_fps_count = non_scalar_fps_count
-    self.empty_fps_count = empty_fps_count
+    return file_lengths, fps_values, non_scalar_fps_count, empty_fps_count
+
+  def _try_load_metadata_cache(
+    self, metadata_cache_file: str
+  ) -> tuple[list[int], list[float], int, int] | None:
+    if not metadata_cache_file or not os.path.exists(metadata_cache_file):
+      return None
+    try:
+      with np.load(metadata_cache_file) as data:
+        if int(data["version"].item()) != 1:
+          return None
+        if int(data["num_files"].item()) != self.num_files:
+          return None
+        cached_hash = str(data["motion_files_hash"].item())
+        if cached_hash != self._motion_files_hash():
+          return None
+        file_lengths = np.asarray(data["file_lengths"], dtype=np.int64).tolist()
+        fps_values = np.asarray(data["fps_values"], dtype=np.float32).tolist()
+        non_scalar_fps_count = int(data["non_scalar_fps_count"].item())
+        empty_fps_count = int(data["empty_fps_count"].item())
+      _bootstrap_debug(
+        f"LargeDatasetMotionStore metadata cache hit file={metadata_cache_file}"
+      )
+      return file_lengths, fps_values, non_scalar_fps_count, empty_fps_count
+    except Exception as exc:
+      _bootstrap_debug(
+        f"LargeDatasetMotionStore metadata cache ignored file={metadata_cache_file} error={exc}"
+      )
+      return None
+
+  def _wait_for_metadata_cache(
+    self,
+    metadata_cache_file: str,
+    *,
+    timeout_s: float,
+    poll_interval_s: float,
+  ) -> tuple[list[int], list[float], int, int] | None:
+    start = time.perf_counter()
+    timeout_s = max(float(timeout_s), 0.0)
+    poll_interval_s = max(float(poll_interval_s), 0.01)
     _bootstrap_debug(
-      "LargeDatasetMotionStore init done "
-      f"num_files={self.num_files} total_frames={int(sum(file_lengths))} "
-      f"non_scalar_fps_count={non_scalar_fps_count} "
-      f"empty_fps_count={empty_fps_count} "
-      f"elapsed={time.perf_counter() - start:.3f}s"
+      f"LargeDatasetMotionStore waiting for metadata cache file={metadata_cache_file}"
     )
+    while time.perf_counter() - start <= timeout_s:
+      cached_metadata = self._try_load_metadata_cache(metadata_cache_file)
+      if cached_metadata is not None:
+        return cached_metadata
+      time.sleep(poll_interval_s)
+    _bootstrap_debug(
+      f"LargeDatasetMotionStore metadata cache wait timed out file={metadata_cache_file}"
+    )
+    return None
+
+  def _write_metadata_cache(
+    self,
+    metadata_cache_file: str,
+    *,
+    file_lengths: list[int],
+    fps_values: list[float],
+    non_scalar_fps_count: int,
+    empty_fps_count: int,
+  ) -> None:
+    if not metadata_cache_file:
+      return
+    try:
+      cache_dir = os.path.dirname(os.path.abspath(metadata_cache_file))
+      os.makedirs(cache_dir, exist_ok=True)
+      tmp_file = f"{metadata_cache_file}.tmp.{os.getpid()}.npz"
+      np.savez(
+        tmp_file,
+        version=np.array(1, dtype=np.int64),
+        num_files=np.array(self.num_files, dtype=np.int64),
+        motion_files_hash=np.array(self._motion_files_hash()),
+        file_lengths=np.asarray(file_lengths, dtype=np.int64),
+        fps_values=np.asarray(fps_values, dtype=np.float32),
+        non_scalar_fps_count=np.array(non_scalar_fps_count, dtype=np.int64),
+        empty_fps_count=np.array(empty_fps_count, dtype=np.int64),
+      )
+      os.replace(tmp_file, metadata_cache_file)
+      _bootstrap_debug(
+        f"LargeDatasetMotionStore metadata cache wrote file={metadata_cache_file}"
+      )
+    except Exception as exc:
+      _bootstrap_debug(
+        f"LargeDatasetMotionStore metadata cache write skipped file={metadata_cache_file} error={exc}"
+      )
+
+  def _motion_files_hash(self) -> str:
+    digest = hashlib.sha1()
+    for motion_file in self.motion_files:
+      digest.update(os.path.abspath(motion_file).encode("utf-8"))
+      digest.update(b"\0")
+    return digest.hexdigest()
+
+  @staticmethod
+  def _runtime_rank_context() -> tuple[int, int]:
+    try:
+      rank = int(os.environ.get("RANK", "0"))
+    except ValueError:
+      rank = 0
+    try:
+      world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    except ValueError:
+      world_size = 1
+    return rank, max(world_size, 1)
 
   @staticmethod
   def _extract_fps_value(fps_data: np.ndarray) -> tuple[float, bool, bool]:
@@ -704,6 +836,8 @@ class GlobalAdaptiveBinPool:
     bin_width_steps: int,
     init_num_failures: float,
     device: str | torch.device,
+    rank: int | None = None,
+    world_size: int | None = None,
   ) -> None:
     self.device = torch.device(device)
     self.file_lengths = torch.as_tensor(
@@ -712,6 +846,12 @@ class GlobalAdaptiveBinPool:
     self.num_files = int(self.file_lengths.numel())
     self.bin_width_steps = max(int(bin_width_steps), 1)
     self.bin_count = int(self.file_lengths.max().item() // self.bin_width_steps) + 1
+    resolved_rank, resolved_world_size = self._resolve_distributed_context()
+    self.rank = resolved_rank if rank is None else int(rank)
+    self.world_size = (
+      resolved_world_size if world_size is None else max(int(world_size), 1)
+    )
+    self.is_sharded = self.world_size > 1
 
     self.motion_bin_counts = torch.clamp(
       torch.div(
@@ -721,36 +861,124 @@ class GlobalAdaptiveBinPool:
       ),
       min=1,
     )
-    bin_indices = torch.arange(self.bin_count, device=self.device)
-    self.bin_valid_mask = bin_indices.unsqueeze(0) < self.motion_bin_counts.unsqueeze(1)
-    self.valid_motion_ids, self.valid_bin_ids = torch.where(self.bin_valid_mask)
-    self.num_valid_motion_bins = max(int(self.valid_motion_ids.numel()), 1)
-    bin_starts = bin_indices.unsqueeze(0) * self.bin_width_steps
-    remaining_lengths = (self.file_lengths.unsqueeze(1) - bin_starts).clamp(min=0)
-    self.bin_lengths = torch.minimum(
-      remaining_lengths,
-      torch.full_like(remaining_lengths, self.bin_width_steps),
+    self.num_valid_motion_bins = max(int(self.motion_bin_counts.sum().item()), 1)
+    self.mean_bin_length = torch.clamp(
+      self.file_lengths.float().sum() / float(self.num_valid_motion_bins),
+      min=1.0,
     )
-    self.bin_lengths.masked_fill_(~self.bin_valid_mask, 0)
-    valid_bin_lengths = self.bin_lengths[self.bin_valid_mask].float()
-    mean_bin_length = torch.clamp(valid_bin_lengths.mean(), min=1.0)
-    self.base_bin_weights = self.bin_lengths.float() / mean_bin_length
-    self.base_bin_weights.masked_fill_(~self.bin_valid_mask, 0.0)
+    if self.is_sharded:
+      self.bin_valid_mask = None
+      self.valid_motion_ids = torch.empty(0, dtype=torch.long, device=self.device)
+      self.valid_bin_ids = torch.empty(0, dtype=torch.long, device=self.device)
+      self.bin_lengths = None
+      self.base_bin_weights = None
+    else:
+      bin_indices = torch.arange(self.bin_count, device=self.device)
+      self.bin_valid_mask = self._bin_valid_mask_for(
+        torch.arange(self.num_files, dtype=torch.long, device=self.device)
+      )
+      self.valid_motion_ids, self.valid_bin_ids = torch.where(self.bin_valid_mask)
+      self.bin_lengths = self._bin_lengths_for_rows(
+        torch.arange(self.num_files, dtype=torch.long, device=self.device)
+      )
+      self.base_bin_weights = self.bin_lengths.float() / self.mean_bin_length
+      self.base_bin_weights.masked_fill_(~self.bin_valid_mask, 0.0)
 
     init_count = float(init_num_failures)
+    self.init_count = init_count
+    self.owned_motion_ids = torch.arange(
+      self.rank, self.num_files, self.world_size, dtype=torch.long, device=self.device
+    )
+    owned_valid_mask = self._bin_valid_mask_for(self.owned_motion_ids)
     self.bin_episode_count = torch.full(
-      (self.num_files, self.bin_count),
+      (int(self.owned_motion_ids.numel()), self.bin_count),
       init_count,
       dtype=torch.float,
       device=self.device,
     )
     self.bin_failure_count = torch.full_like(self.bin_episode_count, init_count)
-    self.bin_episode_count.masked_fill_(~self.bin_valid_mask, 0.0)
-    self.bin_failure_count.masked_fill_(~self.bin_valid_mask, 0.0)
+    self.bin_episode_count.masked_fill_(~owned_valid_mask, 0.0)
+    self.bin_failure_count.masked_fill_(~owned_valid_mask, 0.0)
     self.pending_episode_delta = torch.zeros_like(self.bin_episode_count)
     self.pending_failure_delta = torch.zeros_like(self.bin_failure_count)
     self.last_episode_delta = torch.zeros_like(self.bin_episode_count)
     self.last_failure_delta = torch.zeros_like(self.bin_failure_count)
+    self.active_motion_ids = torch.empty(0, dtype=torch.long, device=self.device)
+    self.active_motion_to_slot = torch.full(
+      (self.num_files,), -1, dtype=torch.long, device=self.device
+    )
+    self.active_episode_count = torch.empty(
+      (0, self.bin_count), dtype=torch.float, device=self.device
+    )
+    self.active_failure_count = torch.empty_like(self.active_episode_count)
+    self.active_bin_valid_mask = torch.empty(
+      (0, self.bin_count), dtype=torch.bool, device=self.device
+    )
+    self.active_bin_lengths = torch.empty(
+      (0, self.bin_count), dtype=torch.long, device=self.device
+    )
+    self._pending_sparse_keys: list[torch.Tensor] = []
+    self._pending_sparse_episode_values: list[torch.Tensor] = []
+    self._pending_sparse_failure_keys: list[torch.Tensor] = []
+    self._pending_sparse_failure_values: list[torch.Tensor] = []
+    self._last_timing_stats = self._empty_timing_stats()
+
+  @staticmethod
+  def _empty_timing_stats() -> dict[str, float]:
+    return {
+      "global_bin_update_time": 0.0,
+      "global_bin_update_pack_time": 0.0,
+      "global_bin_update_gather_time": 0.0,
+      "global_bin_update_apply_time": 0.0,
+      "global_bin_update_episode_key_count": 0.0,
+      "global_bin_update_failure_key_count": 0.0,
+      "adaptive_bin_pool_reset_time": 0.0,
+      "adaptive_bin_pool_reset_applied": 0.0,
+    }
+
+  def get_timing_stats(self) -> dict[str, float]:
+    return dict(self._last_timing_stats)
+
+  @staticmethod
+  def _resolve_distributed_context() -> tuple[int, int]:
+    if dist.is_available() and dist.is_initialized():
+      return dist.get_rank(), dist.get_world_size()
+    try:
+      rank = int(os.environ.get("RANK", "0"))
+    except ValueError:
+      rank = 0
+    try:
+      world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    except ValueError:
+      world_size = 1
+    return rank, max(world_size, 1)
+
+  def _bin_valid_mask_for(self, motion_ids: torch.Tensor) -> torch.Tensor:
+    bin_indices = torch.arange(self.bin_count, device=self.device)
+    return bin_indices.unsqueeze(0) < self.motion_bin_counts[motion_ids].unsqueeze(1)
+
+  def _bin_lengths_for_rows(self, motion_ids: torch.Tensor) -> torch.Tensor:
+    bin_indices = torch.arange(self.bin_count, device=self.device)
+    bin_starts = bin_indices.unsqueeze(0) * self.bin_width_steps
+    remaining_lengths = (self.file_lengths[motion_ids].unsqueeze(1) - bin_starts).clamp(
+      min=0
+    )
+    bin_lengths = torch.minimum(
+      remaining_lengths,
+      torch.full_like(remaining_lengths, self.bin_width_steps),
+    )
+    return bin_lengths.masked_fill(~self._bin_valid_mask_for(motion_ids), 0)
+
+  def _bin_lengths_for_pairs(
+    self, motion_ids: torch.Tensor, bin_ids: torch.Tensor
+  ) -> torch.Tensor:
+    remaining_lengths = (
+      self.file_lengths[motion_ids] - bin_ids.to(dtype=torch.long) * self.bin_width_steps
+    ).clamp(min=0)
+    return torch.minimum(
+      remaining_lengths,
+      torch.full_like(remaining_lengths, self.bin_width_steps),
+    )
 
   def compute_motion_bin_indices(
     self, time_steps: torch.Tensor, motion_ids: torch.Tensor
@@ -760,10 +988,128 @@ class GlobalAdaptiveBinPool:
     return torch.minimum(raw_bin_indices, max_bin_indices)
 
   def compute_failure_rate(self) -> torch.Tensor:
+    if self.is_sharded:
+      failure_rate = self.active_failure_count / torch.clamp(
+        self.active_episode_count, min=1e-12
+      )
+      return failure_rate.masked_fill(~self.active_bin_valid_mask, 0.0)
     failure_rate = self.bin_failure_count / torch.clamp(
       self.bin_episode_count, min=1e-12
     )
     return failure_rate.masked_fill(~self.bin_valid_mask, 0.0)
+
+  def set_active_motion_ids(self, active_motion_ids: torch.Tensor) -> None:
+    active_motion_ids = torch.as_tensor(
+      active_motion_ids, dtype=torch.long, device=self.device
+    )
+    if active_motion_ids.ndim != 1:
+      active_motion_ids = active_motion_ids.reshape(-1)
+    self.active_motion_ids = active_motion_ids.clone()
+    self.active_motion_to_slot.fill_(-1)
+    if active_motion_ids.numel() > 0:
+      self.active_motion_to_slot[active_motion_ids] = torch.arange(
+        active_motion_ids.numel(), dtype=torch.long, device=self.device
+      )
+    self.active_bin_valid_mask = self._bin_valid_mask_for(active_motion_ids)
+    self.active_bin_lengths = self._bin_lengths_for_rows(active_motion_ids)
+    episode_rows, failure_rows = self._fetch_motion_stat_rows(active_motion_ids)
+    self.active_episode_count = episode_rows
+    self.active_failure_count = failure_rows
+
+  def replace_active_motion_ids(
+    self, slot_ids: torch.Tensor, new_motion_ids: torch.Tensor
+  ) -> None:
+    slot_ids = torch.as_tensor(slot_ids, dtype=torch.long, device=self.device)
+    new_motion_ids = torch.as_tensor(new_motion_ids, dtype=torch.long, device=self.device)
+    if slot_ids.numel() == 0:
+      if self.is_sharded and dist.is_available() and dist.is_initialized():
+        self._fetch_motion_stat_rows(new_motion_ids)
+      return
+    old_motion_ids = self.active_motion_ids[slot_ids]
+    self.active_motion_to_slot[old_motion_ids] = -1
+    self.active_motion_ids[slot_ids] = new_motion_ids
+    self.active_motion_to_slot[new_motion_ids] = slot_ids
+    self.active_bin_valid_mask[slot_ids] = self._bin_valid_mask_for(new_motion_ids)
+    self.active_bin_lengths[slot_ids] = self._bin_lengths_for_rows(new_motion_ids)
+    episode_rows, failure_rows = self._fetch_motion_stat_rows(new_motion_ids)
+    self.active_episode_count[slot_ids] = episode_rows
+    self.active_failure_count[slot_ids] = failure_rows
+
+  def _fetch_motion_stat_rows(
+    self, motion_ids: torch.Tensor
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    motion_ids = torch.as_tensor(motion_ids, dtype=torch.long, device=self.device)
+    episode_rows = torch.full(
+      (motion_ids.numel(), self.bin_count),
+      self.init_count,
+      dtype=torch.float,
+      device=self.device,
+    )
+    failure_rows = torch.full_like(episode_rows, self.init_count)
+    valid_mask = self._bin_valid_mask_for(motion_ids)
+    episode_rows.masked_fill_(~valid_mask, 0.0)
+    failure_rows.masked_fill_(~valid_mask, 0.0)
+
+    local_mask = motion_ids % self.world_size == self.rank
+    if local_mask.any():
+      local_rows = motion_ids[local_mask] // self.world_size
+      episode_rows[local_mask] = self.bin_episode_count[local_rows]
+      failure_rows[local_mask] = self.bin_failure_count[local_rows]
+
+    if self.is_sharded and dist.is_available() and dist.is_initialized():
+      episode_rows, failure_rows = self._fetch_motion_stat_rows_distributed(
+        motion_ids, episode_rows, failure_rows
+      )
+    return episode_rows, failure_rows
+
+  def _fetch_motion_stat_rows_distributed(
+    self,
+    motion_ids: torch.Tensor,
+    episode_rows: torch.Tensor,
+    failure_rows: torch.Tensor,
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    request_ids = motion_ids.detach().cpu().tolist()
+    all_requests: list[list[int]] = [None for _ in range(self.world_size)]  # type: ignore[list-item]
+    dist.all_gather_object(all_requests, request_ids)
+
+    responses: dict[int, tuple[list[int], torch.Tensor, torch.Tensor]] = {}
+    for requester_rank, requested_ids in enumerate(all_requests):
+      owned_ids = [motion_id for motion_id in requested_ids if motion_id % self.world_size == self.rank]
+      if not owned_ids:
+        responses[requester_rank] = (
+          [],
+          torch.empty((0, self.bin_count), dtype=torch.float),
+          torch.empty((0, self.bin_count), dtype=torch.float),
+        )
+        continue
+      owned_tensor = torch.tensor(owned_ids, dtype=torch.long, device=self.device)
+      local_rows = owned_tensor // self.world_size
+      responses[requester_rank] = (
+        owned_ids,
+        self.bin_episode_count[local_rows].detach().cpu(),
+        self.bin_failure_count[local_rows].detach().cpu(),
+      )
+
+    all_responses: list[dict[int, tuple[list[int], torch.Tensor, torch.Tensor]]] = [
+      None for _ in range(self.world_size)
+    ]  # type: ignore[list-item]
+    dist.all_gather_object(all_responses, responses)
+
+    slot_by_motion = {int(motion_id): index for index, motion_id in enumerate(request_ids)}
+    for response_by_rank in all_responses:
+      motion_list, episode_cpu, failure_cpu = response_by_rank.get(
+        self.rank,
+        (
+          [],
+          torch.empty((0, self.bin_count), dtype=torch.float),
+          torch.empty((0, self.bin_count), dtype=torch.float),
+        ),
+      )
+      for offset, motion_id in enumerate(motion_list):
+        slot = slot_by_motion[int(motion_id)]
+        episode_rows[slot] = episode_cpu[offset].to(self.device)
+        failure_rows[slot] = failure_cpu[offset].to(self.device)
+    return episode_rows, failure_rows
 
   def accumulate(
     self,
@@ -777,15 +1123,20 @@ class GlobalAdaptiveBinPool:
     time_steps = torch.as_tensor(time_steps, dtype=torch.long, device=self.device)
     current_bin_indices = self.compute_motion_bin_indices(time_steps, motion_ids)
     linear_indices = motion_ids * self.bin_count + current_bin_indices
+    bin_lengths = self._bin_lengths_for_pairs(motion_ids, current_bin_indices)
     episode_values = torch.ones(
-      linear_indices.shape, dtype=self.pending_episode_delta.dtype, device=self.device
+      linear_indices.shape, dtype=torch.float, device=self.device
     ) / torch.clamp(
-      self.bin_lengths[motion_ids, current_bin_indices].to(
-        dtype=self.pending_episode_delta.dtype
-      ),
+      bin_lengths.to(dtype=torch.float),
       min=1.0,
     )
-    self.pending_episode_delta.view(-1).index_add_(0, linear_indices, episode_values)
+    if self.is_sharded:
+      self._pending_sparse_keys.append(linear_indices.detach())
+      self._pending_sparse_episode_values.append(episode_values.detach())
+    else:
+      self.pending_episode_delta.view(-1).index_add_(
+        0, linear_indices, episode_values.to(dtype=self.pending_episode_delta.dtype)
+      )
 
     if failure_mask is None:
       return
@@ -796,24 +1147,212 @@ class GlobalAdaptiveBinPool:
       dtype=self.pending_failure_delta.dtype,
       device=self.device,
     )
-    self.pending_failure_delta.view(-1).index_add_(
-      0, failed_linear_indices, failure_values
-    )
+    if self.is_sharded:
+      self._pending_sparse_failure_keys.append(failed_linear_indices.detach())
+      self._pending_sparse_failure_values.append(failure_values.detach())
+    else:
+      self.pending_failure_delta.view(-1).index_add_(
+        0, failed_linear_indices, failure_values
+      )
 
   def synchronize(self) -> float:
     start = time.perf_counter()
+    self._last_timing_stats = self._empty_timing_stats()
+    if self.is_sharded:
+      pack_start = time.perf_counter()
+      local_update = self._consume_local_sparse_update()
+      pack_time = time.perf_counter() - pack_start
+      gather_start = time.perf_counter()
+      gathered_updates = self._gather_sparse_updates(local_update)
+      gather_time = time.perf_counter() - gather_start
+      apply_start = time.perf_counter()
+      episode_delta, failure_delta = self._apply_sparse_updates(gathered_updates)
+      apply_time = time.perf_counter() - apply_start
+      self.last_episode_delta.copy_(episode_delta)
+      self.last_failure_delta.copy_(failure_delta)
+      elapsed = time.perf_counter() - start
+      self._last_timing_stats.update(
+        {
+          "global_bin_update_time": float(elapsed),
+          "global_bin_update_pack_time": float(pack_time),
+          "global_bin_update_gather_time": float(gather_time),
+          "global_bin_update_apply_time": float(apply_time),
+          "global_bin_update_episode_key_count": float(
+            sum(update["episode_keys"].numel() for update in gathered_updates)
+          ),
+          "global_bin_update_failure_key_count": float(
+            sum(update["failure_keys"].numel() for update in gathered_updates)
+          ),
+        }
+      )
+      return elapsed
+
+    pack_start = time.perf_counter()
     episode_delta = self.pending_episode_delta.clone()
     failure_delta = self.pending_failure_delta.clone()
+    pack_time = time.perf_counter() - pack_start
+    gather_start = time.perf_counter()
     if dist.is_available() and dist.is_initialized():
       dist.all_reduce(episode_delta, op=dist.ReduceOp.SUM)
       dist.all_reduce(failure_delta, op=dist.ReduceOp.SUM)
+    gather_time = time.perf_counter() - gather_start
+    apply_start = time.perf_counter()
     self.bin_episode_count += episode_delta
     self.bin_failure_count += failure_delta
     self.last_episode_delta.copy_(episode_delta)
     self.last_failure_delta.copy_(failure_delta)
     self.pending_episode_delta.zero_()
     self.pending_failure_delta.zero_()
-    return time.perf_counter() - start
+    apply_time = time.perf_counter() - apply_start
+    elapsed = time.perf_counter() - start
+    self._last_timing_stats.update(
+      {
+        "global_bin_update_time": float(elapsed),
+        "global_bin_update_pack_time": float(pack_time),
+        "global_bin_update_gather_time": float(gather_time),
+        "global_bin_update_apply_time": float(apply_time),
+      }
+    )
+    return elapsed
+
+  def reset_counts_if_due(
+    self,
+    *,
+    iteration: int,
+    interval_iterations: int,
+  ) -> float:
+    self._last_timing_stats["adaptive_bin_pool_reset_time"] = 0.0
+    self._last_timing_stats["adaptive_bin_pool_reset_applied"] = 0.0
+    interval_iterations = int(interval_iterations)
+    if interval_iterations <= 0 or int(iteration) <= 0:
+      return 0.0
+    if int(iteration) % interval_iterations != 0:
+      return 0.0
+
+    start = time.perf_counter()
+    self._reset_count_rows()
+    if self.active_motion_ids.numel() > 0:
+      self.set_active_motion_ids(self.active_motion_ids)
+    elapsed = time.perf_counter() - start
+    self._last_timing_stats["adaptive_bin_pool_reset_time"] = float(elapsed)
+    self._last_timing_stats["adaptive_bin_pool_reset_applied"] = 1.0
+    return elapsed
+
+  def _reset_count_rows(self) -> None:
+    valid_mask = self._bin_valid_mask_for(self.owned_motion_ids)
+    self.bin_episode_count.fill_(self.init_count)
+    self.bin_failure_count.fill_(self.init_count)
+    self.bin_episode_count.masked_fill_(~valid_mask, 0.0)
+    self.bin_failure_count.masked_fill_(~valid_mask, 0.0)
+    self.pending_episode_delta.zero_()
+    self.pending_failure_delta.zero_()
+    self.last_episode_delta.zero_()
+    self.last_failure_delta.zero_()
+    self._pending_sparse_keys.clear()
+    self._pending_sparse_episode_values.clear()
+    self._pending_sparse_failure_keys.clear()
+    self._pending_sparse_failure_values.clear()
+
+  def _consume_local_sparse_update(self) -> dict[str, torch.Tensor]:
+    if self._pending_sparse_keys:
+      episode_keys = torch.cat(self._pending_sparse_keys)
+      episode_values = torch.cat(self._pending_sparse_episode_values)
+      unique_episode_keys, inverse = torch.unique(episode_keys, return_inverse=True)
+      unique_episode_values = torch.zeros(
+        unique_episode_keys.shape, dtype=torch.float, device=self.device
+      )
+      unique_episode_values.scatter_add_(0, inverse, episode_values)
+    else:
+      unique_episode_keys = torch.empty(0, dtype=torch.long, device=self.device)
+      unique_episode_values = torch.empty(0, dtype=torch.float, device=self.device)
+
+    if self._pending_sparse_failure_keys:
+      failure_keys = torch.cat(self._pending_sparse_failure_keys)
+      failure_values = torch.cat(self._pending_sparse_failure_values)
+      unique_failure_keys, inverse = torch.unique(failure_keys, return_inverse=True)
+      unique_failure_values = torch.zeros(
+        unique_failure_keys.shape, dtype=torch.float, device=self.device
+      )
+      unique_failure_values.scatter_add_(0, inverse, failure_values)
+    else:
+      unique_failure_keys = torch.empty(0, dtype=torch.long, device=self.device)
+      unique_failure_values = torch.empty(0, dtype=torch.float, device=self.device)
+
+    self._pending_sparse_keys.clear()
+    self._pending_sparse_episode_values.clear()
+    self._pending_sparse_failure_keys.clear()
+    self._pending_sparse_failure_values.clear()
+    return {
+      "episode_keys": unique_episode_keys.detach().cpu(),
+      "episode_values": unique_episode_values.detach().cpu(),
+      "failure_keys": unique_failure_keys.detach().cpu(),
+      "failure_values": unique_failure_values.detach().cpu(),
+    }
+
+  def _gather_sparse_updates(
+    self, local_update: dict[str, torch.Tensor]
+  ) -> list[dict[str, torch.Tensor]]:
+    if dist.is_available() and dist.is_initialized():
+      gathered_updates: list[dict[str, torch.Tensor]] = [
+        None for _ in range(self.world_size)
+      ]  # type: ignore[list-item]
+      dist.all_gather_object(gathered_updates, local_update)
+      return gathered_updates
+    return [local_update]
+
+  def _apply_sparse_updates(
+    self, gathered_updates: list[dict[str, torch.Tensor]]
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    episode_delta = torch.zeros_like(self.bin_episode_count)
+    failure_delta = torch.zeros_like(self.bin_failure_count)
+    for update in gathered_updates:
+      self._apply_sparse_update_tensor(
+        update["episode_keys"].to(self.device),
+        update["episode_values"].to(self.device),
+        episode_delta,
+        self.bin_episode_count,
+        self.active_episode_count,
+      )
+      self._apply_sparse_update_tensor(
+        update["failure_keys"].to(self.device),
+        update["failure_values"].to(self.device),
+        failure_delta,
+        self.bin_failure_count,
+        self.active_failure_count,
+      )
+    return episode_delta, failure_delta
+
+  def _apply_sparse_update_tensor(
+    self,
+    keys: torch.Tensor,
+    values: torch.Tensor,
+    shard_delta: torch.Tensor,
+    shard_target: torch.Tensor,
+    active_target: torch.Tensor,
+  ) -> None:
+    if keys.numel() == 0:
+      return
+    motion_ids = keys // self.bin_count
+    bin_ids = keys % self.bin_count
+
+    owner_mask = motion_ids % self.world_size == self.rank
+    if owner_mask.any():
+      local_rows = motion_ids[owner_mask] // self.world_size
+      flat_indices = local_rows * self.bin_count + bin_ids[owner_mask]
+      shard_delta.view(-1).index_add_(0, flat_indices, values[owner_mask])
+      shard_target.view(-1).index_add_(0, flat_indices, values[owner_mask])
+
+    if self.active_motion_ids.numel() == 0:
+      return
+    active_slots = self.active_motion_to_slot[motion_ids]
+    active_mask = active_slots >= 0
+    if active_mask.any():
+      flat_active_indices = (
+        active_slots[active_mask] * self.bin_count + bin_ids[active_mask]
+      )
+      active_target.view(-1).index_add_(
+        0, flat_active_indices, values[active_mask].to(active_target.dtype)
+      )
 
   def compute_active_pair_sampling_probabilities(
     self,
@@ -828,6 +1367,29 @@ class GlobalAdaptiveBinPool:
     active_motion_ids = torch.as_tensor(
       active_motion_ids, dtype=torch.long, device=self.device
     )
+    if self.is_sharded:
+      if not torch.equal(active_motion_ids, self.active_motion_ids):
+        self.set_active_motion_ids(active_motion_ids)
+      active_row_ids, valid_bin_ids = torch.where(self.active_bin_valid_mask)
+      valid_motion_ids = self.active_motion_ids[active_row_ids]
+      if valid_motion_ids.numel() == 0:
+        raise RuntimeError("Active subset contains no valid motion bins")
+      probabilities, valid_failure_rate = (
+        self._compute_active_pair_probabilities_from_cache(
+          active_row_ids,
+          valid_motion_ids,
+          valid_bin_ids,
+          num_active_motions=int(active_motion_ids.numel()),
+          adaptive_uniform_ratio=adaptive_uniform_ratio,
+          adaptive_failure_rate_max_over_mean=adaptive_failure_rate_max_over_mean,
+          adaptive_sequence_length_agnostic=adaptive_sequence_length_agnostic,
+          adaptive_max_prob_per_bin=adaptive_max_prob_per_bin,
+          adaptive_max_prob_per_motion=adaptive_max_prob_per_motion,
+          auto_cap_over_mean=adaptive_failure_rate_max_over_mean,
+        )
+      )
+      return valid_motion_ids, valid_bin_ids, probabilities, valid_failure_rate
+
     active_bin_mask = self.bin_valid_mask[active_motion_ids]
     active_row_ids, valid_bin_ids = torch.where(active_bin_mask)
     valid_motion_ids = active_motion_ids[active_row_ids]
@@ -855,6 +1417,47 @@ class GlobalAdaptiveBinPool:
     adaptive_failure_rate_max_over_mean: float,
     adaptive_sequence_length_agnostic: bool,
   ) -> tuple[torch.Tensor, torch.Tensor]:
+    if self.is_sharded:
+      candidate_motion_ids = torch.as_tensor(
+        candidate_motion_ids, dtype=torch.long, device=self.device
+      )
+      if candidate_motion_ids.ndim != 1:
+        candidate_motion_ids = candidate_motion_ids.reshape(-1)
+      candidate_valid_mask = self._bin_valid_mask_for(candidate_motion_ids)
+      candidate_row_ids, valid_bin_ids = torch.where(candidate_valid_mask)
+      valid_motion_ids = candidate_motion_ids[candidate_row_ids]
+      if valid_motion_ids.numel() == 0:
+        probabilities = torch.full(
+          (candidate_motion_ids.numel(),),
+          1.0 / float(max(candidate_motion_ids.numel(), 1)),
+          dtype=torch.float,
+          device=self.device,
+        )
+        return candidate_motion_ids, probabilities
+      episode_rows, failure_rows = self._fetch_motion_stat_rows(candidate_motion_ids)
+      probabilities, _ = self._compute_pair_probabilities_from_rows(
+        candidate_row_ids,
+        valid_motion_ids,
+        valid_bin_ids,
+        episode_rows,
+        failure_rows,
+        num_rows=int(candidate_motion_ids.numel()),
+        adaptive_uniform_ratio=adaptive_uniform_ratio,
+        adaptive_failure_rate_max_over_mean=adaptive_failure_rate_max_over_mean,
+        adaptive_sequence_length_agnostic=adaptive_sequence_length_agnostic,
+        adaptive_max_prob_per_bin=None,
+        adaptive_max_prob_per_motion=None,
+        auto_cap_over_mean=adaptive_failure_rate_max_over_mean,
+      )
+      motion_probabilities = torch.zeros(
+        candidate_motion_ids.numel(), dtype=probabilities.dtype, device=self.device
+      )
+      motion_probabilities.scatter_add_(0, candidate_row_ids, probabilities)
+      motion_probabilities = motion_probabilities / torch.clamp(
+        motion_probabilities.sum(), min=1e-12
+      )
+      return candidate_motion_ids, motion_probabilities
+
     motion_ids, _, pair_probabilities, _ = self.compute_active_pair_sampling_probabilities(
       candidate_motion_ids,
       adaptive_uniform_ratio=adaptive_uniform_ratio,
@@ -872,6 +1475,92 @@ class GlobalAdaptiveBinPool:
       candidate_probabilities.sum(), min=1e-12
     )
     return candidate_motion_ids, candidate_probabilities
+
+  def _compute_active_pair_probabilities_from_cache(
+    self,
+    active_row_ids: torch.Tensor,
+    valid_motion_ids: torch.Tensor,
+    valid_bin_ids: torch.Tensor,
+    *,
+    num_active_motions: int,
+    adaptive_uniform_ratio: float,
+    adaptive_failure_rate_max_over_mean: float,
+    adaptive_sequence_length_agnostic: bool,
+    adaptive_max_prob_per_bin: float | Literal["auto"] | None,
+    adaptive_max_prob_per_motion: float | Literal["auto"] | None,
+    auto_cap_over_mean: float,
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    return self._compute_pair_probabilities_from_rows(
+      active_row_ids,
+      valid_motion_ids,
+      valid_bin_ids,
+      self.active_episode_count,
+      self.active_failure_count,
+      num_rows=num_active_motions,
+      adaptive_uniform_ratio=adaptive_uniform_ratio,
+      adaptive_failure_rate_max_over_mean=adaptive_failure_rate_max_over_mean,
+      adaptive_sequence_length_agnostic=adaptive_sequence_length_agnostic,
+      adaptive_max_prob_per_bin=adaptive_max_prob_per_bin,
+      adaptive_max_prob_per_motion=adaptive_max_prob_per_motion,
+      auto_cap_over_mean=auto_cap_over_mean,
+    )
+
+  def _compute_pair_probabilities_from_rows(
+    self,
+    row_ids: torch.Tensor,
+    valid_motion_ids: torch.Tensor,
+    valid_bin_ids: torch.Tensor,
+    episode_rows: torch.Tensor,
+    failure_rows: torch.Tensor,
+    *,
+    num_rows: int,
+    adaptive_uniform_ratio: float,
+    adaptive_failure_rate_max_over_mean: float,
+    adaptive_sequence_length_agnostic: bool,
+    adaptive_max_prob_per_bin: float | Literal["auto"] | None,
+    adaptive_max_prob_per_motion: float | Literal["auto"] | None,
+    auto_cap_over_mean: float,
+  ) -> tuple[torch.Tensor, torch.Tensor]:
+    failure_rate = failure_rows / torch.clamp(episode_rows, min=1e-12)
+    valid_failure_rate = failure_rate[row_ids, valid_bin_ids]
+    failure_rate_mean = valid_failure_rate.mean()
+    failure_rate_upper_bound = failure_rate_mean * float(
+      adaptive_failure_rate_max_over_mean
+    )
+    clipped_failure_rate = torch.clamp(
+      valid_failure_rate, 0.0, failure_rate_upper_bound
+    )
+    clipped_sum = clipped_failure_rate.sum()
+    if clipped_sum <= 0.0:
+      failure_based_probabilities = torch.full(
+        (len(valid_motion_ids),),
+        1.0 / float(max(len(valid_motion_ids), 1)),
+        dtype=torch.float,
+        device=self.device,
+      )
+    else:
+      failure_based_probabilities = clipped_failure_rate / clipped_sum
+
+    uniform_probabilities = torch.full_like(
+      failure_based_probabilities, 1.0 / float(max(len(valid_motion_ids), 1))
+    )
+    uniform_ratio = float(max(0.0, min(1.0, adaptive_uniform_ratio)))
+    probabilities = (
+      1.0 - uniform_ratio
+    ) * failure_based_probabilities + uniform_ratio * uniform_probabilities
+    probabilities = probabilities * self._compute_bin_weights_for_pairs(
+      valid_motion_ids, valid_bin_ids, adaptive_sequence_length_agnostic
+    )
+    probabilities = probabilities / torch.clamp(probabilities.sum(), min=1e-12)
+    probabilities = self._apply_max_probability_constraints(
+      probabilities,
+      row_ids,
+      num_rows,
+      adaptive_max_prob_per_bin,
+      adaptive_max_prob_per_motion,
+      auto_cap_over_mean,
+    )
+    return probabilities, valid_failure_rate
 
   def _compute_pair_probabilities(
     self,
@@ -932,6 +1621,24 @@ class GlobalAdaptiveBinPool:
       bin_weights = bin_weights / self.motion_bin_counts.unsqueeze(1).float()
       bin_weights = bin_weights.masked_fill(~self.bin_valid_mask, 0.0)
     return bin_weights
+
+  def _compute_bin_weights_for_pairs(
+    self,
+    motion_ids: torch.Tensor,
+    bin_ids: torch.Tensor,
+    sequence_length_agnostic: bool,
+  ) -> torch.Tensor:
+    bin_lengths = self._bin_lengths_for_pairs(motion_ids, bin_ids).float()
+    bin_weights = bin_lengths / self.mean_bin_length
+    if sequence_length_agnostic:
+      bin_weights = bin_weights / self.motion_bin_counts[motion_ids].float()
+    return bin_weights
+
+  def count_valid_bins(self, motion_ids: torch.Tensor) -> int:
+    motion_ids = torch.as_tensor(motion_ids, dtype=torch.long, device=self.device)
+    if motion_ids.numel() == 0:
+      return 0
+    return int(self.motion_bin_counts[motion_ids].sum().item())
 
   def _apply_max_probability_constraints(
     self,
@@ -1009,6 +1716,9 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       self.body_indexes,
       motion_type=self.cfg.motion_type,
       device=self.device,
+      metadata_cache_file=self._resolve_motion_metadata_cache_file(),
+      metadata_cache_wait_timeout_s=self.cfg.motion_metadata_cache_wait_timeout_s,
+      metadata_cache_poll_interval_s=self.cfg.motion_metadata_cache_poll_interval_s,
     )
     _bootstrap_debug(
       f"after LargeDatasetMotionStore elapsed={time.perf_counter() - store_start:.3f}s"
@@ -1072,6 +1782,7 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       f"after GlobalAdaptiveBinPool elapsed={time.perf_counter() - bin_pool_start:.3f}s "
       f"bin_count={self.global_bin_pool.bin_count}"
     )
+    self.global_bin_pool.set_active_motion_ids(self.active_subset.active_motion_ids)
     self._bind_global_bin_pool_tensors()
     self._init_adaptive_sampling_window()
     self._adaptive_sampling_phase = "idle"
@@ -1192,6 +1903,15 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       os.path.abspath(motion_path).encode("utf-8")
     ).hexdigest()[:12]
     return os.path.join(debug_dir, f"motion_manifest_{motion_path_key}.txt")
+
+  def _resolve_motion_metadata_cache_file(self) -> str:
+    configured_cache = os.fspath(getattr(self.cfg, "motion_metadata_cache_file", ""))
+    if configured_cache:
+      return configured_cache
+    configured_manifest = os.fspath(getattr(self.cfg, "motion_manifest_file", ""))
+    if configured_manifest:
+      return f"{configured_manifest}.metadata.npz"
+    return ""
 
   def _resolve_motion_files_with_manifest(
     self, motion_path: str, manifest_file: str
@@ -1323,8 +2043,12 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     self.valid_bin_ids = self.global_bin_pool.valid_bin_ids
     self.num_valid_motion_bins = self.global_bin_pool.num_valid_motion_bins
     self.bin_lengths = self.global_bin_pool.bin_lengths
-    self.bin_weights = self.global_bin_pool._compute_bin_weights(
-      self.cfg.adaptive_sequence_length_agnostic
+    self.bin_weights = (
+      None
+      if self.global_bin_pool.is_sharded
+      else self.global_bin_pool._compute_bin_weights(
+        self.cfg.adaptive_sequence_length_agnostic
+      )
     )
     self.bin_episode_count = self.global_bin_pool.bin_episode_count
     self.bin_failure_count = self.global_bin_pool.bin_failure_count
@@ -1340,16 +2064,68 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
           self.global_bin_pool.last_episode_delta,
           self.global_bin_pool.last_failure_delta,
         )
+      previous_window_chunk = getattr(self, "_adaptive_window_last_logical_chunk", None)
       super().begin_adaptive_sampling_iteration(iteration)
+      if (
+        self.global_bin_pool.is_sharded
+        and previous_window_chunk is not None
+        and previous_window_chunk != getattr(self, "_adaptive_window_last_logical_chunk", None)
+      ):
+        self.global_bin_pool.set_active_motion_ids(self.active_subset.active_motion_ids)
+      self.global_bin_pool.reset_counts_if_due(
+        iteration=iteration,
+        interval_iterations=self.cfg.adaptive_bin_pool_reset_interval_iterations,
+      )
+      if (
+        self.global_bin_pool.get_timing_stats()[
+          "adaptive_bin_pool_reset_applied"
+        ]
+        > 0.0
+      ):
+        self._reset_adaptive_sampling_window_after_bin_pool_reset()
     else:
       self._last_global_bin_update_time = 0.0
     start = time.perf_counter()
     self._refresh_active_subset(iteration)
     self._last_subset_update_time = time.perf_counter() - start
 
+  def _reset_adaptive_sampling_window_after_bin_pool_reset(self) -> None:
+    episode_chunks = getattr(self, "_adaptive_window_episode_chunks", None)
+    failure_chunks = getattr(self, "_adaptive_window_failure_chunks", None)
+    if episode_chunks is None or failure_chunks is None:
+      return
+    episode_chunks.zero_()
+    failure_chunks.zero_()
+    chunk_index = int(getattr(self, "_adaptive_window_current_chunk", 0))
+    chunk_index %= int(episode_chunks.shape[0])
+    episode_chunks[chunk_index].copy_(self.global_bin_pool.bin_episode_count)
+    failure_chunks[chunk_index].copy_(self.global_bin_pool.bin_failure_count)
+
   def get_large_dataset_timing_stats(self, *, reset: bool = False) -> dict[str, float]:
+    pool_stats = self.global_bin_pool.get_timing_stats()
     stats = {
       "global_bin_update_time": float(self._last_global_bin_update_time),
+      "global_bin_update_pack_time": float(
+        pool_stats.get("global_bin_update_pack_time", 0.0)
+      ),
+      "global_bin_update_gather_time": float(
+        pool_stats.get("global_bin_update_gather_time", 0.0)
+      ),
+      "global_bin_update_apply_time": float(
+        pool_stats.get("global_bin_update_apply_time", 0.0)
+      ),
+      "global_bin_update_episode_key_count": float(
+        pool_stats.get("global_bin_update_episode_key_count", 0.0)
+      ),
+      "global_bin_update_failure_key_count": float(
+        pool_stats.get("global_bin_update_failure_key_count", 0.0)
+      ),
+      "adaptive_bin_pool_reset_time": float(
+        pool_stats.get("adaptive_bin_pool_reset_time", 0.0)
+      ),
+      "adaptive_bin_pool_reset_applied": float(
+        pool_stats.get("adaptive_bin_pool_reset_applied", 0.0)
+      ),
       "subset_update_time": float(self._last_subset_update_time),
       "motion_gather_time": float(self._motion_gather_time_accum),
       "motion_gather_call_count": float(self._motion_gather_call_count),
@@ -1404,10 +2180,8 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
   def _uniform_baseline_probabilities(
     self, motion_indices: torch.Tensor
   ) -> torch.Tensor:
-    active_valid_bins = int(
-      self.global_bin_pool.bin_valid_mask[self.active_subset.active_motion_ids]
-      .sum()
-      .item()
+    active_valid_bins = self.global_bin_pool.count_valid_bins(
+      self.active_subset.active_motion_ids
     )
     return torch.full(
       (len(motion_indices),),
@@ -1498,9 +2272,7 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       self.metrics["sampling_failure_rate_mean"][env_ids] = 0.0
       self.metrics["sampling_failure_rate_max"][env_ids] = 0.0
       self.metrics["sampling_effective_num_bins"][env_ids] = float(
-        self.global_bin_pool.bin_valid_mask[self.active_subset.active_motion_ids]
-        .sum()
-        .item()
+        self.global_bin_pool.count_valid_bins(self.active_subset.active_motion_ids)
       )
       self.metrics["sampling_num_concentrated_bins"][env_ids] = 0.0
 
@@ -1591,19 +2363,24 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     refresh_count = int(self.cfg.subset_refresh_count)
     if refresh_count <= 0 or self.motion_store.num_files <= self.active_subset.subset_size:
       return
+    refresh_result = self.active_subset._empty_refresh_result()
     self.active_subset.set_slot_ref_counts_from_motion_ids(self.motion_idx)
     replacement_ids = self._sample_subset_replacement_ids(refresh_count)
-    if replacement_ids.numel() == 0:
-      return
-    refresh_result = self.active_subset.refresh(
-      replacement_ids,
-      iteration=iteration,
-      max_replacements=refresh_count,
-    )
-    self.motion.replace_slots(
+    if replacement_ids.numel() > 0:
+      refresh_result = self.active_subset.refresh(
+        replacement_ids,
+        iteration=iteration,
+        max_replacements=refresh_count,
+      )
+    if refresh_result.num_replaced > 0:
+      self.motion.replace_slots(
+        refresh_result.replaced_slot_ids,
+        refresh_result.new_motion_ids,
+        self.motion_store,
+      )
+    self.global_bin_pool.replace_active_motion_ids(
       refresh_result.replaced_slot_ids,
       refresh_result.new_motion_ids,
-      self.motion_store,
     )
 
   def _sample_subset_replacement_ids(self, count: int) -> torch.Tensor:
@@ -1615,9 +2392,23 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     adaptive_count = max(0, min(count, adaptive_count))
     sampled_parts: list[torch.Tensor] = []
     if adaptive_count > 0 and self.cfg.sampling_mode == "adaptive":
+      adaptive_candidate_ids = available_ids
+      candidate_pool_size = int(
+        getattr(self.cfg, "subset_adaptive_candidate_pool_size", 10_000)
+      )
+      if (
+        candidate_pool_size > 0
+        and adaptive_candidate_ids.numel() > candidate_pool_size
+      ):
+        candidate_order = torch.randperm(
+          adaptive_candidate_ids.numel(), device=self.device
+        )
+        adaptive_candidate_ids = adaptive_candidate_ids[
+          candidate_order[:candidate_pool_size]
+        ]
       candidate_ids, candidate_probabilities = (
         self.global_bin_pool.compute_motion_sampling_probabilities(
-          available_ids,
+          adaptive_candidate_ids,
           adaptive_uniform_ratio=self.cfg.adaptive_uniform_ratio,
           adaptive_failure_rate_max_over_mean=self.cfg.adaptive_failure_rate_max_over_mean,
           adaptive_sequence_length_agnostic=self.cfg.adaptive_sequence_length_agnostic,
@@ -1678,7 +2469,12 @@ class LargeDatasetMultiMotionCommandCfg(MultiMotionCommandCfg):
   subset_refresh_count: int = 10
   subset_min_resident_iterations: int = 50
   subset_adaptive_refresh_ratio: float = 0.5
+  subset_adaptive_candidate_pool_size: int = 10_000
+  adaptive_bin_pool_reset_interval_iterations: int = 5000
   motion_manifest_file: str = ""
+  motion_metadata_cache_file: str = ""
+  motion_metadata_cache_wait_timeout_s: float = 7200.0
+  motion_metadata_cache_poll_interval_s: float = 0.25
   motion_manifest_wait_timeout_s: float = 600.0
   motion_manifest_poll_interval_s: float = 0.25
   motion_scan_log_interval_s: float = 10.0

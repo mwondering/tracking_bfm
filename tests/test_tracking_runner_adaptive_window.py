@@ -125,6 +125,13 @@ def test_tracking_runner_prints_large_dataset_timing_when_hook_exists(capsys) ->
       self.reset_args.append(reset)
       return {
         "global_bin_update_time": 0.0123,
+        "global_bin_update_pack_time": 0.0011,
+        "global_bin_update_gather_time": 0.0022,
+        "global_bin_update_apply_time": 0.0033,
+        "adaptive_bin_pool_reset_time": 0.0044,
+        "adaptive_bin_pool_reset_applied": 1.0,
+        "global_bin_update_episode_key_count": 5.0,
+        "global_bin_update_failure_key_count": 2.0,
         "subset_update_time": 0.0456,
         "motion_gather_time": 0.0789,
         "motion_gather_call_count": 4.0,
@@ -142,12 +149,26 @@ def test_tracking_runner_prints_large_dataset_timing_when_hook_exists(capsys) ->
   assert "collect_time: 1.2500s" in output
   assert "learn_time: 2.5000s" in output
   assert "global_bin_update_time: 0.0123s" in output
+  assert "global_bin_update_pack_time: 0.0011s" in output
+  assert "global_bin_update_gather_time: 0.0022s" in output
+  assert "global_bin_update_apply_time: 0.0033s" in output
+  assert "adaptive_bin_pool_reset_time: 0.0044s" in output
+  assert "adaptive_bin_pool_reset_applied: 1" in output
+  assert "global_bin_update_episode_key_count: 5" in output
+  assert "global_bin_update_failure_key_count: 2" in output
   assert "subset_update_time: 0.0456s" in output
   assert "motion_gather_time: 0.0789s" in output
   assert "motion_gather_call_count: 4" in output
   assert motion.reset_args == [True]
   assert runner.logger.writer.scalars == [
     ("Perf/global_bin_update_time", 0.0123, 7),
+    ("Perf/global_bin_update_pack_time", 0.0011, 7),
+    ("Perf/global_bin_update_gather_time", 0.0022, 7),
+    ("Perf/global_bin_update_apply_time", 0.0033, 7),
+    ("Perf/adaptive_bin_pool_reset_time", 0.0044, 7),
+    ("Perf/adaptive_bin_pool_reset_applied", 1.0, 7),
+    ("Perf/global_bin_update_episode_key_count", 5.0, 7),
+    ("Perf/global_bin_update_failure_key_count", 2.0, 7),
     ("Perf/subset_update_time", 0.0456, 7),
     ("Perf/motion_gather_time", 0.0789, 7),
     ("Perf/motion_gather_call_count", 4.0, 7),

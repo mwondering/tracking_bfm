@@ -107,6 +107,27 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     except TypeError:
       stats = get_stats()
     global_bin_update_time = float(stats.get("global_bin_update_time", 0.0))
+    global_bin_update_pack_time = float(
+      stats.get("global_bin_update_pack_time", 0.0)
+    )
+    global_bin_update_gather_time = float(
+      stats.get("global_bin_update_gather_time", 0.0)
+    )
+    global_bin_update_apply_time = float(
+      stats.get("global_bin_update_apply_time", 0.0)
+    )
+    adaptive_bin_pool_reset_time = float(
+      stats.get("adaptive_bin_pool_reset_time", 0.0)
+    )
+    adaptive_bin_pool_reset_applied = float(
+      stats.get("adaptive_bin_pool_reset_applied", 0.0)
+    )
+    global_bin_update_episode_key_count = float(
+      stats.get("global_bin_update_episode_key_count", 0.0)
+    )
+    global_bin_update_failure_key_count = float(
+      stats.get("global_bin_update_failure_key_count", 0.0)
+    )
     subset_update_time = float(stats.get("subset_update_time", 0.0))
     motion_gather_time = float(stats.get("motion_gather_time", 0.0))
     motion_gather_call_count = float(stats.get("motion_gather_call_count", 0.0))
@@ -115,6 +136,13 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
       f"collect_time: {collect_time:.4f}s, "
       f"learn_time: {learn_time:.4f}s, "
       f"global_bin_update_time: {global_bin_update_time:.4f}s, "
+      f"global_bin_update_pack_time: {global_bin_update_pack_time:.4f}s, "
+      f"global_bin_update_gather_time: {global_bin_update_gather_time:.4f}s, "
+      f"global_bin_update_apply_time: {global_bin_update_apply_time:.4f}s, "
+      f"adaptive_bin_pool_reset_time: {adaptive_bin_pool_reset_time:.4f}s, "
+      f"adaptive_bin_pool_reset_applied: {adaptive_bin_pool_reset_applied:.0f}, "
+      f"global_bin_update_episode_key_count: {global_bin_update_episode_key_count:.0f}, "
+      f"global_bin_update_failure_key_count: {global_bin_update_failure_key_count:.0f}, "
       f"subset_update_time: {subset_update_time:.4f}s, "
       f"motion_gather_time: {motion_gather_time:.4f}s, "
       f"motion_gather_call_count: {motion_gather_call_count:.0f}"
@@ -122,6 +150,33 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     writer = getattr(self.logger, "writer", None)
     if writer is not None:
       writer.add_scalar("Perf/global_bin_update_time", global_bin_update_time, it)
+      writer.add_scalar(
+        "Perf/global_bin_update_pack_time", global_bin_update_pack_time, it
+      )
+      writer.add_scalar(
+        "Perf/global_bin_update_gather_time", global_bin_update_gather_time, it
+      )
+      writer.add_scalar(
+        "Perf/global_bin_update_apply_time", global_bin_update_apply_time, it
+      )
+      writer.add_scalar(
+        "Perf/adaptive_bin_pool_reset_time", adaptive_bin_pool_reset_time, it
+      )
+      writer.add_scalar(
+        "Perf/adaptive_bin_pool_reset_applied",
+        adaptive_bin_pool_reset_applied,
+        it,
+      )
+      writer.add_scalar(
+        "Perf/global_bin_update_episode_key_count",
+        global_bin_update_episode_key_count,
+        it,
+      )
+      writer.add_scalar(
+        "Perf/global_bin_update_failure_key_count",
+        global_bin_update_failure_key_count,
+        it,
+      )
       writer.add_scalar("Perf/subset_update_time", subset_update_time, it)
       writer.add_scalar("Perf/motion_gather_time", motion_gather_time, it)
       writer.add_scalar("Perf/motion_gather_call_count", motion_gather_call_count, it)

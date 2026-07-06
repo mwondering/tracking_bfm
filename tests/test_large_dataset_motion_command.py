@@ -110,6 +110,27 @@ def test_large_dataset_nonzero_rank_reads_manifest_without_scanning(
   assert command._resolve_all_motion_files() == [str(motion_file)]
 
 
+def test_large_dataset_metadata_cache_path_defaults_to_manifest_sidecar(
+  tmp_path: Path,
+) -> None:
+  manifest_file = tmp_path / "manifest.txt"
+  command = _make_motion_resolver_shell(
+    motion_path=tmp_path,
+    manifest_file=manifest_file,
+  )
+  command.cfg.motion_metadata_cache_file = ""
+
+  assert command._resolve_motion_metadata_cache_file() == (
+    str(manifest_file) + ".metadata.npz"
+  )
+
+  command.cfg.motion_metadata_cache_file = str(tmp_path / "explicit_metadata.npz")
+
+  assert command._resolve_motion_metadata_cache_file() == str(
+    tmp_path / "explicit_metadata.npz"
+  )
+
+
 def test_active_subset_tracks_unique_active_and_pending_motion_ids() -> None:
   subset = ActiveMotionSubset(
     total_motion_count=8,
@@ -309,6 +330,47 @@ def test_motion_store_uses_default_fps_for_empty_fps_arrays(tmp_path: Path) -> N
   assert store.empty_fps_count == 1
 
 
+def test_motion_store_reuses_metadata_cache_without_opening_motion_files(
+  tmp_path: Path, monkeypatch
+) -> None:
+  motion_files = []
+  for index, length in enumerate([3, 5]):
+    path = tmp_path / f"motion_{index}.npz"
+    _write_motion(path, length=length, offset=float(index))
+    motion_files.append(str(path))
+  metadata_cache_file = tmp_path / "metadata_cache.npz"
+
+  first_store = LargeDatasetMotionStore(
+    motion_files,
+    body_indexes=torch.tensor([0], dtype=torch.long),
+    motion_type="mujoco",
+    device="cpu",
+    metadata_cache_file=str(metadata_cache_file),
+  )
+  assert first_store.file_lengths.tolist() == [3, 5]
+  assert metadata_cache_file.exists()
+
+  original_np_load = large_dataset_module.np.load
+
+  def fail_motion_np_load(path, *args, **kwargs):
+    if Path(path) == metadata_cache_file:
+      return original_np_load(path, *args, **kwargs)
+    raise AssertionError("metadata cache hit should not open motion npz files")
+
+  monkeypatch.setattr(large_dataset_module.np, "load", fail_motion_np_load)
+
+  second_store = LargeDatasetMotionStore(
+    motion_files,
+    body_indexes=torch.tensor([0], dtype=torch.long),
+    motion_type="mujoco",
+    device="cpu",
+    metadata_cache_file=str(metadata_cache_file),
+  )
+
+  assert second_store.file_lengths.tolist() == [3, 5]
+  assert second_store.fps_list == [pytest.approx(30.0), pytest.approx(30.0)]
+
+
 def test_global_bin_pool_syncs_local_deltas_without_distributed() -> None:
   pool = GlobalAdaptiveBinPool(
     torch.tensor([10, 6], dtype=torch.long),
@@ -374,6 +436,127 @@ def test_global_bin_pool_accumulate_updates_only_touched_bins(monkeypatch) -> No
   )
 
 
+def test_sharded_global_bin_pool_keeps_owner_shard_and_active_cache() -> None:
+  pool = GlobalAdaptiveBinPool(
+    torch.tensor([10, 10, 10, 10], dtype=torch.long),
+    bin_width_steps=5,
+    init_num_failures=1.0,
+    device="cpu",
+    rank=1,
+    world_size=2,
+  )
+
+  assert pool.owned_motion_ids.tolist() == [1, 3]
+  assert pool.bin_episode_count.shape == (2, 3)
+
+  pool.set_active_motion_ids(torch.tensor([0, 3], dtype=torch.long))
+
+  assert pool.active_motion_ids.tolist() == [0, 3]
+  assert pool.active_episode_count.shape == (2, 3)
+  assert pool.active_motion_to_slot[0].item() == 0
+  assert pool.active_motion_to_slot[3].item() == 1
+
+
+def test_sharded_global_bin_pool_updates_shard_and_active_cache() -> None:
+  pool = GlobalAdaptiveBinPool(
+    torch.tensor([10, 10, 10, 10], dtype=torch.long),
+    bin_width_steps=5,
+    init_num_failures=1.0,
+    device="cpu",
+    rank=1,
+    world_size=2,
+  )
+  pool.set_active_motion_ids(torch.tensor([1, 2], dtype=torch.long))
+
+  pool.accumulate(
+    torch.tensor([1, 2], dtype=torch.long),
+    torch.tensor([7, 0], dtype=torch.long),
+    torch.tensor([True, True], dtype=torch.bool),
+  )
+  pool.synchronize()
+
+  # Motion 1 is owned by rank 1, so the sharded full pool is updated.
+  torch.testing.assert_close(pool.bin_episode_count[0], torch.tensor([1.0, 1.2, 0.0]))
+  torch.testing.assert_close(pool.bin_failure_count[0], torch.tensor([1.0, 2.0, 0.0]))
+  # Motion 2 is not owned by rank 1, but it is in the local active subset, so
+  # the active cache still receives the gathered sparse update.
+  torch.testing.assert_close(
+    pool.active_episode_count[1], torch.tensor([1.2, 1.0, 0.0])
+  )
+  torch.testing.assert_close(
+    pool.active_failure_count[1], torch.tensor([2.0, 1.0, 0.0])
+  )
+
+
+def test_sharded_global_bin_pool_reports_sparse_update_timing() -> None:
+  pool = GlobalAdaptiveBinPool(
+    torch.tensor([10, 10, 10, 10], dtype=torch.long),
+    bin_width_steps=5,
+    init_num_failures=1.0,
+    device="cpu",
+    rank=1,
+    world_size=2,
+  )
+
+  pool.accumulate(
+    torch.tensor([1, 2], dtype=torch.long),
+    torch.tensor([7, 0], dtype=torch.long),
+    torch.tensor([True, False], dtype=torch.bool),
+  )
+  elapsed = pool.synchronize()
+  stats = pool.get_timing_stats()
+
+  assert stats["global_bin_update_time"] == pytest.approx(elapsed)
+  assert stats["global_bin_update_pack_time"] >= 0.0
+  assert stats["global_bin_update_gather_time"] >= 0.0
+  assert stats["global_bin_update_apply_time"] >= 0.0
+  assert stats["global_bin_update_episode_key_count"] == pytest.approx(2.0)
+  assert stats["global_bin_update_failure_key_count"] == pytest.approx(1.0)
+
+
+def test_global_bin_pool_resets_counts_on_configured_interval() -> None:
+  pool = GlobalAdaptiveBinPool(
+    torch.tensor([20, 20], dtype=torch.long),
+    bin_width_steps=5,
+    init_num_failures=1.0,
+    device="cpu",
+    rank=0,
+    world_size=2,
+  )
+  pool.set_active_motion_ids(torch.tensor([0, 1], dtype=torch.long))
+  pool.bin_episode_count[0] = torch.tensor([10.0, 12.0, 14.0, 16.0, 0.0])
+  pool.bin_failure_count[0] = torch.tensor([0.0, 10.0, 2.0, 8.0, 0.0])
+  pool.active_episode_count[0] = pool.bin_episode_count[0]
+  pool.active_failure_count[0] = pool.bin_failure_count[0]
+
+  skipped_time = pool.reset_counts_if_due(
+    iteration=4999,
+    interval_iterations=5000,
+  )
+  assert skipped_time == pytest.approx(0.0)
+  torch.testing.assert_close(
+    pool.bin_episode_count[0],
+    torch.tensor([10.0, 12.0, 14.0, 16.0, 0.0]),
+  )
+
+  reset_time = pool.reset_counts_if_due(
+    iteration=5000,
+    interval_iterations=5000,
+  )
+
+  assert reset_time >= 0.0
+  assert pool.get_timing_stats()["adaptive_bin_pool_reset_applied"] == pytest.approx(1.0)
+  torch.testing.assert_close(
+    pool.bin_episode_count[0],
+    torch.tensor([1.0, 1.0, 1.0, 1.0, 0.0]),
+  )
+  torch.testing.assert_close(
+    pool.bin_failure_count[0],
+    torch.tensor([1.0, 1.0, 1.0, 1.0, 0.0]),
+  )
+  torch.testing.assert_close(pool.active_failure_count[0], pool.bin_failure_count[0])
+
+
 def test_global_bin_pool_probabilities_are_limited_to_active_subset() -> None:
   pool = GlobalAdaptiveBinPool(
     torch.tensor([10, 10, 10], dtype=torch.long),
@@ -429,6 +612,8 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
     adaptive_failure_rate_window_iterations=None,
     adaptive_failure_rate_window_chunks=40,
     subset_refresh_count=0,
+    subset_adaptive_candidate_pool_size=10_000,
+    adaptive_bin_pool_reset_interval_iterations=5000,
   )
   command.global_bin_pool = GlobalAdaptiveBinPool(
     torch.tensor([10, 10, 10, 10], dtype=torch.long),
@@ -499,10 +684,29 @@ def test_large_dataset_timing_stats_report_and_reset_gather_accumulators() -> No
   command._last_subset_update_time = 0.5
   command._motion_gather_time_accum = 0.75
   command._motion_gather_call_count = 3
+  command.global_bin_pool._last_timing_stats.update(
+    {
+      "global_bin_update_time": 0.25,
+      "global_bin_update_pack_time": 0.01,
+      "global_bin_update_gather_time": 0.02,
+      "global_bin_update_apply_time": 0.03,
+      "adaptive_bin_pool_reset_time": 0.04,
+      "adaptive_bin_pool_reset_applied": 1.0,
+      "global_bin_update_episode_key_count": 5.0,
+      "global_bin_update_failure_key_count": 2.0,
+    }
+  )
 
   stats = command.get_large_dataset_timing_stats(reset=True)
 
   assert stats["global_bin_update_time"] == pytest.approx(0.25)
+  assert stats["global_bin_update_pack_time"] == pytest.approx(0.01)
+  assert stats["global_bin_update_gather_time"] == pytest.approx(0.02)
+  assert stats["global_bin_update_apply_time"] == pytest.approx(0.03)
+  assert stats["adaptive_bin_pool_reset_time"] == pytest.approx(0.04)
+  assert stats["adaptive_bin_pool_reset_applied"] == pytest.approx(1.0)
+  assert stats["global_bin_update_episode_key_count"] == pytest.approx(5.0)
+  assert stats["global_bin_update_failure_key_count"] == pytest.approx(2.0)
   assert stats["subset_update_time"] == pytest.approx(0.5)
   assert stats["motion_gather_time"] == pytest.approx(0.75)
   assert stats["motion_gather_call_count"] == pytest.approx(3.0)
@@ -526,6 +730,52 @@ def test_large_dataset_command_records_synced_delta_before_advancing_window() ->
     chunk_zero_before[1, 0].item() + 0.2
   )
   assert command._adaptive_window_episode_chunks[1, 1, 0].item() == pytest.approx(0.0)
+
+
+def test_large_dataset_command_reset_clears_adaptive_window_chunks() -> None:
+  command = _make_large_dataset_command_shell()
+  command.cfg.adaptive_bin_pool_reset_interval_iterations = 1
+  command.cfg.adaptive_failure_rate_window_iterations = 4
+  command.cfg.adaptive_failure_rate_window_chunks = 2
+  command._init_adaptive_sampling_window()
+  command.begin_adaptive_sampling_iteration(0)
+  command.global_bin_pool.pending_episode_delta[1, 0] = 0.2
+  command.global_bin_pool.pending_failure_delta[1, 0] = 1.0
+
+  command.begin_adaptive_sampling_iteration(1)
+
+  torch.testing.assert_close(
+    command.global_bin_pool.bin_episode_count,
+    torch.tensor(
+      [
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+      ]
+    ),
+  )
+  torch.testing.assert_close(
+    command.global_bin_pool.bin_failure_count,
+    torch.tensor(
+      [
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+      ]
+    ),
+  )
+  assert command._adaptive_window_episode_chunks.sum().item() == pytest.approx(
+    command.global_bin_pool.bin_episode_count.sum().item()
+  )
+  assert command._adaptive_window_failure_chunks.sum().item() == pytest.approx(
+    command.global_bin_pool.bin_failure_count.sum().item()
+  )
+  assert (
+    command.get_large_dataset_timing_stats()["adaptive_bin_pool_reset_applied"]
+    == pytest.approx(1.0)
+  )
 
 
 def test_large_dataset_subset_refresh_falls_back_when_adaptive_probabilities_are_sparse(
@@ -556,6 +806,34 @@ def test_large_dataset_subset_refresh_falls_back_when_adaptive_probabilities_are
   assert sampled.numel() == 3
   assert len(set(sampled.tolist())) == 3
   assert set(sampled.tolist()) == {2, 3, 4}
+
+
+def test_large_dataset_subset_refresh_limits_adaptive_candidate_pool(monkeypatch) -> None:
+  command = _make_large_dataset_command_shell()
+  command.cfg.subset_adaptive_refresh_ratio = 1.0
+  command.cfg.subset_adaptive_candidate_pool_size = 3
+  command.active_subset = ActiveMotionSubset(
+    total_motion_count=10,
+    subset_size=2,
+    min_resident_iterations=50,
+    device="cpu",
+  )
+  command.active_subset.initialize(torch.tensor([0, 1], dtype=torch.long), iteration=0)
+  command.motion_store = SimpleNamespace(num_files=10)
+
+  def candidate_probabilities(candidate_ids, **kwargs):
+    assert candidate_ids.numel() == 3
+    return candidate_ids, torch.full((3,), 1.0 / 3.0)
+
+  monkeypatch.setattr(
+    command.global_bin_pool,
+    "compute_motion_sampling_probabilities",
+    candidate_probabilities,
+  )
+
+  sampled = command._sample_subset_replacement_ids(2)
+
+  assert sampled.numel() == 2
 
 
 def test_large_dataset_command_exports_opt_in_aliases() -> None:
