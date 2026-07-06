@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import multiprocessing as mp
 import os
 import shutil
 import subprocess
@@ -11,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal, NamedTuple
 
+import numpy as np
 from tqdm import tqdm
 
 
@@ -28,6 +31,13 @@ class ManifestResult:
   count: int
   elapsed_s: float
   manifest_file: Path
+
+
+@dataclass(frozen=True)
+class MetadataCacheResult:
+  count: int
+  elapsed_s: float
+  metadata_cache_file: Path
 
 
 def _notify_progress(
@@ -127,11 +137,11 @@ def _collect_motion_files(
     return _collect_with_python(motion_root, progress_callback=progress_callback)
 
 
-def _make_tqdm_progress_callback(enabled: bool) -> ProgressReporter:
+def _make_tqdm_progress_callback(enabled: bool, *, desc: str) -> ProgressReporter:
   if not enabled:
     return ProgressReporter(callback=None, close=lambda: None)
   progress_bar = tqdm(
-    desc="Scanning motion files",
+    desc=desc,
     unit="files",
     dynamic_ncols=True,
     mininterval=0.5,
@@ -158,7 +168,9 @@ def write_motion_manifest(
   if not motion_root.is_dir():
     raise ValueError(f"motion_root must be a directory: {motion_root}")
 
-  tqdm_progress = _make_tqdm_progress_callback(show_progress)
+  tqdm_progress = _make_tqdm_progress_callback(
+    show_progress, desc="Scanning motion files"
+  )
 
   def report_progress(count: int) -> None:
     if tqdm_progress.callback is not None:
@@ -198,6 +210,159 @@ def write_motion_manifest(
   )
 
 
+def reuse_or_write_motion_manifest(
+  motion_root: str | Path,
+  manifest_file: str | Path,
+  *,
+  backend: Backend = "auto",
+  relative_to: str | Path | None = None,
+  progress_callback: ProgressCallback | None = None,
+  show_progress: bool = False,
+  reuse_existing: bool = False,
+) -> ManifestResult:
+  manifest_file = Path(manifest_file).expanduser()
+  if reuse_existing and manifest_file.exists():
+    start = time.perf_counter()
+    return ManifestResult(
+      count=len(_read_manifest_file(manifest_file)),
+      elapsed_s=time.perf_counter() - start,
+      manifest_file=manifest_file,
+    )
+  return write_motion_manifest(
+    motion_root,
+    manifest_file,
+    backend=backend,
+    relative_to=relative_to,
+    progress_callback=progress_callback,
+    show_progress=show_progress,
+  )
+
+
+def _read_manifest_file(manifest_file: Path) -> list[str]:
+  with manifest_file.open(encoding="utf-8") as f:
+    return [line.strip() for line in f if line.strip()]
+
+
+def _motion_files_hash(motion_files: list[str]) -> str:
+  digest = hashlib.sha1()
+  for motion_file in motion_files:
+    digest.update(os.path.abspath(motion_file).encode("utf-8"))
+    digest.update(b"\0")
+  return digest.hexdigest()
+
+
+def _extract_fps_value(fps_data: np.ndarray) -> tuple[float, bool, bool]:
+  fps_array = np.asarray(fps_data).reshape(-1)
+  if fps_array.size == 0:
+    return 30.0, False, True
+  return float(fps_array[0]), fps_array.size != 1, False
+
+
+def _read_motion_metadata_job(job: tuple[int, str]) -> tuple[int, int, float, bool, bool]:
+  index, motion_file = job
+  if not os.path.isfile(motion_file):
+    raise FileNotFoundError(f"Invalid motion file path: {motion_file}")
+  with np.load(motion_file) as data:
+    file_length = int(data["joint_pos"].shape[0])
+    fps_value, is_non_scalar_fps, is_empty_fps = _extract_fps_value(data["fps"])
+  return index, file_length, fps_value, is_non_scalar_fps, is_empty_fps
+
+
+def _iter_motion_metadata(
+  motion_files: list[str],
+  *,
+  workers: int,
+  chunksize: int,
+):
+  jobs = enumerate(motion_files)
+  if workers <= 1:
+    for job in jobs:
+      yield _read_motion_metadata_job(job)
+    return
+  with mp.Pool(processes=workers) as pool:
+    yield from pool.imap_unordered(
+      _read_motion_metadata_job,
+      jobs,
+      chunksize=max(int(chunksize), 1),
+    )
+
+
+def write_motion_metadata_cache(
+  manifest_file: str | Path,
+  metadata_cache_file: str | Path | None = None,
+  *,
+  workers: int | None = None,
+  chunksize: int = 64,
+  progress_callback: ProgressCallback | None = None,
+  show_progress: bool = False,
+) -> MetadataCacheResult:
+  start = time.perf_counter()
+  manifest_file = Path(manifest_file).expanduser()
+  if metadata_cache_file is None:
+    metadata_cache_file = Path(str(manifest_file) + ".metadata.npz")
+  else:
+    metadata_cache_file = Path(metadata_cache_file).expanduser()
+  motion_files = _read_manifest_file(manifest_file)
+  num_files = len(motion_files)
+  if workers is None:
+    workers = min(os.cpu_count() or 1, 8)
+  workers = max(int(workers), 1)
+  file_lengths = np.empty(num_files, dtype=np.int64)
+  fps_values = np.empty(num_files, dtype=np.float32)
+  non_scalar_fps_count = 0
+  empty_fps_count = 0
+  tqdm_progress = _make_tqdm_progress_callback(
+    show_progress, desc="Reading motion metadata"
+  )
+  completed_count = 0
+
+  try:
+    for (
+      index,
+      file_length,
+      fps_value,
+      is_non_scalar_fps,
+      is_empty_fps,
+    ) in _iter_motion_metadata(
+      motion_files,
+      workers=workers,
+      chunksize=chunksize,
+    ):
+      file_lengths[index] = file_length
+      fps_values[index] = fps_value
+      if is_non_scalar_fps:
+        non_scalar_fps_count += 1
+      if is_empty_fps:
+        empty_fps_count += 1
+      completed_count += 1
+      if tqdm_progress.callback is not None:
+        tqdm_progress.callback(completed_count)
+      _notify_progress(progress_callback, completed_count)
+  finally:
+    tqdm_progress.close()
+
+  metadata_cache_file.parent.mkdir(parents=True, exist_ok=True)
+  tmp_file = metadata_cache_file.with_name(
+    f"{metadata_cache_file.name}.tmp.{os.getpid()}.npz"
+  )
+  np.savez(
+    tmp_file,
+    version=np.array(1, dtype=np.int64),
+    num_files=np.array(num_files, dtype=np.int64),
+    motion_files_hash=np.array(_motion_files_hash(motion_files)),
+    file_lengths=file_lengths,
+    fps_values=fps_values,
+    non_scalar_fps_count=np.array(non_scalar_fps_count, dtype=np.int64),
+    empty_fps_count=np.array(empty_fps_count, dtype=np.int64),
+  )
+  os.replace(tmp_file, metadata_cache_file)
+  return MetadataCacheResult(
+    count=num_files,
+    elapsed_s=time.perf_counter() - start,
+    metadata_cache_file=metadata_cache_file,
+  )
+
+
 def _parse_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
     description=(
@@ -226,25 +391,68 @@ def _parse_args() -> argparse.Namespace:
     action="store_true",
     help="Disable the scanning progress bar.",
   )
+  parser.add_argument(
+    "--reuse-existing-manifest",
+    action="store_true",
+    help="If manifest_file exists, reuse it instead of scanning motion_root again.",
+  )
+  parser.add_argument(
+    "--build-metadata-cache",
+    action="store_true",
+    help="Also build the .metadata.npz cache used by LargeDatasetMotionStore.",
+  )
+  parser.add_argument(
+    "--metadata-cache-file",
+    type=Path,
+    default=None,
+    help="Metadata cache output path. Defaults to <manifest_file>.metadata.npz.",
+  )
+  parser.add_argument(
+    "--metadata-workers",
+    type=int,
+    default=None,
+    help="Parallel workers for metadata cache generation. Defaults to min(cpu_count, 8).",
+  )
+  parser.add_argument(
+    "--metadata-chunksize",
+    type=int,
+    default=64,
+    help="Task chunk size for metadata worker processes.",
+  )
   return parser.parse_args()
 
 
 def main() -> None:
   args = _parse_args()
-  result = write_motion_manifest(
+  reused_existing_manifest = args.reuse_existing_manifest and args.manifest_file.exists()
+  result = reuse_or_write_motion_manifest(
     args.motion_root,
     args.manifest_file,
     backend=args.backend,
     relative_to=args.motion_root if args.relative else None,
     show_progress=not args.no_progress,
+    reuse_existing=args.reuse_existing_manifest,
   )
+  action = "Reused existing motion manifest" if reused_existing_manifest else "Wrote motion manifest"
   print(
-    "Wrote motion manifest: "
-    f"count={result.count} file={result.manifest_file} "
+    f"{action}: count={result.count} file={result.manifest_file} "
     f"elapsed={result.elapsed_s:.3f}s"
   )
   metadata_cache_file = str(result.manifest_file) + ".metadata.npz"
   print(f"Recommended metadata cache file: {metadata_cache_file}")
+  if args.build_metadata_cache:
+    metadata_result = write_motion_metadata_cache(
+      result.manifest_file,
+      args.metadata_cache_file,
+      workers=args.metadata_workers,
+      chunksize=args.metadata_chunksize,
+      show_progress=not args.no_progress,
+    )
+    print(
+      "Wrote motion metadata cache: "
+      f"count={metadata_result.count} file={metadata_result.metadata_cache_file} "
+      f"elapsed={metadata_result.elapsed_s:.3f}s"
+    )
 
 
 if __name__ == "__main__":
