@@ -27,3 +27,13 @@ def test_latent_analysis_console_script_is_registered() -> None:
   scripts = pyproject["project"]["scripts"]
 
   assert scripts["analyze-latent-space"] == "mjlab.scripts.analyze_latent_space:main"
+
+
+def test_generate_motion_manifest_console_script_is_registered() -> None:
+  pyproject = tomllib.loads(Path("pyproject.toml").read_text())
+  scripts = pyproject["project"]["scripts"]
+
+  assert (
+    scripts["generate-motion-manifest"]
+    == "mjlab.scripts.generate_motion_manifest:main"
+  )
