@@ -642,6 +642,18 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
   return command
 
 
+def test_large_dataset_command_initializes_env_motions_to_resident_subset() -> None:
+  command = _make_large_dataset_command_shell()
+
+  command._initialize_env_motion_assignments()
+
+  slot_ids = command.active_subset.motion_to_slot[command.motion_idx]
+  assert torch.all(slot_ids >= 0)
+  assert set(command.motion_idx.tolist()) <= {1, 3}
+  assert torch.all(command.motion_length == 10)
+  assert torch.all(command.time_steps == 0)
+
+
 def test_large_dataset_command_adaptive_sampling_uses_active_subset_only() -> None:
   command = _make_large_dataset_command_shell()
   command.global_bin_pool.bin_episode_count[:] = 10.0

@@ -1755,6 +1755,7 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     self.motion_length = torch.zeros(
       self.num_envs, dtype=torch.long, device=self.device
     )
+    self._initialize_env_motion_assignments()
 
     self.body_pos_relative_w = torch.zeros(
       self.num_envs, len(cfg.body_names), 3, device=self.device
@@ -2275,6 +2276,14 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
         self.global_bin_pool.count_valid_bins(self.active_subset.active_motion_ids)
       )
       self.metrics["sampling_num_concentrated_bins"][env_ids] = 0.0
+
+  def _initialize_env_motion_assignments(self) -> None:
+    if self.num_envs == 0:
+      return
+    motion_indices = self._sample_active_motion_ids(self.num_envs)
+    self.motion_idx.copy_(motion_indices)
+    self.motion_length.copy_(self.motion_store.file_lengths[motion_indices])
+    self.time_steps.zero_()
 
   def _resample_command(self, env_ids: torch.Tensor):
     if len(env_ids) == 0:
