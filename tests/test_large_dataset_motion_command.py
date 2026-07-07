@@ -614,6 +614,9 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
     subset_refresh_count=0,
     subset_adaptive_candidate_pool_size=10_000,
     adaptive_bin_pool_reset_interval_iterations=5000,
+    adaptive_bin_snapshot_interval_iterations=0,
+    adaptive_bin_snapshot_num_buckets=2,
+    adaptive_bin_snapshot_dir="",
   )
   command.global_bin_pool = GlobalAdaptiveBinPool(
     torch.tensor([10, 10, 10, 10], dtype=torch.long),
@@ -630,7 +633,10 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
     device="cpu",
   )
   command.active_subset.initialize(torch.tensor([1, 3], dtype=torch.long), iteration=0)
-  command.motion_store = SimpleNamespace(file_lengths=command.global_bin_pool.file_lengths)
+  command.motion_store = SimpleNamespace(
+    file_lengths=command.global_bin_pool.file_lengths,
+    motion_files=[f"/data/motion_{idx}.npz" for idx in range(4)],
+  )
   command.motion_idx = torch.zeros(command.num_envs, dtype=torch.long)
   command.motion_length = torch.zeros(command.num_envs, dtype=torch.long)
   command.time_steps = torch.zeros(command.num_envs, dtype=torch.long)
@@ -639,6 +645,8 @@ def _make_large_dataset_command_shell() -> LargeDatasetMultiMotionCommand:
   command._last_subset_update_time = 0.0
   command._motion_gather_time_accum = 0.0
   command._motion_gather_call_count = 0
+  command._adaptive_bin_snapshot_writer = None
+  command._adaptive_bin_snapshot_writer_key = None
   return command
 
 
@@ -652,6 +660,27 @@ def test_large_dataset_command_initializes_env_motions_to_resident_subset() -> N
   assert set(command.motion_idx.tolist()) <= {1, 3}
   assert torch.all(command.motion_length == 10)
   assert torch.all(command.time_steps == 0)
+
+
+def test_large_dataset_command_writes_snapshot_only_on_interval(tmp_path: Path) -> None:
+  command = _make_large_dataset_command_shell()
+  command.cfg.adaptive_bin_snapshot_interval_iterations = 2
+  command.global_bin_pool.bin_episode_count += 2.0
+  command.global_bin_pool.bin_failure_count += 1.0
+
+  command.maybe_write_adaptive_bin_snapshot(
+    iteration=1,
+    default_snapshot_dir=tmp_path,
+  )
+  assert not (tmp_path / "latest.json").exists()
+
+  command.maybe_write_adaptive_bin_snapshot(
+    iteration=2,
+    default_snapshot_dir=tmp_path,
+  )
+  assert (tmp_path / "latest.json").exists()
+  assert (tmp_path / "access_sum.f32").exists()
+  assert (tmp_path / "failure_sum.f32").exists()
 
 
 def test_large_dataset_command_adaptive_sampling_uses_active_subset_only() -> None:

@@ -90,6 +90,24 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
       begin_iteration(iteration)
     _bootstrap_debug(f"after begin_adaptive_sampling_iteration iteration={iteration}")
 
+  def _write_large_dataset_snapshot(self, iteration: int) -> None:
+    unwrapped_env = getattr(self.env, "unwrapped", None)
+    command_manager = getattr(unwrapped_env, "command_manager", None)
+    if command_manager is None:
+      return
+    motion_cmd = command_manager.get_term("motion")
+    write_snapshot = getattr(motion_cmd, "maybe_write_adaptive_bin_snapshot", None)
+    if not callable(write_snapshot):
+      return
+    log_dir = getattr(self.logger, "log_dir", None) or self.log_dir
+    default_snapshot_dir = (
+      os.path.join(log_dir, "adaptive_bin_pool_view") if log_dir else None
+    )
+    write_snapshot(
+      iteration=iteration,
+      default_snapshot_dir=default_snapshot_dir,
+    )
+
   def _log_large_dataset_timing(
     self, *, it: int, collect_time: float, learn_time: float
   ) -> None:
@@ -221,6 +239,7 @@ class MotionTrackingOnPolicyRunner(MjlabOnPolicyRunner):
     for it in range(start_it, total_it):
       _bootstrap_debug(f"iteration {it}: start")
       self._begin_adaptive_sampling_iteration(it)
+      self._write_large_dataset_snapshot(it)
       start = time.time()
       with torch.inference_mode():
         num_steps_per_env = int(self.cfg["num_steps_per_env"])

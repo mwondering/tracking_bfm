@@ -19,11 +19,11 @@ from mjlab.utils.lab_api.math import (
 )
 
 from .multi_commands import (
-  MultiMotionCommand,
-  MultiMotionCommandCfg,
-  MotionLoader,
   _ISAACLAB_TO_MUJOCO_BODY_REINDEX,
   _ISAACLAB_TO_MUJOCO_JOINT_REINDEX,
+  MotionLoader,
+  MultiMotionCommand,
+  MultiMotionCommandCfg,
 )
 
 
@@ -392,9 +392,15 @@ class LargeDatasetMotionSlotBuffer:
       for bucket_id, capacity in enumerate(self._bucket_capacities)
     )
     active_frames = max(sum(lengths), 1)
+    bucket_slot_counts = [
+      len(bucket_slots[i]) for i in range(len(self._bucket_capacities))
+    ]
+    bucket_summary = list(
+      zip(self._bucket_capacities, bucket_slot_counts, strict=True)
+    )
     _bootstrap_debug(
       "slot bucket storage built "
-      f"buckets={list(zip(self._bucket_capacities, [len(bucket_slots[i]) for i in range(len(self._bucket_capacities))]))} "
+      f"buckets={bucket_summary} "
       f"padding_overhead={padded_frames / active_frames:.3f}x"
     )
 
@@ -873,7 +879,6 @@ class GlobalAdaptiveBinPool:
       self.bin_lengths = None
       self.base_bin_weights = None
     else:
-      bin_indices = torch.arange(self.bin_count, device=self.device)
       self.bin_valid_mask = self._bin_valid_mask_for(
         torch.arange(self.num_files, dtype=torch.long, device=self.device)
       )
@@ -1845,6 +1850,8 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
     self._last_subset_update_time = 0.0
     self._motion_gather_time_accum = 0.0
     self._motion_gather_call_count = 0
+    self._adaptive_bin_snapshot_writer = None
+    self._adaptive_bin_snapshot_writer_key = None
     _bootstrap_debug("LargeDatasetMultiMotionCommand init done")
 
   def _resolve_all_motion_files(self) -> list[str]:
@@ -2135,6 +2142,40 @@ class LargeDatasetMultiMotionCommand(MultiMotionCommand):
       self._motion_gather_time_accum = 0.0
       self._motion_gather_call_count = 0
     return stats
+
+  def maybe_write_adaptive_bin_snapshot(
+    self,
+    *,
+    iteration: int,
+    default_snapshot_dir: str | os.PathLike[str] | None = None,
+  ) -> None:
+    interval = int(getattr(self.cfg, "adaptive_bin_snapshot_interval_iterations", 0))
+    if interval <= 0 or int(iteration) <= 0 or int(iteration) % interval != 0:
+      return
+    snapshot_dir = os.fspath(getattr(self.cfg, "adaptive_bin_snapshot_dir", ""))
+    if not snapshot_dir:
+      if default_snapshot_dir is None:
+        return
+      snapshot_dir = os.fspath(default_snapshot_dir)
+
+    num_buckets = int(getattr(self.cfg, "adaptive_bin_snapshot_num_buckets", 2048))
+    writer_key = (snapshot_dir, num_buckets)
+    if (
+      self._adaptive_bin_snapshot_writer is None
+      or writer_key != self._adaptive_bin_snapshot_writer_key
+    ):
+      from mjlab.tasks.tracking.viewer.snapshot import AdaptiveBinPoolSnapshotWriter
+
+      self._adaptive_bin_snapshot_writer = AdaptiveBinPoolSnapshotWriter(
+        snapshot_dir=snapshot_dir,
+        num_buckets=num_buckets,
+        motion_files=self.motion_store.motion_files,
+        manifest_file=os.fspath(getattr(self.cfg, "motion_manifest_file", "")),
+      )
+      self._adaptive_bin_snapshot_writer_key = writer_key
+    self._adaptive_bin_snapshot_writer.write(
+      self.global_bin_pool, iteration=int(iteration)
+    )
 
   def _compute_failure_rate(self) -> torch.Tensor:
     return self.global_bin_pool.compute_failure_rate()
@@ -2480,6 +2521,9 @@ class LargeDatasetMultiMotionCommandCfg(MultiMotionCommandCfg):
   subset_adaptive_refresh_ratio: float = 0.5
   subset_adaptive_candidate_pool_size: int = 10_000
   adaptive_bin_pool_reset_interval_iterations: int = 5000
+  adaptive_bin_snapshot_interval_iterations: int = 0
+  adaptive_bin_snapshot_num_buckets: int = 2048
+  adaptive_bin_snapshot_dir: str = ""
   motion_manifest_file: str = ""
   motion_metadata_cache_file: str = ""
   motion_metadata_cache_wait_timeout_s: float = 7200.0

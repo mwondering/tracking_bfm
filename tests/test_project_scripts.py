@@ -37,3 +37,10 @@ def test_generate_motion_manifest_console_script_is_registered() -> None:
     scripts["generate-motion-manifest"]
     == "mjlab.scripts.generate_motion_manifest:main"
   )
+
+
+def test_adaptive_bin_viewer_console_script_is_registered() -> None:
+  pyproject = tomllib.loads(Path("pyproject.toml").read_text())
+  scripts = pyproject["project"]["scripts"]
+
+  assert scripts["adaptive-bin-viewer"] == "mjlab.tasks.tracking.viewer.server:main"

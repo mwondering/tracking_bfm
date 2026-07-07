@@ -68,6 +68,7 @@ export-tracking-bfm-onnx = "mjlab.scripts.export_tracking_bfm_onnx:main"
 export-latent-tracking-bfm-onnx = "mjlab.scripts.export_latent_tracking_bfm_onnx:main"
 analyze-latent-space = "mjlab.scripts.analyze_latent_space:main"
 generate-motion-manifest = "mjlab.scripts.generate_motion_manifest:main"
+adaptive-bin-viewer = "mjlab.tasks.tracking.viewer.server:main"
 
 [dependency-groups]
 dev = [
