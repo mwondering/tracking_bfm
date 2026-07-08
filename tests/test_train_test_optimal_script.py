@@ -78,3 +78,24 @@ def test_train_test_optimal_script_can_select_sparsetrack_attention_task(
   assert args[args.index("--agent.run_name") + 1] == (
     "test_optimal_sparsetrack_full_ref_attn_no_reg_no_dr"
   )
+
+
+def test_train_test_optimal_script_can_select_hist_proprio_actor_critic_task(
+  tmp_path: Path,
+) -> None:
+  args = _run_script_with_uv_stub(
+    tmp_path,
+    ATTENTION_VARIANT="hist_proprio_cross_actor_critic",
+  )
+
+  assert args[:3] == [
+    "run",
+    "train",
+    (
+      "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-"
+      "HistProprioCrossAttnActorCritic-NoRegNoDR"
+    ),
+  ]
+  assert args[args.index("--agent.run_name") + 1] == (
+    "test_optimal_hist_proprio_cross_attn_actor_critic_no_reg_no_dr"
+  )

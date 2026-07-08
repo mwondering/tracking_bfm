@@ -29,12 +29,16 @@ case "${DISABLE_REG_AND_DR,,}" in
         DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR"
         DEFAULT_RUN_NAME="test_optimal_hist_proprio_cross_attn_no_reg_no_dr"
         ;;
+      hist_proprio_cross_actor_critic)
+        DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttnActorCritic-NoRegNoDR"
+        DEFAULT_RUN_NAME="test_optimal_hist_proprio_cross_attn_actor_critic_no_reg_no_dr"
+        ;;
       sparsetrack_full_ref)
         DEFAULT_TASK="Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR"
         DEFAULT_RUN_NAME="test_optimal_sparsetrack_full_ref_attn_no_reg_no_dr"
         ;;
       *)
-        echo "ATTENTION_VARIANT must be one of mlp, full_obs_causal, proprio_ref_cross, hist_proprio_cross, sparsetrack_full_ref; got: $ATTENTION_VARIANT" >&2
+        echo "ATTENTION_VARIANT must be one of mlp, full_obs_causal, proprio_ref_cross, hist_proprio_cross, hist_proprio_cross_actor_critic, sparsetrack_full_ref; got: $ATTENTION_VARIANT" >&2
         exit 2
         ;;
     esac

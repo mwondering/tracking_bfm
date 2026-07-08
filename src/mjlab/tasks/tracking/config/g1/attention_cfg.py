@@ -11,6 +11,7 @@ AttentionVariant = Literal[
   "full_obs_causal",
   "proprio_ref_cross",
   "hist_proprio_cross",
+  "hist_proprio_cross_actor_critic",
   "sparsetrack_full_ref",
 ]
 
@@ -64,6 +65,8 @@ def tracking_attention_actor_cfg(
   if variant == "proprio_ref_cross":
     return _tracking_attention_actor_cfg(PROPRIO_REF_CROSS_CLASS, 0, 3)
   if variant == "hist_proprio_cross":
+    return _tracking_attention_actor_cfg(HIST_PROPRIO_CROSS_CLASS, 2, 1)
+  if variant == "hist_proprio_cross_actor_critic":
     return _tracking_attention_actor_cfg(HIST_PROPRIO_CROSS_CLASS, 2, 1)
   if variant == "sparsetrack_full_ref":
     return _tracking_attention_actor_cfg(

@@ -15,6 +15,9 @@ from .attention_cfg import (
 SPARSETRACK_FULL_REF_CRITIC_CLASS = (
   "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionCritic"
 )
+HIST_PROPRIO_CROSS_CRITIC_CLASS = (
+  "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionCritic"
+)
 SPARSETRACK_SPLIT_LR_PPO_CLASS = "mjlab.tasks.tracking.rl.ppo:SparseTrackSplitLrPPO"
 
 
@@ -103,30 +106,16 @@ def unitree_g1_trackingbfm_attention_ppo_runner_cfg(
   cfg = unitree_g1_trackingbfm_ppo_runner_cfg()
   cfg.actor = tracking_attention_actor_cfg(variant)
   cfg.experiment_name = "test_optimal_tracking_bfm_attention"
-  if variant == "sparsetrack_full_ref":
+  if variant in ("hist_proprio_cross_actor_critic", "sparsetrack_full_ref"):
     actor_cfg = cfg.actor
     assert isinstance(actor_cfg, TrackingAttentionModelCfg)
-    cfg.critic = TrackingAttentionModelCfg(
-      class_name=SPARSETRACK_FULL_REF_CRITIC_CLASS,
-      hidden_dims=(512, 256),
-      activation="elu",
-      obs_normalization=True,
-      distribution_cfg=None,
-      history_length=actor_cfg.history_length,
-      frame_dim=actor_cfg.frame_dim,
-      command_dim=actor_cfg.command_dim,
-      num_dofs=actor_cfg.num_dofs,
-      d_model=actor_cfg.d_model,
-      num_heads=actor_cfg.num_heads,
-      ffn_dim=actor_cfg.ffn_dim,
-      history_layers=actor_cfg.history_layers,
-      cross_layers=actor_cfg.cross_layers,
-      dropout=actor_cfg.dropout,
-      attention_activation=actor_cfg.attention_activation,
-      head_hidden_dims=actor_cfg.head_hidden_dims,
-      task_embedder_hidden_dims=actor_cfg.task_embedder_hidden_dims,
-      reduced_task_dim=None,
+    critic_class = (
+      HIST_PROPRIO_CROSS_CRITIC_CLASS
+      if variant == "hist_proprio_cross_actor_critic"
+      else SPARSETRACK_FULL_REF_CRITIC_CLASS
     )
+    cfg.critic = _tracking_attention_critic_cfg(actor_cfg, critic_class)
+  if variant == "sparsetrack_full_ref":
     cfg.algorithm.class_name = SPARSETRACK_SPLIT_LR_PPO_CLASS
     cfg.algorithm.learning_rate = 2.0e-5
     cfg.algorithm.actor_learning_rate = 2.0e-5
@@ -136,6 +125,33 @@ def unitree_g1_trackingbfm_attention_ppo_runner_cfg(
     cfg.algorithm.entropy_coef = 0.005
     cfg.num_steps_per_env = 32
   return cfg
+
+
+def _tracking_attention_critic_cfg(
+  actor_cfg: TrackingAttentionModelCfg,
+  class_name: str,
+) -> TrackingAttentionModelCfg:
+  return TrackingAttentionModelCfg(
+    class_name=class_name,
+    hidden_dims=actor_cfg.head_hidden_dims,
+    activation=actor_cfg.activation,
+    obs_normalization=True,
+    distribution_cfg=None,
+    history_length=actor_cfg.history_length,
+    frame_dim=actor_cfg.frame_dim,
+    command_dim=actor_cfg.command_dim,
+    num_dofs=actor_cfg.num_dofs,
+    d_model=actor_cfg.d_model,
+    num_heads=actor_cfg.num_heads,
+    ffn_dim=actor_cfg.ffn_dim,
+    history_layers=actor_cfg.history_layers,
+    cross_layers=actor_cfg.cross_layers,
+    dropout=actor_cfg.dropout,
+    attention_activation=actor_cfg.attention_activation,
+    head_hidden_dims=actor_cfg.head_hidden_dims,
+    task_embedder_hidden_dims=actor_cfg.task_embedder_hidden_dims,
+    reduced_task_dim=None,
+  )
 
 
 def unitree_g1_trackingbfm_action_trunk_ppo_runner_cfg() -> RslRlOnPolicyRunnerCfg:

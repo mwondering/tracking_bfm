@@ -328,6 +328,9 @@ ATTENTION_TEST_OPTIMAL_TASKS = {
   "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR": (
     "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor"
   ),
+  "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttnActorCritic-NoRegNoDR": (
+    "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionActor"
+  ),
   "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-SparseTrackFullRefAttn-NoRegNoDR": (
     "mjlab.tasks.tracking.rl.attention_models:SparseTrackFullRefAttentionActor"
   ),
@@ -368,11 +371,48 @@ def test_tracking_attention_test_optimal_keeps_baseline_mlp_critic() -> None:
     task_id
     for task_id in ATTENTION_TEST_OPTIMAL_TASKS
     if "SparseTrackFullRefAttn" not in task_id
+    and "HistProprioCrossAttnActorCritic" not in task_id
   ):
     rl_cfg = cast(RslRlOnPolicyRunnerCfg, load_rl_cfg(task_id))
 
     assert rl_cfg.critic == baseline.critic
     assert rl_cfg.actor.class_name == ATTENTION_TEST_OPTIMAL_TASKS[task_id]
+
+
+def test_hist_proprio_cross_attention_baseline_keeps_mlp_critic() -> None:
+  baseline = cast(
+    RslRlOnPolicyRunnerCfg,
+    load_rl_cfg("Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-NoRegNoDR"),
+  )
+  task_id = (
+    "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-HistProprioCrossAttn-NoRegNoDR"
+  )
+
+  cfg = load_env_cfg(task_id)
+  rl_cfg = cast(RslRlOnPolicyRunnerCfg, load_rl_cfg(task_id))
+
+  assert rl_cfg.critic == baseline.critic
+  for term in cfg.observations["critic"].terms.values():
+    assert term.history_length == 0
+
+
+def test_hist_proprio_cross_actor_critic_variant_uses_transformer_critic() -> None:
+  task_id = (
+    "Mjlab-Trackingbfm-Flat-Unitree-G1-TestOptimal-"
+    "HistProprioCrossAttnActorCritic-NoRegNoDR"
+  )
+
+  cfg = load_env_cfg(task_id)
+  rl_cfg = cast(RslRlOnPolicyRunnerCfg, load_rl_cfg(task_id))
+
+  assert (
+    rl_cfg.critic.class_name
+    == "mjlab.tasks.tracking.rl.attention_models:HistProprioCrossAttentionCritic"
+  )
+  assert rl_cfg.critic.distribution_cfg is None
+  for term in cfg.observations["critic"].terms.values():
+    assert term.history_length == 11
+    assert term.flatten_history_dim is True
 
 
 def test_sparsetrack_attention_test_optimal_uses_conservative_ppo_settings() -> None:

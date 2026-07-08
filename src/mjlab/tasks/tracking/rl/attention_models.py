@@ -612,6 +612,18 @@ class HistProprioCrossAttentionActor(_BaseTrackingAttentionActor):
     return torch.cat((current_full_obs, dynamics, command_embedding), dim=-1)
 
 
+class HistProprioCrossAttentionCritic(HistProprioCrossAttentionActor):
+  """RoHM-style history/cross-attention critic for tracking value estimation."""
+
+  def _expected_output_dim(self) -> int:
+    return 1
+
+  def as_onnx(self, verbose: bool = False) -> nn.Module:
+    raise NotImplementedError(
+      "HistProprioCross transformer critic is not exported to ONNX"
+    )
+
+
 class _SparseTrackFullRefAttentionMixin:
   """Shared SparseTrack full-reference transformer implementation."""
 

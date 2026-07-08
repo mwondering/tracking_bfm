@@ -17,6 +17,7 @@ from mjlab.tasks.tracking.rl.attention_models import (
   TERM_DIMS,
   FullObsCausalAttentionActor,
   HistProprioCrossAttentionActor,
+  HistProprioCrossAttentionCritic,
   ProprioRefCrossAttentionActor,
   SparseTrackFullRefAttentionActor,
   SparseTrackFullRefAttentionCritic,
@@ -90,6 +91,23 @@ def _make_sparsetrack_critic() -> SparseTrackFullRefAttentionCritic:
   cfg_dict.pop("class_name")
   cfg_dict["distribution_cfg"] = None
   return SparseTrackFullRefAttentionCritic(
+    TensorDict(
+      {"critic": torch.randn(4, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
+      batch_size=[4],
+    ),
+    {"actor": ["actor"], "critic": ["critic"]},
+    "critic",
+    1,
+    **cfg_dict,
+  )
+
+
+def _make_hist_proprio_cross_critic() -> HistProprioCrossAttentionCritic:
+  cfg = tracking_attention_actor_cfg("hist_proprio_cross")
+  cfg_dict = cfg.__dict__.copy()
+  cfg_dict.pop("class_name")
+  cfg_dict["distribution_cfg"] = None
+  return HistProprioCrossAttentionCritic(
     TensorDict(
       {"critic": torch.randn(4, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
       batch_size=[4],
@@ -295,6 +313,18 @@ def test_sparsetrack_full_ref_attention_uses_linear_projection_head() -> None:
 
 def test_sparsetrack_full_ref_attention_critic_forward_shape() -> None:
   critic = _make_sparsetrack_critic()
+  obs = TensorDict(
+    {"critic": torch.randn(3, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
+    batch_size=[3],
+  )
+
+  values = critic(obs)
+
+  assert values.shape == (3, 1)
+
+
+def test_hist_proprio_cross_attention_critic_forward_shape() -> None:
+  critic = _make_hist_proprio_cross_critic()
   obs = TensorDict(
     {"critic": torch.randn(3, ACTOR_HISTORY_LENGTH * FRAME_DIM)},
     batch_size=[3],
